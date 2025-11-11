@@ -47,6 +47,7 @@ Tips:
 - Frontmatter arrays (e.g., `status: [planning, drafting]`) are checked entry by entry, so matching either value moves the note.
 - Regex conditions support both raw patterns (`project`) and literal syntax (`/pattern/flags`).
 - Use descriptive property names (e.g., `frontmatter.type`) to avoid confusion with similarly named fields in different contexts.
+- Upgrading from the old property rules? Your existing configuration is migrated automatically the next time the plugin loads so you can continue editing it in the new builder.
 
 ## Legacy property rules (deprecated)
 

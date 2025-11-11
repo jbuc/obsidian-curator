@@ -25,6 +25,7 @@ export interface AutoNoteMoverSettings {
 	excluded_folder: Array<ExcludedFolder>;
 	filter_engine_enabled: boolean;
 	filter_rules: FilterRule[];
+	filter_rules_migrated?: boolean;
 }
 
 export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
@@ -35,6 +36,7 @@ export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
 	excluded_folder: [{ folder: '' }],
 	filter_engine_enabled: false,
 	filter_rules: [],
+	filter_rules_migrated: false,
 };
 
 export class AutoNoteMoverSettingTab extends PluginSettingTab {

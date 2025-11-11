@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, AutoNoteMoverSettings, AutoNoteMoverSettingTab } from
 import { fileMove, getTriggerIndicator, isFmDisable } from 'utils/Utils';
 import { evaluateRules } from 'filter/filterEvaluator';
 import { executeActions } from 'filter/actionExecutor';
-import type { FilterRule, FilterNode } from 'filter/filterTypes';
+import type { FilterRule, FilterNode, RuleAction } from 'filter/filterTypes';
 
 export default class AutoNoteMover extends Plugin {
 	settings: AutoNoteMoverSettings;
@@ -244,6 +244,15 @@ export default class AutoNoteMover extends Plugin {
 		}));
 
 		this.settings.filter_rules = this.settings.filter_rules ?? [];
+
+		if (!this.settings.filter_rules_migrated && this.settings.property_rules.length) {
+			const migratedFilterRules = convertLegacyPropertyRules(this.settings.property_rules);
+			if (migratedFilterRules.length) {
+				this.settings.filter_rules = migratedFilterRules;
+				this.settings.filter_rules_migrated = true;
+				await this.saveSettings();
+			}
+		}
 	}
 
 	async saveSettings() {
@@ -310,4 +319,70 @@ const filterNodeUsesProperty = (node: FilterNode, property: string): boolean => 
 		return node.property?.toLowerCase() === property;
 	}
 	return node.children.some((child) => filterNodeUsesProperty(child, property));
+};
+
+const convertLegacyPropertyRules = (legacyRules: AutoNoteMoverSettings['property_rules']): FilterRule[] => {
+	const migrated: FilterRule[] = [];
+
+	legacyRules.forEach((legacyRule, index) => {
+			const folder = legacyRule.folder?.trim();
+			if (!folder) {
+				return;
+			}
+
+			const conditions: FilterNode[] = [];
+			const property = legacyRule.property?.trim();
+			const value = legacyRule.value?.trim();
+			if (property && value) {
+				conditions.push({
+					type: 'condition',
+					property,
+					comparator: 'equals',
+					value,
+					caseSensitive: false,
+				});
+			}
+
+			const titlePattern = legacyRule.title?.trim();
+			if (titlePattern) {
+				conditions.push({
+					type: 'condition',
+					property: 'file.name',
+					comparator: 'matchesRegex',
+					value: titlePattern,
+				});
+			}
+
+			if (!conditions.length) {
+				return;
+			}
+
+			const filter: FilterNode =
+				conditions.length === 1
+					? conditions[0]
+					: {
+							type: 'group',
+							operator: 'all',
+							children: conditions,
+					  };
+
+			const actions: RuleAction[] = [
+				{
+					type: 'move',
+					targetFolder: folder,
+					createFolderIfMissing: false,
+				},
+			];
+
+			migrated.push({
+				id: `legacy-${index}`,
+				name: legacyRule.property || legacyRule.title || `Legacy Rule ${index + 1}`,
+				enabled: true,
+				filter,
+				actions,
+				stopOnMatch: true,
+			});
+		});
+
+	return migrated;
 };
