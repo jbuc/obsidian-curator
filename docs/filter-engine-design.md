@@ -11,20 +11,23 @@ Build a flexible filtering system that can evaluate nested criteria (AND/OR/NOT)
 
 ## Proposed Model
 
+The canonical interfaces now live in `filter/filterTypes.ts`. Highlights:
+
 ### Filter Tree
 ```ts
-interface FilterGroup {
+export interface FilterGroup {
 	type: 'group';
-	operator: 'and' | 'or' | 'not';
+	operator: 'all' | 'any' | 'none'; // all=AND, any=OR, none=NOT
 	children: Array<FilterGroup | FilterCondition>;
 }
 
-interface FilterCondition {
+export interface FilterCondition {
 	type: 'condition';
-	property: string;        // e.g., 'tags', 'frontmatter.status', 'path'
-	comparator: Comparator;  // equals, contains, matchesRegex, etc.
-	value: string | string[];
+	property: string;        // e.g., 'file.name', 'frontmatter.status'
+	comparator: Comparator;  // 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'matchesRegex' | 'exists' | 'notExists'
+	value?: string | string[];
 	caseSensitive?: boolean;
+	negate?: boolean;       // inversion toggle per condition
 }
 ```
 
@@ -45,13 +48,13 @@ type RuleAction = ActionMove | ActionTag | /* future */ ActionRunCommand;
 
 ### Rule
 ```ts
-interface FilterRule {
+export interface FilterRule {
 	id: string;
 	name: string;
-	filter: FilterGroup | FilterCondition;
-	actions: RuleAction[];
-	stopOnMatch: boolean; // whether to short-circuit when this rule fires
 	enabled: boolean;
+	filter: FilterNode;
+	actions: RuleAction[];
+	stopOnMatch?: boolean;
 }
 ```
 
