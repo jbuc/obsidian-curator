@@ -107,113 +107,8 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 					})
 			);
 
-		const ruleDesc = document.createDocumentFragment();
-		ruleDesc.append(
-			'1. Enter the property you want to evaluate (for example: tags, type, status, folder, path).',
-			descEl.createEl('br'),
-			'2. Provide the exact value to match for that property.',
-			descEl.createEl('br'),
-			'3. (Optional) Define a title pattern using JavaScript regular expressions if you want to move notes based on their name.',
-			descEl.createEl('br'),
-			'4. Choose the destination folder for matching notes.',
-			descEl.createEl('br'),
-			'5. Rules run from top to bottom. Notes are moved by the ',
-			descEl.createEl('strong', { text: 'first matching rule.' }),
-			descEl.createEl('br'),
-			descEl.createEl('br'),
-			'Notice:',
-			descEl.createEl('br'),
-			'1. Attached files will not be moved, but they will still appear in the note.',
-			descEl.createEl('br'),
-			'2. Auto Note Mover will not move notes that have "',
-			descEl.createEl('strong', { text: 'AutoNoteMover: disable' }),
-			'" in the frontmatter.'
-		);
-		new Setting(this.containerEl)
-
-			.setName('Add new rule')
-			.setDesc(ruleDesc)
-			.addButton((button: ButtonComponent) => {
-				button
-					.setTooltip('Add new rule')
-					.setButtonText('+')
-					.setCta()
-					.onClick(async () => {
-						this.plugin.settings.property_rules.push({
-							property: '',
-							value: '',
-							title: '',
-							folder: '',
-						});
-						await this.plugin.saveSettings();
-						this.display();
-					});
-			});
-
-		this.plugin.settings.property_rules.forEach((rule, index) => {
-			const s = new Setting(this.containerEl)
-				.addText((cb) => {
-					cb.setPlaceholder('Property')
-						.setValue(rule.property)
-						.onChange(async (newProperty) => {
-							this.plugin.settings.property_rules[index].property = newProperty.trim();
-							await this.plugin.saveSettings();
-						});
-				})
-				.addText((cb) => {
-					cb.setPlaceholder('Value (exact match)')
-						.setValue(rule.value)
-						.onChange(async (newValue) => {
-							this.plugin.settings.property_rules[index].value = newValue.trim();
-							await this.plugin.saveSettings();
-						});
-				})
-				.addText((cb) => {
-					cb.setPlaceholder('Title regex (optional)')
-						.setValue(rule.title)
-						.onChange(async (newTitle) => {
-							this.plugin.settings.property_rules[index].title = newTitle;
-							await this.plugin.saveSettings();
-						});
-				})
-				.addSearch((cb) => {
-					new FolderSuggest(this.app, cb.inputEl);
-					cb.setPlaceholder('Folder')
-						.setValue(rule.folder)
-						.onChange(async (newFolder) => {
-							this.plugin.settings.property_rules[index].folder = newFolder.trim();
-							await this.plugin.saveSettings();
-						});
-				})
-				.addExtraButton((cb) => {
-					cb.setIcon('up-chevron-glyph')
-						.setTooltip('Move up')
-						.onClick(async () => {
-							arrayMove(this.plugin.settings.property_rules, index, index - 1);
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				})
-				.addExtraButton((cb) => {
-					cb.setIcon('down-chevron-glyph')
-						.setTooltip('Move down')
-						.onClick(async () => {
-							arrayMove(this.plugin.settings.property_rules, index, index + 1);
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				})
-				.addExtraButton((cb) => {
-					cb.setIcon('cross')
-						.setTooltip('Delete')
-						.onClick(async () => {
-							this.plugin.settings.property_rules.splice(index, 1);
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				});
-			s.infoEl.remove();
-		});
+		this.renderFilterEngineSettings();
+		this.renderLegacyRulesNotice();
 
 		const useRegexToCheckForExcludedFolder = document.createDocumentFragment();
 		useRegexToCheckForExcludedFolder.append(
@@ -316,7 +211,6 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 				});
 			});
 
-		this.renderFilterEngineSettings();
 	}
 
 	private renderFilterEngineSettings() {
@@ -366,21 +260,31 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 				});
 		});
 
-		filterSetting.addExtraButton((button) => {
-			button
-				.setIcon('save')
-				.setTooltip('Save rules')
-				.onClick(async () => {
-					try {
-						const parsed = JSON.parse(draftFilterRules) as FilterRule[];
-						this.plugin.settings.filter_rules = parsed;
-						await this.plugin.saveSettings();
-						new Notice('Filter rules saved.');
-					} catch (error) {
-						console.error('[Auto Note Mover] Invalid filter rules JSON', error);
-						new Notice('Invalid JSON. Changes not saved.');
-					}
-				});
-		});
+			filterSetting.addExtraButton((button) => {
+				button
+					.setIcon('save')
+					.setTooltip('Save rules')
+					.onClick(async () => {
+						try {
+							const parsed = JSON.parse(draftFilterRules) as FilterRule[];
+							this.plugin.settings.filter_rules = parsed;
+							await this.plugin.saveSettings();
+							new Notice('Filter rules saved.');
+						} catch (error) {
+							console.error('[Auto Note Mover] Invalid filter rules JSON', error);
+							new Notice('Invalid JSON. Changes not saved.');
+						}
+					});
+			});
+	}
+
+	private renderLegacyRulesNotice() {
+		const legacyDesc = document.createDocumentFragment();
+		legacyDesc.append(
+			'The original single-line rules have been deprecated. Existing configurations continue to run when the filter engine is disabled, but they are no longer editable from the UI.',
+			this.containerEl.createEl('br'),
+			'To migrate, recreate the logic using the filter engine JSON editor above (see docs/filter-engine-sample.json for examples).'
+		);
+		new Setting(this.containerEl).setName('Legacy rules').setDesc(legacyDesc);
 	}
 }

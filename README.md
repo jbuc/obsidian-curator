@@ -4,12 +4,11 @@ Auto Note Mover will automatically move the active notes to their respective fol
 
 ## How it works
 
-Create one or more **property rules**. Each rule defines:
+Create one or more **filter rules**. Each rule combines:
 
-- The property to inspect (for example: `tags`, `folder`, `path`, or any frontmatter key such as `frontmatter.status` or `status`).
-- The exact value that property must contain for the rule to match.
-- *(Optional)* A title pattern expressed as a JavaScript regular expression.
-- The destination folder to move matching notes into.
+- A nested filter tree (groups + conditions) that decides when the rule matches.
+- One or more actions (move, apply template, rename, etc.) that run sequentially when the rule fires.
+- Optional `stopOnMatch` behavior to short-circuit once the actions complete.
 
 When the active note matches the rule, Auto Note Mover will move the note to the destination folder.
 
@@ -33,30 +32,38 @@ Will not automatically move notes.
 
 You can trigger by command.
 
-## Rules
+## Filter rules (beta)
 
-1. Enter the property you want to evaluate. Supported shortcuts include `tags`, `tag`, `title`, `name`, `folder`, and `path`. Any frontmatter key can also be referenced using either its bare name (`status`) or the explicit `frontmatter.` prefix (`frontmatter.status`).
-2. Provide the exact value to match. Comparisons are case sensitive.
-3. (Optional) Specify a title pattern using a JavaScript regular expression if you want to move notes based on their name instead of a property value.
-4. Choose the destination folder for notes that satisfy the rule.
-5. The rules are checked from top to bottom. The note is moved by the **first matching rule.**
+1. Enable **Filter engine** in the plugin settings (Settings → Community plugins → Auto Note Mover).
+2. Define a filter tree by combining groups (`all`, `any`, `none`) and individual conditions. Properties can reference file metadata (e.g., `file.name`, `file.folder`, `tags`, `frontmatter.status`). Comparators currently include `equals`, `contains`, `startsWith`, `endsWith`, `matchesRegex`, `exists`, and `notExists`. Set `negate: true` on a condition to invert it.
+3. Add one or more actions to run when the filter matches. Actions execute sequentially, so you can move a note, apply a template, and rename it in one pass.
+4. Decide whether the rule should stop evaluation (`stopOnMatch`) or allow later rules to run.
+5. Save the JSON in the temporary editor. See `docs/filter-engine-sample.json` for ready-to-use examples that mirror the mockups above.
 
 Tips:
+
+- Tags are automatically normalized so `#project` and `project` both match when you specify the `tags` property.
+- Frontmatter arrays (e.g., `status: [planning, drafting]`) are checked entry by entry, so matching either value moves the note.
+- Regex conditions support both raw patterns (`project`) and literal syntax (`/pattern/flags`).
+- Use descriptive property names (e.g., `frontmatter.type`) to avoid confusion with similarly named fields in different contexts.
+
+## Legacy property rules (deprecated)
+
+The original UI for simple tag/title-to-folder rules has been removed, but existing configurations continue to run when the filter engine is disabled.
+
+1. Enter the property you want to evaluate (for example: tags, type, status, folder, path).
+2. Provide the exact value to match for that property.
+3. (Optional) Define a title pattern using JavaScript regular expressions if you want to move notes based on their name.
+4. Choose the destination folder for matching notes.
+5. Rules run from top to bottom. Notes are moved by the **first matching rule.**
+
+Legacy tips still apply while this mode is enabled:
 
 - Tags are automatically normalized so `#project` and `project` both match when you specify the `tags` property.
 - Frontmatter arrays (e.g., `status: [planning, drafting]`) are checked entry by entry, so matching either value moves the note.
 - Title patterns always use JavaScript regular expressions (e.g., `^Daily-\\d+$`).
 - Use the `title` or `name` property for exact matches; rely on the Title Pattern field when you need regex-based matching.
 - Use descriptive property names (e.g., `frontmatter.type`) to avoid confusion with similarly named fields in different contexts.
-
-## Filter Engine (beta)
-
-Enable **Filter engine** under the plugin settings to try the new nested criteria workflow (legacy property rules are ignored while this is enabled).
-
-- Build rules as JSON objects that follow the schema in `filter/filterTypes.ts`. Each rule combines a filter tree (`group` + `condition` nodes) and a list of actions (`move`, `applyTemplate`, `rename`, etc.).
-- Stack multiple actions to move a note, inject a template, and adjust its title in a single pass.
-- Set `stopOnMatch` on a rule to halt evaluation once it fires; leave it `false` to let subsequent rules run.
-- Use `docs/filter-engine-sample.json` as a starting point—it mirrors the mockup shared earlier and can be pasted directly into the temporary JSON editor.
 
 ## Notice
 
