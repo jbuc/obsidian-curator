@@ -21,6 +21,10 @@ export const renderFilterRulesEditor = (
 ): void => {
 	injectFilterBuilderStyles();
 
+	const toolbar = containerEl.createDiv('anm-filter-toolbar');
+	const collapseAllBtn = toolbar.createEl('button', { text: 'Collapse all', cls: 'anm-btn-link' });
+	const expandAllBtn = toolbar.createEl('button', { text: 'Expand all', cls: 'anm-btn-link' });
+
 	const wrapper = containerEl.createDiv('anm-filter-rules');
 
 	const refresh = () => {
@@ -36,6 +40,14 @@ export const renderFilterRulesEditor = (
 		await onChange();
 		refresh();
 	};
+
+	const applyCollapseState = (collapsed: boolean) => {
+		rules.forEach((rule) => toggleCollapsedRule(rule.id, collapsed));
+		wrapper.findAll('.anm-rule-card').forEach((card) => card.toggleClass('anm-collapsed', collapsed));
+	};
+
+	collapseAllBtn.onclick = () => applyCollapseState(true);
+	expandAllBtn.onclick = () => applyCollapseState(false);
 
 	const build = () => {
 		if (!rules.length) {
@@ -55,6 +67,7 @@ export const renderFilterRulesEditor = (
 
 	const renderRuleCard = (parent: HTMLElement, rule: FilterRule, index: number) => {
 		const card = parent.createDiv('anm-rule-card');
+		card.toggleClass('anm-collapsed', isRuleCollapsed(rule.id));
 
 		const header = card.createDiv('anm-rule-header');
 		const nameInput = header.createEl('input', {
@@ -68,6 +81,16 @@ export const renderFilterRulesEditor = (
 		};
 
 		const toggleGroup = header.createDiv('anm-toggle-group');
+		const collapseToggle = toggleGroup.createEl('button', {
+			text: card.hasClass('anm-collapsed') ? 'Expand' : 'Collapse',
+			cls: 'anm-btn-link',
+		});
+		collapseToggle.onclick = () => {
+			const collapsed = !card.hasClass('anm-collapsed');
+			card.toggleClass('anm-collapsed', collapsed);
+			collapseToggle.setText(collapsed ? 'Expand' : 'Collapse');
+			toggleCollapsedRule(rule.id, collapsed);
+		};
 		const enabledToggle = createToggleControl(toggleGroup, 'Enabled', rule.enabled, async (value) => {
 			rule.enabled = value;
 			await notify();
@@ -417,6 +440,18 @@ const createDefaultAction = (type: RuleAction['type']): RuleAction => {
 			return { type: 'move', targetFolder: '' };
 	}
 };
+
+const collapsedRuleState = new Set<string>();
+
+const toggleCollapsedRule = (id: string, collapsed: boolean) => {
+	if (collapsed) {
+		collapsedRuleState.add(id);
+	} else {
+		collapsedRuleState.delete(id);
+	}
+};
+
+const isRuleCollapsed = (id: string) => collapsedRuleState.has(id);
 
 const createDefaultRule = (): FilterRule => ({
 	id: `rule-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
