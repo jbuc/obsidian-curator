@@ -1,6 +1,9 @@
-import { MarkdownView, Plugin, TFile, getAllTags, Notice, TAbstractFile, normalizePath } from 'obsidian';
+import { MarkdownView, Plugin, TFile, getAllTags, Notice, TAbstractFile, normalizePath, CachedMetadata } from 'obsidian';
 import { DEFAULT_SETTINGS, AutoNoteMoverSettings, AutoNoteMoverSettingTab } from 'settings/settings';
 import { fileMove, getTriggerIndicator, isFmDisable } from 'utils/Utils';
+import { evaluateRules } from 'filter/filterEvaluator';
+import { executeActions } from 'filter/actionExecutor';
+import type { FilterRule, FilterNode } from 'filter/filterTypes';
 
 export default class AutoNoteMover extends Plugin {
 	settings: AutoNoteMoverSettings;
@@ -10,7 +13,7 @@ export default class AutoNoteMover extends Plugin {
 		const propertyRules = this.settings.property_rules;
 		const excludedFolder = this.settings.excluded_folder;
 
-		const fileCheck = (file: TAbstractFile, oldPath?: string, caller?: string) => {
+		const fileCheck = async (file: TAbstractFile, oldPath?: string, caller?: string) => {
 			if (this.settings.trigger_auto_manual !== 'Automatic' && caller !== 'cmd') {
 				return;
 			}
@@ -41,6 +44,11 @@ export default class AutoNoteMover extends Plugin {
 			const fileCache = this.app.metadataCache.getFileCache(file);
 			// Disable AutoNoteMover when "AutoNoteMover: disable" is present in the frontmatter.
 			if (isFmDisable(fileCache)) {
+				return;
+			}
+
+			const handledByFilterEngine = await this.tryFilterEngine(file, fileCache);
+			if (handledByFilterEngine) {
 				return;
 			}
 
@@ -147,9 +155,9 @@ export default class AutoNoteMover extends Plugin {
 		}
 
 		this.app.workspace.onLayoutReady(() => {
-			this.registerEvent(this.app.vault.on('create', (file) => fileCheck(file)));
-			this.registerEvent(this.app.metadataCache.on('changed', (file) => fileCheck(file)));
-			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => fileCheck(file, oldPath)));
+			this.registerEvent(this.app.vault.on('create', (file) => void fileCheck(file)));
+			this.registerEvent(this.app.metadataCache.on('changed', (file) => void fileCheck(file)));
+			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => void fileCheck(file, oldPath)));
 		});
 
 		const moveNoteCommand = (view: MarkdownView) => {
@@ -157,7 +165,7 @@ export default class AutoNoteMover extends Plugin {
 				new Notice('Auto Note Mover is disabled in the frontmatter.');
 				return;
 			}
-			fileCheck(view.file, undefined, 'cmd');
+			void fileCheck(view.file, undefined, 'cmd');
 		};
 
 		this.addCommand({
@@ -234,9 +242,72 @@ export default class AutoNoteMover extends Plugin {
 			title: rule.title ?? '',
 			folder: rule.folder ?? '',
 		}));
+
+		this.settings.filter_rules = this.settings.filter_rules ?? [];
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	private async tryFilterEngine(file: TFile, fileCache: CachedMetadata | null): Promise<boolean> {
+		if (!this.settings.filter_engine_enabled) {
+			return false;
+		}
+		const rules = this.settings.filter_rules ?? [];
+		if (!rules.length) {
+			return false;
+		}
+
+		const requiresContent = rulesRequireProperty(rules, 'file.content');
+		let content: string | undefined;
+		if (requiresContent) {
+			try {
+				content = await this.app.vault.read(file);
+			} catch (error) {
+				console.error('[Auto Note Mover] Failed to read file content for filter evaluation', error);
+			}
+		}
+
+		const tags = getAllTags(fileCache) ?? [];
+		const frontmatter = (fileCache?.frontmatter as Record<string, unknown>) ?? {};
+		const context = {
+			file,
+			path: file.path,
+			folder: file.parent?.path ?? '',
+			name: file.basename,
+			extension: file.extension,
+			tags,
+			frontmatter,
+			cache: fileCache,
+			content,
+		};
+
+		const matches = evaluateRules(rules, context);
+		if (!matches.length) {
+			return false;
+		}
+
+		const actionContext = { app: this.app, file };
+		for (const match of matches) {
+			try {
+				await executeActions(match.actions, actionContext);
+			} catch (error) {
+				console.error('[Auto Note Mover] Failed to execute actions for rule', match.rule?.name, error);
+			}
+		}
+		return true;
+	}
 }
+
+const rulesRequireProperty = (rules: FilterRule[], property: string): boolean => {
+	const target = property.toLowerCase();
+	return rules.some((rule) => filterNodeUsesProperty(rule.filter, target));
+};
+
+const filterNodeUsesProperty = (node: FilterNode, property: string): boolean => {
+	if (node.type === 'condition') {
+		return node.property?.toLowerCase() === property;
+	}
+	return node.children.some((child) => filterNodeUsesProperty(child, property));
+};

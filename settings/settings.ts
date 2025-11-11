@@ -1,8 +1,9 @@
 import AutoNoteMover from 'main';
-import { App, PluginSettingTab, Setting, ButtonComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, ButtonComponent, Notice, TextAreaComponent } from 'obsidian';
 
 import { FolderSuggest } from 'suggests/file-suggest';
 import { arrayMove } from 'utils/Utils';
+import { FilterRule } from 'filter/filterTypes';
 
 export interface PropertyRule {
 	property: string;
@@ -21,6 +22,8 @@ export interface AutoNoteMoverSettings {
 	property_rules: Array<PropertyRule>;
 	use_regex_to_check_for_excluded_folder: boolean;
 	excluded_folder: Array<ExcludedFolder>;
+	filter_engine_enabled: boolean;
+	filter_rules: FilterRule[];
 }
 
 export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
@@ -29,6 +32,8 @@ export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
 	property_rules: [{ property: '', value: '', title: '', folder: '' }],
 	use_regex_to_check_for_excluded_folder: false,
 	excluded_folder: [{ folder: '' }],
+	filter_engine_enabled: false,
+	filter_rules: [],
 };
 
 export class AutoNoteMoverSettingTab extends PluginSettingTab {
@@ -310,5 +315,72 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 					this.display();
 				});
 			});
+
+		this.renderFilterEngineSettings();
+	}
+
+	private renderFilterEngineSettings() {
+		this.containerEl.createEl('h3', { text: 'Filter Engine (beta)' });
+
+		new Setting(this.containerEl)
+			.setName('Enable filter engine')
+			.setDesc('Use the new nested filter/action workflow. Legacy rules are ignored while this is enabled.')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.filter_engine_enabled).onChange(async (value) => {
+					this.plugin.settings.filter_engine_enabled = value;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			});
+
+		if (!this.plugin.settings.filter_engine_enabled) {
+			return;
+		}
+
+		let draftFilterRules = JSON.stringify(this.plugin.settings.filter_rules ?? [], null, 2);
+		const filterSetting = new Setting(this.containerEl)
+			.setName('Filter rules (JSON)')
+			.setDesc(
+				'Temporary JSON editor for the new filter engine. Enter an array of rules that follow the schema defined in filter/filterTypes.ts.'
+			);
+
+		let textAreaRef: TextAreaComponent | null = null;
+		filterSetting.addTextArea((text) => {
+			textAreaRef = text;
+			text.setValue(draftFilterRules).onChange((value) => {
+				draftFilterRules = value;
+			});
+			text.inputEl.rows = 12;
+			text.inputEl.style.fontFamily = 'var(--font-monospace)';
+		});
+
+		filterSetting.addExtraButton((button) => {
+			button
+				.setIcon('reset')
+				.setTooltip('Reset to current value')
+				.onClick(() => {
+					draftFilterRules = JSON.stringify(this.plugin.settings.filter_rules ?? [], null, 2);
+					if (textAreaRef) {
+						textAreaRef.setValue(draftFilterRules);
+					}
+				});
+		});
+
+		filterSetting.addExtraButton((button) => {
+			button
+				.setIcon('save')
+				.setTooltip('Save rules')
+				.onClick(async () => {
+					try {
+						const parsed = JSON.parse(draftFilterRules) as FilterRule[];
+						this.plugin.settings.filter_rules = parsed;
+						await this.plugin.saveSettings();
+						new Notice('Filter rules saved.');
+					} catch (error) {
+						console.error('[Auto Note Mover] Invalid filter rules JSON', error);
+						new Notice('Invalid JSON. Changes not saved.');
+					}
+				});
+		});
 	}
 }
