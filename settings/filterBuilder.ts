@@ -43,7 +43,13 @@ export const renderFilterRulesEditor = (
 
 	const applyCollapseState = (collapsed: boolean) => {
 		rules.forEach((rule) => toggleCollapsedRule(rule.id, collapsed));
-		wrapper.findAll('.anm-rule-card').forEach((card) => card.toggleClass('anm-collapsed', collapsed));
+		wrapper.findAll('.anm-rule-card').forEach((card) => {
+			card.toggleClass('anm-collapsed', collapsed);
+			const toggle = card.querySelector('.anm-collapse-toggle') as HTMLButtonElement | null;
+			if (toggle) {
+				updateCollapseControl(toggle, collapsed);
+			}
+		});
 	};
 
 	collapseAllBtn.onclick = () => applyCollapseState(true);
@@ -82,13 +88,15 @@ export const renderFilterRulesEditor = (
 
 		const toggleGroup = header.createDiv('anm-toggle-group');
 		const collapseToggle = toggleGroup.createEl('button', {
-			text: card.hasClass('anm-collapsed') ? 'Expand' : 'Collapse',
-			cls: 'anm-btn-link',
+			text: '',
+			cls: 'anm-btn-link anm-collapse-toggle',
+			attr: { 'data-rule-id': rule.id },
 		});
+		updateCollapseControl(collapseToggle, card.hasClass('anm-collapsed'));
 		collapseToggle.onclick = () => {
 			const collapsed = !card.hasClass('anm-collapsed');
 			card.toggleClass('anm-collapsed', collapsed);
-			collapseToggle.setText(collapsed ? 'Expand' : 'Collapse');
+			updateCollapseControl(collapseToggle, collapsed);
 			toggleCollapsedRule(rule.id, collapsed);
 		};
 		const enabledToggle = createToggleControl(toggleGroup, 'Enabled', rule.enabled, async (value) => {
@@ -453,6 +461,10 @@ const toggleCollapsedRule = (id: string, collapsed: boolean) => {
 
 const isRuleCollapsed = (id: string) => collapsedRuleState.has(id);
 
+const updateCollapseControl = (button: HTMLButtonElement, collapsed: boolean) => {
+	button.setText(collapsed ? 'Expand' : 'Collapse');
+};
+
 const createDefaultRule = (): FilterRule => ({
 	id: `rule-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 	name: 'New rule',
@@ -488,6 +500,9 @@ const injectFilterBuilderStyles = () => {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
+}
+.anm-rule-card.anm-collapsed > :not(.anm-rule-header) {
+	display: none;
 }
 .anm-rule-header {
 	display: flex;
@@ -535,6 +550,9 @@ const injectFilterBuilderStyles = () => {
 	gap: 0.75rem;
 	background: var(--background-secondary);
 }
+.anm-rule-card.anm-collapsed > :not(.anm-rule-header) {
+	display: none;
+}
 .anm-group-header {
 	display: flex;
 	align-items: center;
@@ -550,6 +568,13 @@ const injectFilterBuilderStyles = () => {
 .anm-group-footer {
 	display: flex;
 	gap: 1rem;
+}
+.anm-group.anm-collapsed .anm-group-children,
+.anm-group.anm-collapsed .anm-group-footer {
+	display: none;
+}
+.anm-group.anm-collapsed .anm-chevron {
+	transform: rotate(-90deg);
 }
 .anm-condition-row {
 	display: flex;
