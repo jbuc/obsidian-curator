@@ -1,4 +1,5 @@
 import { FilterRule, FilterNode, FilterGroup, FilterCondition, RuleAction } from 'filter/filterTypes';
+import { Setting, ExtraButtonComponent, ButtonComponent, DropdownComponent, TextComponent, ToggleComponent } from 'obsidian';
 
 type OnChange = () => Promise<void> | void;
 
@@ -9,10 +10,40 @@ const COMPARATORS: FilterCondition['comparator'][] = [
 	'endsWith',
 	'matchesRegex',
 	'exists',
-	'notExists',
 ];
 
 const ACTION_TYPES: RuleAction['type'][] = ['move', 'applyTemplate', 'rename', 'addTag', 'removeTag'];
+
+type QuantifierOption = 'all' | 'any';
+type TruthinessOption = 'true' | 'false';
+
+const GROUP_MODES: Array<{
+	value: string;
+	label: string;
+	quantifier: QuantifierOption;
+	truthiness: TruthinessOption;
+}> = [
+	{ value: 'all:true', label: 'All of the following are true', quantifier: 'all', truthiness: 'true' },
+	{ value: 'any:true', label: 'Any of the following are true', quantifier: 'any', truthiness: 'true' },
+	{ value: 'all:false', label: 'All of the following are false', quantifier: 'all', truthiness: 'false' },
+	{ value: 'any:false', label: 'Any of the following are false', quantifier: 'any', truthiness: 'false' },
+];
+
+const getGroupQuantifier = (group: FilterGroup): QuantifierOption => (group.operator === 'any' ? 'any' : 'all');
+
+const getGroupTruthiness = (group: FilterGroup): TruthinessOption => {
+	if (group.truthiness) {
+		return group.truthiness;
+	}
+	return group.operator === 'none' ? 'false' : 'true';
+};
+
+const updateGroupOperator = (group: FilterGroup, quantifier: QuantifierOption, truthiness: TruthinessOption) => {
+	group.operator = quantifier;
+	group.truthiness = truthiness;
+};
+
+const getGroupModeValue = (group: FilterGroup) => `${getGroupQuantifier(group)}:${getGroupTruthiness(group)}`;
 
 export const renderFilterRulesEditor = (
 	containerEl: HTMLElement,
@@ -21,9 +52,20 @@ export const renderFilterRulesEditor = (
 ): void => {
 	injectFilterBuilderStyles();
 
-	const toolbar = containerEl.createDiv('anm-filter-toolbar');
-	const collapseAllBtn = toolbar.createEl('button', { text: 'Collapse all', cls: 'anm-btn-link' });
-	const expandAllBtn = toolbar.createEl('button', { text: 'Expand all', cls: 'anm-btn-link' });
+	const collapseButtons = new Map<string, ExtraButtonComponent>();
+
+	const toolbarSetting = new Setting(containerEl);
+	toolbarSetting.settingEl.addClass('anm-filter-toolbar');
+	toolbarSetting.setName('');
+	toolbarSetting.setDesc('');
+	toolbarSetting.addButton((button) => {
+		button.setButtonText('Collapse all');
+		button.onClick(() => applyCollapseState(true));
+	});
+	toolbarSetting.addButton((button) => {
+		button.setButtonText('Expand all');
+		button.onClick(() => applyCollapseState(false));
+	});
 
 	const wrapper = containerEl.createDiv('anm-filter-rules');
 
@@ -42,20 +84,20 @@ export const renderFilterRulesEditor = (
 	};
 
 	const applyCollapseState = (collapsed: boolean) => {
-		rules.forEach((rule) => toggleCollapsedRule(rule.id, collapsed));
+		rules.forEach((rule) => {
+			toggleCollapsedRule(rule.id, collapsed);
+			const btn = collapseButtons.get(rule.id);
+			if (btn) {
+				updateCollapseControl(btn, collapsed);
+			}
+		});
 		wrapper.findAll('.anm-rule-card').forEach((card) => {
 			card.toggleClass('anm-collapsed', collapsed);
-			const toggle = card.querySelector('.anm-collapse-toggle') as HTMLButtonElement | null;
-			if (toggle) {
-				updateCollapseControl(toggle, collapsed);
-			}
 		});
 	};
 
-	collapseAllBtn.onclick = () => applyCollapseState(true);
-	expandAllBtn.onclick = () => applyCollapseState(false);
-
 	const build = () => {
+		collapseButtons.clear();
 		if (!rules.length) {
 			wrapper.createEl('p', { text: 'No rules yet. Add one below.' });
 		}
@@ -64,19 +106,32 @@ export const renderFilterRulesEditor = (
 			renderRuleCard(wrapper, rule, index);
 		});
 
-		const addRuleButton = wrapper.createEl('button', { text: 'Add rule', cls: 'anm-btn-primary' });
-		addRuleButton.onclick = async () => {
-			rules.push(createDefaultRule());
-			await notifyAndRefresh();
-		};
+		const addRuleSetting = new Setting(wrapper);
+		addRuleSetting.settingEl.addClass('anm-add-rule');
+		addRuleSetting.setName('');
+		addRuleSetting.setDesc('');
+		addRuleSetting.addButton((button) => {
+			button.setButtonText('Add rule').setCta();
+			button.onClick(async () => {
+				rules.push(createDefaultRule());
+				await notifyAndRefresh();
+			});
+		});
 	};
 
 	const renderRuleCard = (parent: HTMLElement, rule: FilterRule, index: number) => {
 		const card = parent.createDiv('anm-rule-card');
-		card.toggleClass('anm-collapsed', isRuleCollapsed(rule.id));
+		const initiallyCollapsed = isRuleCollapsed(rule.id);
+		card.toggleClass('anm-collapsed', initiallyCollapsed);
 
-		const header = card.createDiv('anm-rule-header');
-		const nameInput = header.createEl('input', {
+		const headerSetting = new Setting(card);
+		headerSetting.settingEl.addClass('anm-rule-header-setting');
+		headerSetting.setName('');
+		headerSetting.setDesc('');
+		headerSetting.infoEl.empty();
+		const nameWrapper = headerSetting.infoEl.createDiv('anm-rule-name-field');
+		nameWrapper.createSpan({ text: 'Rule:', cls: 'anm-field-label-inline' });
+		const nameInput = nameWrapper.createEl('input', {
 			value: rule.name,
 			attr: { placeholder: 'Rule name' },
 			cls: 'anm-rule-name',
@@ -86,49 +141,53 @@ export const renderFilterRulesEditor = (
 			await notify();
 		};
 
-		const toggleGroup = header.createDiv('anm-toggle-group');
-		const collapseToggle = toggleGroup.createEl('button', {
-			text: '',
-			cls: 'anm-btn-link anm-collapse-toggle',
-			attr: { 'data-rule-id': rule.id },
+		headerSetting.addToggle((toggle) => {
+			toggle.setValue(rule.enabled);
+			toggle.onChange(async (value) => {
+				rule.enabled = value;
+				await notify();
+			});
 		});
-		updateCollapseControl(collapseToggle, card.hasClass('anm-collapsed'));
-		collapseToggle.onclick = () => {
-			const collapsed = !card.hasClass('anm-collapsed');
-			card.toggleClass('anm-collapsed', collapsed);
-			updateCollapseControl(collapseToggle, collapsed);
-			toggleCollapsedRule(rule.id, collapsed);
-		};
-		const enabledToggle = createToggleControl(toggleGroup, 'Enabled', rule.enabled, async (value) => {
-			rule.enabled = value;
-			await notify();
+
+		let collapseButton: ExtraButtonComponent | null = null;
+		headerSetting.addExtraButton((button) => {
+			collapseButton = button;
+			button.setIcon('chevron-up');
+			button.setTooltip('Collapse rule');
+			button.onClick(() => {
+				const collapsed = !card.hasClass('anm-collapsed');
+				card.toggleClass('anm-collapsed', collapsed);
+				updateCollapseControl(button, collapsed);
+				toggleCollapsedRule(rule.id, collapsed);
+			});
 		});
-		enabledToggle.input.checked = rule.enabled;
-		const stopToggle = createToggleControl(toggleGroup, 'Stop on match', !!rule.stopOnMatch, async (value) => {
-			rule.stopOnMatch = value;
-			await notify();
+		if (collapseButton) {
+			collapseButtons.set(rule.id, collapseButton);
+			updateCollapseControl(collapseButton, initiallyCollapsed);
+		}
+
+			headerSetting.addExtraButton((button) => {
+			button.setIcon('copy');
+			button.setTooltip('Duplicate rule');
+			button.onClick(async () => {
+				const clone = cloneRule(rule);
+				rules.splice(index + 1, 0, clone);
+				await notifyAndRefresh();
+			});
 		});
-		stopToggle.input.checked = !!rule.stopOnMatch;
+			headerSetting.addExtraButton((button) => {
+			button.setIcon('trash');
+			button.setTooltip('Delete rule');
+			button.onClick(async () => {
+				rules.splice(index, 1);
+				await notifyAndRefresh();
+			});
+		});
 
-		const actionsRow = header.createDiv('anm-rule-actions');
-		const duplicateButton = actionsRow.createEl('button', { text: 'Duplicate', cls: 'anm-btn-link' });
-		duplicateButton.onclick = async () => {
-			const clone = cloneRule(rule);
-			rules.splice(index + 1, 0, clone);
-			await notifyAndRefresh();
-		};
-		const deleteButton = actionsRow.createEl('button', { text: 'Delete', cls: 'anm-btn-danger' });
-		deleteButton.onclick = async () => {
-			rules.splice(index, 1);
-			await notifyAndRefresh();
-		};
-
-		// Filter tree
-		renderFilterNodeEditor(card, rule.filter, null, null, notify, notifyAndRefresh, true);
-
-		// Actions
-		card.createEl('p', { text: 'Make the following changes:', cls: 'anm-actions-heading' });
-		renderActionsEditor(card, rule.actions, notify, notifyAndRefresh);
+		const body = card.createDiv('anm-rule-body');
+		renderFilterNodeEditor(body, rule.filter, null, null, notify, notifyAndRefresh, true);
+		body.createEl('p', { text: 'Make the following changes:', cls: 'anm-actions-heading' });
+		renderActionsEditor(body, rule.actions, notify, notifyAndRefresh);
 	};
 
 	const renderFilterNodeEditor = (
@@ -142,41 +201,44 @@ export const renderFilterRulesEditor = (
 		parentOperator: FilterGroup['operator'] = 'all'
 	) => {
 		if (node.type === 'group') {
-			const groupEl = container.createDiv('anm-group');
-			const header = groupEl.createDiv('anm-group-header');
+			const intro = isRoot ? 'when' : parentOperator === 'any' ? 'or' : 'and';
+			const groupSetting = new Setting(container);
+			groupSetting.settingEl.addClass('anm-group');
+			if (isRoot) {
+				groupSetting.settingEl.addClass('anm-group--root');
+			} else {
+				groupSetting.settingEl.addClass('anm-group--nested');
+			}
+			groupSetting.setName('');
+			groupSetting.setDesc('');
+			groupSetting.infoEl.empty();
+			const headerRow = groupSetting.infoEl.createDiv('anm-group-header');
+			headerRow.createSpan({ text: intro, cls: 'anm-logic-label' });
 
-			const intro = isRoot ? 'where' : parentOperator === 'any' ? 'or' : 'and';
-			header.createSpan({ text: `${intro} `, cls: 'anm-logic-label' });
-			header.createSpan({ text: operatorLabel(node.operator), cls: 'anm-operator-label' });
-
-			const operatorSelect = header.createEl('select', { cls: 'anm-operator-select' });
-			[
-				{ label: 'all of the following are true', value: 'all' },
-				{ label: 'any of the following are true', value: 'any' },
-				{ label: 'none of the following are true', value: 'none' },
-			].forEach((option) => {
-				operatorSelect.append(new Option(option.label, option.value, false, node.operator === option.value));
+			const modeSelect = new DropdownComponent(headerRow);
+			modeSelect.selectEl.addClass('anm-group-mode');
+			GROUP_MODES.forEach((option) => {
+				modeSelect.addOption(option.value, option.label);
 			});
-			operatorSelect.onchange = async () => {
-				node.operator = operatorSelect.value as FilterGroup['operator'];
-				await notifyChange();
-			};
-
-			const chevron = header.createSpan({ text: '▾', cls: 'anm-chevron' });
-			chevron.onclick = () => {
-				const collapsed = groupEl.hasClass('anm-collapsed');
-				groupEl.toggleClass('anm-collapsed', !collapsed);
-			};
+			modeSelect.setValue(getGroupModeValue(node));
+			modeSelect.onChange(async (value) => {
+				const nextMode = GROUP_MODES.find((entry) => entry.value === value) ?? GROUP_MODES[0];
+				updateGroupOperator(node, nextMode.quantifier, nextMode.truthiness);
+				await notifyAndRefresh();
+			});
 
 			if (parentChildren && index !== null) {
-				const remove = header.createEl('button', { text: 'Remove', cls: 'anm-btn-link' });
-				remove.onclick = async () => {
+				const actions = headerRow.createDiv('anm-group-actions');
+				const removeButton = new ExtraButtonComponent(actions);
+				removeButton.setIcon('trash');
+				removeButton.setTooltip('Remove group');
+				removeButton.onClick(async () => {
 					parentChildren.splice(index, 1);
 					await notifyAndRefresh();
-				};
+				});
 			}
 
-			const childrenContainer = groupEl.createDiv('anm-group-children');
+			const childrenContainer = groupSetting.infoEl.createDiv('anm-group-children');
 			node.children.forEach((child, childIndex) => {
 				renderFilterNodeEditor(
 					childrenContainer,
@@ -186,206 +248,230 @@ export const renderFilterRulesEditor = (
 					notifyChange,
 					notifyAndRefresh,
 					false,
-					node.operator
+					getGroupQuantifier(node)
 				);
 			});
 
-			const footer = groupEl.createDiv('anm-group-footer');
-			const addConditionBtn = footer.createEl('button', { text: 'add criteria', cls: 'anm-link-btn' });
-			addConditionBtn.onclick = async () => {
+			const footer = groupSetting.infoEl.createDiv('anm-group-footer');
+			const addCriteriaBtn = new ButtonComponent(footer);
+			addCriteriaBtn.setButtonText('+ add criteria');
+			addCriteriaBtn.onClick(async () => {
 				node.children.push(createDefaultCondition());
 				await notifyAndRefresh();
-			};
-			const addGroupBtn = footer.createEl('button', { text: 'add group', cls: 'anm-link-btn' });
-			addGroupBtn.onclick = async () => {
+			});
+			const addGroupBtn = new ButtonComponent(footer);
+			addGroupBtn.setButtonText('+ add group');
+			addGroupBtn.onClick(async () => {
 				node.children.push(createDefaultGroup());
 				await notifyAndRefresh();
-			};
+			});
+
 		} else {
-			const conditionRow = container.createDiv('anm-condition-row');
-			const connector = conditionRow.createSpan({
-				text: connectorLabel(parentChildren, index, parentOperator),
-				cls: 'anm-condition-connector',
-			});
-			const conditionEl = conditionRow.createDiv('anm-condition');
+			const connectorText = connectorLabel(parentChildren, index, parentOperator);
+			const conditionSetting = new Setting(container);
+			conditionSetting.settingEl.addClass('anm-condition-row');
+			conditionSetting.setName('');
+			conditionSetting.setDesc('');
+			conditionSetting.infoEl.empty();
+			const line = conditionSetting.infoEl.createDiv('anm-condition-line');
+			line.createSpan({ text: connectorText, cls: 'anm-logic-label' });
 
-			const propertySelect = conditionEl.createEl('input', {
-				value: node.property,
-				attr: { placeholder: 'file.name, tags, frontmatter.status' },
-			});
-			propertySelect.oninput = async () => {
-				node.property = propertySelect.value;
-				await notifyChange();
-			};
-
-			const comparatorSelect = conditionEl.createEl('select');
-			COMPARATORS.forEach((comp) => {
-				comparatorSelect.append(new Option(comp, comp, false, node.comparator === comp));
-			});
-			comparatorSelect.onchange = async () => {
-				node.comparator = comparatorSelect.value as FilterCondition['comparator'];
-				await notifyChange();
-			};
-
-			const valueInput = conditionEl.createEl('input', {
-				value: Array.isArray(node.value) ? node.value.join(',') : node.value ?? '',
-				attr: { placeholder: 'value / pattern (optional)' },
-			});
-			valueInput.oninput = async () => {
-				node.value = valueInput.value;
-				await notifyChange();
-			};
-
-			const toggleRow = conditionEl.createDiv('anm-condition-options');
-			createToggleControl(toggleRow, 'Case sensitive', !!node.caseSensitive, async (value) => {
-				node.caseSensitive = value;
+			const propertyField = line.createDiv('anm-condition-field');
+			propertyField.addClass('anm-condition-field--property');
+			const propertyInput = new TextComponent(propertyField);
+			propertyInput.inputEl.placeholder = 'key';
+			propertyInput.setValue(node.property ?? '');
+			propertyInput.onChange(async (value) => {
+				node.property = value;
 				await notifyChange();
 			});
-			createToggleControl(toggleRow, 'Negate', !!node.negate, async (value) => {
+
+			const comparatorField = line.createDiv('anm-condition-field');
+			comparatorField.addClass('anm-condition-field--comparator');
+			const comparatorSelect = new DropdownComponent(comparatorField);
+			COMPARATORS.forEach((comp) => comparatorSelect.addOption(comp, comp));
+			comparatorSelect.setValue(node.comparator);
+			comparatorSelect.onChange(async (value) => {
+				node.comparator = value as FilterCondition['comparator'];
+				await notifyChange();
+			});
+			const valueField = line.createDiv('anm-condition-field');
+			valueField.addClass('anm-condition-field--value');
+			const valueInput = new TextComponent(valueField);
+			valueInput.inputEl.placeholder = 'value';
+			valueInput.setValue(Array.isArray(node.value) ? node.value.join(',') : node.value ?? '');
+			valueInput.onChange(async (value) => {
+				node.value = value;
+				await notifyChange();
+			});
+
+			const toolsBar = line.createDiv('anm-condition-tools');
+			const flagBar = toolsBar.createDiv('anm-condition-flags');
+			createFlagButton(flagBar, 'circle-slash', 'Negate comparison', !!node.negate, async (value) => {
 				node.negate = value;
+				await notifyChange();
+			});
+			createFlagButton(flagBar, 'case-sensitive', 'Match case', !!node.caseSensitive, async (value) => {
+				node.caseSensitive = value;
 				await notifyChange();
 			});
 
 			if (parentChildren && index !== null) {
-				const remove = conditionEl.createEl('button', { text: 'Remove', cls: 'anm-btn-link danger' });
-				remove.onclick = async () => {
+				const removeButton = new ExtraButtonComponent(toolsBar);
+				removeButton.setIcon('trash');
+				removeButton.setTooltip('Remove criteria');
+				removeButton.onClick(async () => {
 					parentChildren.splice(index, 1);
 					await notifyAndRefresh();
-				};
+				});
 			}
 		}
 	};
 
-	const renderActionsEditor = (
-		container: HTMLElement,
-		actions: RuleAction[],
-		notifyChange: () => Promise<void>,
-		notifyAndRefresh: () => Promise<void>
-	) => {
-		const list = container.createDiv('anm-actions');
-		actions.forEach((action, index) => {
-			const row = list.createDiv('anm-action-row');
-			const typeSelect = row.createEl('select');
-			ACTION_TYPES.forEach((type) => {
-				typeSelect.append(new Option(type, type, false, action.type === type));
-			});
-			typeSelect.onchange = async () => {
-				actions[index] = createDefaultAction(typeSelect.value as RuleAction['type']);
-				await notifyAndRefresh();
-			};
-
-			const fields = row.createDiv('anm-action-fields');
-			renderActionFields(fields, action, notifyChange);
-
-			const remove = row.createEl('button', { text: 'Remove', cls: 'anm-btn-link danger' });
-			remove.onclick = async () => {
-				actions.splice(index, 1);
-				await notifyAndRefresh();
-			};
+const renderActionsEditor = (
+	container: HTMLElement,
+	actions: RuleAction[],
+	notifyChange: () => Promise<void>,
+	notifyAndRefresh: () => Promise<void>
+) => {
+	actions.forEach((action, index) => {
+		const actionSetting = new Setting(container);
+		actionSetting.settingEl.addClass('anm-action-row');
+		actionSetting.setName('');
+		actionSetting.setDesc('');
+		actionSetting.infoEl.empty();
+		const line = actionSetting.infoEl.createDiv('anm-action-line');
+		const typeWrapper = line.createDiv('anm-action-type');
+		const typeSelect = new DropdownComponent(typeWrapper);
+		ACTION_TYPES.forEach((type) => typeSelect.addOption(type, type));
+		typeSelect.setValue(action.type);
+		typeSelect.onChange(async (value) => {
+			actions[index] = createDefaultAction(value as RuleAction['type']);
+			await notifyAndRefresh();
 		});
 
-		const addActionBtn = container.createEl('button', { text: 'add action', cls: 'anm-link-btn' });
-		addActionBtn.onclick = async () => {
+		const fieldsWrapper = line.createDiv('anm-action-fields');
+		renderActionFields(fieldsWrapper, action, notifyChange);
+
+		actionSetting.addExtraButton((button) => {
+			button.setIcon('trash');
+			button.setTooltip('Remove action');
+			button.onClick(async () => {
+				actions.splice(index, 1);
+				await notifyAndRefresh();
+			});
+		});
+	});
+
+	const addActionSetting = new Setting(container);
+	addActionSetting.settingEl.addClass('anm-add-action');
+	addActionSetting.setName('');
+	addActionSetting.setDesc('');
+	addActionSetting.addButton((button) => {
+		button.setButtonText('+ add action');
+		button.onClick(async () => {
 			actions.push(createDefaultAction('move'));
 			await notifyAndRefresh();
-		};
-	};
-
-	const renderActionFields = (container: HTMLElement, action: RuleAction, notifyChange: () => Promise<void>) => {
-		switch (action.type) {
-			case 'move': {
-				const targetInput = container.createEl('input', {
-					value: action.targetFolder,
-					attr: { placeholder: 'Destination folder' },
-				});
-				targetInput.oninput = async () => {
-					action.targetFolder = targetInput.value;
-					await notifyChange();
-				};
-				createToggleControl(container, 'Create folder if needed', !!action.createFolderIfMissing, async (value) => {
-					action.createFolderIfMissing = value;
-					await notifyChange();
-				});
-				break;
-			}
-			case 'applyTemplate': {
-				const templateInput = container.createEl('input', {
-					value: action.templatePath,
-					attr: { placeholder: 'Template path (relative to vault)' },
-				});
-				templateInput.oninput = async () => {
-					action.templatePath = templateInput.value;
-					await notifyChange();
-				};
-				const modeSelect = container.createEl('select');
-				['prepend', 'append', 'replace'].forEach((mode) => {
-					modeSelect.append(new Option(mode, mode, false, action.mode === mode));
-				});
-				modeSelect.onchange = async () => {
-					action.mode = modeSelect.value as typeof action.mode;
-					await notifyChange();
-				};
-				break;
-			}
-			case 'rename': {
-				const prefix = container.createEl('input', {
-					value: action.prefix ?? '',
-					attr: { placeholder: 'Prefix' },
-				});
-				prefix.oninput = async () => {
-					action.prefix = prefix.value || undefined;
-					await notifyChange();
-				};
-				const suffix = container.createEl('input', {
-					value: action.suffix ?? '',
-					attr: { placeholder: 'Suffix' },
-				});
-				suffix.oninput = async () => {
-					action.suffix = suffix.value || undefined;
-					await notifyChange();
-				};
-				const replace = container.createEl('input', {
-					value: action.replace ?? '',
-					attr: { placeholder: 'Replace basename' },
-				});
-				replace.oninput = async () => {
-					action.replace = replace.value || undefined;
-					await notifyChange();
-				};
-				break;
-			}
-			case 'addTag':
-			case 'removeTag': {
-				const tagInput = container.createEl('input', {
-					value: action.tag,
-					attr: { placeholder: '#tag' },
-				});
-				tagInput.oninput = async () => {
-					action.tag = tagInput.value;
-					await notifyChange();
-				};
-				break;
-			}
-			default:
-				container.createSpan({ text: 'Unsupported action type.' });
-		}
-	};
-
-	refresh();
+		});
+	});
 };
 
-const createToggleControl = (
+const renderActionFields = (container: HTMLElement, action: RuleAction, notifyChange: () => Promise<void>) => {
+	switch (action.type) {
+		case 'move': {
+			const targetInput = new TextComponent(container);
+			targetInput.inputEl.placeholder = 'Destination folder';
+			targetInput.setValue(action.targetFolder ?? '');
+			targetInput.onChange(async (value) => {
+				action.targetFolder = value;
+				await notifyChange();
+			});
+			break;
+		}
+		case 'applyTemplate': {
+			const templateInput = new TextComponent(container);
+			templateInput.inputEl.placeholder = 'Template path (relative to vault)';
+			templateInput.setValue(action.templatePath ?? '');
+			templateInput.onChange(async (value) => {
+				action.templatePath = value;
+				await notifyChange();
+			});
+			const modeSelect = new DropdownComponent(container);
+			modeSelect.addOption('prepend', 'prepend');
+			modeSelect.addOption('append', 'append');
+			modeSelect.addOption('replace', 'replace');
+			modeSelect.setValue(action.mode ?? 'prepend');
+			modeSelect.onChange(async (value) => {
+				action.mode = value as typeof action.mode;
+				await notifyChange();
+			});
+			break;
+		}
+		case 'rename': {
+			const prefix = new TextComponent(container);
+			prefix.inputEl.placeholder = 'Prefix';
+			prefix.setValue(action.prefix ?? '');
+			prefix.onChange(async (value) => {
+				action.prefix = value || undefined;
+				await notifyChange();
+			});
+			const suffix = new TextComponent(container);
+			suffix.inputEl.placeholder = 'Suffix';
+			suffix.setValue(action.suffix ?? '');
+			suffix.onChange(async (value) => {
+				action.suffix = value || undefined;
+				await notifyChange();
+			});
+			const replace = new TextComponent(container);
+			replace.inputEl.placeholder = 'Replace basename';
+			replace.setValue(action.replace ?? '');
+			replace.onChange(async (value) => {
+				action.replace = value || undefined;
+				await notifyChange();
+			});
+			break;
+		}
+		case 'addTag':
+		case 'removeTag': {
+			const tagInput = new TextComponent(container);
+			tagInput.inputEl.placeholder = '#tag';
+			tagInput.setValue(action.tag ?? '');
+			tagInput.onChange(async (value) => {
+				action.tag = value;
+				await notifyChange();
+			});
+			break;
+		}
+		default:
+			container.createSpan({ text: 'Unsupported action type.' });
+	}
+};
+
+const createFlagButton = (
 	container: HTMLElement,
-	label: string,
+	icon: string,
+	tooltip: string,
 	value: boolean,
 	onChange: (value: boolean) => Promise<void>
 ) => {
-	const wrapper = container.createDiv('anm-toggle');
-	const span = wrapper.createSpan({ text: label });
-	const input = wrapper.createEl('input', { type: 'checkbox' });
-	input.checked = value;
-	input.onchange = () => onChange(input.checked);
-	return { wrapper, span, input };
+	const button = new ExtraButtonComponent(container);
+	button.setIcon(icon);
+	button.setTooltip(tooltip);
+	const el = button.extraSettingsEl;
+	el.addClass('anm-flag-button');
+	const sync = (next: boolean) => {
+		el.toggleClass('is-active', next);
+	};
+	sync(value);
+	button.onClick(async () => {
+		const next = !el.hasClass('is-active');
+		sync(next);
+		await onChange(next);
+	});
+	return button;
+};
+
+	refresh();
 };
 
 const connectorLabel = (
@@ -403,19 +489,6 @@ const connectorLabel = (
 		return 'or';
 	}
 	return 'and';
-};
-
-const operatorLabel = (operator: FilterGroup['operator']) => {
-	switch (operator) {
-		case 'all':
-			return 'all of the following are true';
-		case 'any':
-			return 'any of the following are true';
-		case 'none':
-			return 'none of the following are true';
-		default:
-			return 'all of the following are true';
-	}
 };
 
 const createDefaultCondition = (): FilterCondition => ({
@@ -461,8 +534,9 @@ const toggleCollapsedRule = (id: string, collapsed: boolean) => {
 
 const isRuleCollapsed = (id: string) => collapsedRuleState.has(id);
 
-const updateCollapseControl = (button: HTMLButtonElement, collapsed: boolean) => {
-	button.setText(collapsed ? 'Expand' : 'Collapse');
+const updateCollapseControl = (button: ExtraButtonComponent, collapsed: boolean) => {
+	button.setIcon(collapsed ? 'chevron-down' : 'chevron-up');
+	button.setTooltip(collapsed ? 'Expand rule' : 'Collapse rule');
 };
 
 const createDefaultRule = (): FilterRule => ({
@@ -485,147 +559,199 @@ const injectFilterBuilderStyles = () => {
 	if (stylesInjected) return;
 	stylesInjected = true;
 	const style = document.createElement('style');
-	style.textContent = `
+style.textContent = `
+.anm-filter-toolbar .setting-item-control {
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+.anm-filter-toolbar .setting-item-info {
+	display: none;
+}
 .anm-filter-rules {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 }
 .anm-rule-card {
-	border: 1px solid var(--interactive-normal);
-	border-radius: 8px;
 	padding: 1rem;
-	background: var(--background-primary);
-	box-shadow: var(--shadow-s);
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-base-30);
+    background: var(--color-base-10);
 }
-.anm-rule-card.anm-collapsed > :not(.anm-rule-header) {
-	display: none;
+
+.anm-field-label-inline, .anm-logic-label {
+	color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.75em;
+    width: 3.5em;
 }
-.anm-rule-header {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+
+.anm-rule-header-setting {
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+.anm-rule-name-field {
+	display: inline-flex;
 	align-items: center;
-	justify-content: space-between;
+	gap: 0.4rem;
 }
 .anm-rule-name {
-	flex: 1 1 220px;
-	font-weight: 600;
-}
-.anm-toggle-group,
-.anm-condition-options {
-	display: flex;
-	gap: 0.5rem;
-	align-items: center;
-	flex-wrap: wrap;
-}
-.anm-btn-primary,
-.anm-btn-danger,
-.anm-btn-link,
-.anm-link-btn {
-	border: none;
-	cursor: pointer;
-	background: transparent;
-	color: var(--text-accent);
-	padding: 0.25rem 0.5rem;
-}
-.anm-btn-primary {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-radius: 4px;
-}
-.anm-btn-danger,
-.anm-btn-link.danger {
-	color: var(--text-error);
-}
-.anm-group {
-	border: 1px solid var(--interactive-border);
+	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
-	padding: 0.75rem;
+	padding: 0.35rem 0.6rem;
+	background: var(--background-secondary);
+}
+.anm-rule-body {
+	padding: 0.75rem 1rem 1rem;
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
-	background: var(--background-secondary);
 }
-.anm-rule-card.anm-collapsed > :not(.anm-rule-header) {
+.anm-rule-card.anm-collapsed .anm-rule-body {
+	display: none;
+}
+.anm-group.setting-item {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	padding: 0.75rem;
+	margin-top: 0.75rem;
+	background: var(--background-secondary);
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.75rem;
+}
+.anm-group--nested {
+	margin-left: 0.75rem;
+	width: calc(100% - 0.75rem);
+}
+.anm-group .setting-item-info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 100%;
+	margin:0;
+}
+.anm-group .setting-item-control {
 	display: none;
 }
 .anm-group-header {
 	display: flex;
-	align-items: center;
 	flex-wrap: wrap;
 	gap: 0.5rem;
 	font-weight: 600;
+	align-items: center;
 }
+.anm-group-actions {
+	margin-left: auto;
+	display: flex;
+	gap: 0.25rem;
+}
+.anm-group-mode {
+	min-width: 220px;
+}
+
 .anm-group-children {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: 0.75rem;
 }
 .anm-group-footer {
 	display: flex;
-	gap: 1rem;
-}
-.anm-group.anm-collapsed .anm-group-children,
-.anm-group.anm-collapsed .anm-group-footer {
-	display: none;
-}
-.anm-group.anm-collapsed .anm-chevron {
-	transform: rotate(-90deg);
-}
-.anm-condition-row {
-	display: flex;
-	align-items: flex-start;
 	gap: 0.5rem;
+	flex-wrap: wrap;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--background-modifier-border);
 }
-.anm-condition-connector {
-	width: 40px;
-	text-transform: lowercase;
-	color: var(--text-muted);
-	padding-top: 0.4rem;
-}
-.anm-condition {
-	flex: 1;
+.anm-condition-row.setting-item {
+	padding: 0.25rem 0 0 1rem;
+	border: none;
 	display: flex;
 	flex-direction: column;
-	gap: 0.4rem;
 }
-.anm-condition input,
-.anm-condition select {
-	width: 100%;
+.anm-condition-row .setting-item-control {
+	display: none;
+}
+.anm-condition-line {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+.anm-condition-line > .anm-logic-label {
+	flex: 0 0 auto;
+}
+.anm-condition-field--property {
+    width: 22%;
+}
+.anm-condition-field--value {
+    width:25%
+}
+.anm-condition-field {
+	flex: 0 0 auto;
+}
+.anm-condition-field--property input {
+	max-width: 100%;
+}
+.anm-condition-field--comparator select {
+}
+.anm-condition-field--value {
+	flex: 1 1 auto;
+}
+.anm-condition-field--value input {
+	max-width: 100%;
+}
+.anm-condition-tools {
+	display: flex;
+	gap: 0.25rem;
+	flex: 0 0 auto;
+	margin-left: auto;
+	align-items: center;
+}
+.anm-condition-flags {
+	display: flex;
+	gap: 0.25rem;
+}
+.anm-flag-button {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.2rem;
+	width: 26px;
+	height: 26px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+.anm-flag-button.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
 }
 .anm-actions-heading {
 	margin: 0;
 	font-weight: 600;
 }
-.anm-actions {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
+.anm-action-row.setting-item {
+	border-top: 1px solid var(--background-modifier-border);
 }
-.anm-action-row {
+.anm-action-line {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
 	align-items: center;
-	padding: 0.5rem;
-	border: 1px dashed var(--interactive-border);
-	border-radius: 6px;
 }
 .anm-action-fields {
 	display: flex;
-	flex: 1;
-	gap: 0.5rem;
 	flex-wrap: wrap;
+	gap: 0.5rem;
 }
-.anm-link-btn {
-	color: var(--text-accent);
-	text-decoration: underline;
-	background: transparent;
-	padding: 0;
+.anm-add-rule .setting-item-info,
+.anm-add-action .setting-item-info {
+	display: none;
+}
+.anm-add-rule .setting-item-control,
+.anm-add-action .setting-item-control {
+	justify-content: flex-start;
 }
 .anm-json-editor summary {
 	cursor: pointer;
@@ -633,7 +759,7 @@ const injectFilterBuilderStyles = () => {
 }
 .anm-json-editor textarea {
 	margin-top: 0.5rem;
-	border: 1px solid var(--interactive-border);
+	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
 	padding: 0.5rem;
 }
