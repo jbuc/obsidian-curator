@@ -1,4 +1,4 @@
-# Filter Engine Redesign
+# Criteria Engine Redesign
 
 ## Goal
 Build a flexible filtering system that can evaluate nested criteria (AND/OR/NOT) against any file metadata and then execute one or more actions (move, tag, etc.). The current single-line rule list is too limiting for multi-condition workflows.
@@ -13,7 +13,7 @@ Build a flexible filtering system that can evaluate nested criteria (AND/OR/NOT)
 
 The canonical interfaces now live in `filter/filterTypes.ts`. Highlights:
 
-### Filter Tree
+### Criteria Tree
 ```ts
 export interface FilterGroup {
 	type: 'group';
@@ -61,7 +61,7 @@ export interface FilterRule {
 ## UI Sketch
 1. **Rule List** – vertical list showing rule name, enabled toggle, action summary.
 2. **Rule Editor Pane** – split layout:
-   - **Filter Builder** – nested cards for groups and conditions, drag-and-drop ordering, operator dropdowns.
+   - **Criteria Builder** – nested cards for groups and conditions, drag-and-drop ordering, operator dropdowns.
    - **Action Builder** – list of actions with type selector (Move, Add Tag, Remove Tag). Each action has its own inputs.
 3. **Execution Settings** – rule ordering, stop-on-match toggle, scope (auto/manual).
 
@@ -77,16 +77,16 @@ export interface FilterRule {
 1. Should actions be able to run sequentially even when a move occurs?
 2. Do we need condition templates (e.g., quick “Has tag” buttons) for usability?
 3. How to surface validation errors for deeply nested groups?
-4. Should filters support time-based comparators (created date, modified date)?
+4. Should criteria support time-based comparators (created date, modified date)?
 
 ## Sample Rules
-`docs/filter-engine-sample.json` contains a rule set that mirrors the UI mockup shared earlier:
+`docs/criteria-engine-sample.json` contains a rule set that mirrors the UI mockup shared earlier:
 
 - Top-level `all` group requiring a date-like filename and a folder containing `project`.
 - Nested `any` and `all` groups to demonstrate combination logic.
 - Actions stack move + template application + rename prefix + tag removal.
 
-Load the file, copy the JSON into the settings panel, and enable the filter engine to test-drive the workflow.
+Load the file, copy the JSON into the settings panel, and enable the criteria engine to test-drive the workflow.
 
 ## Next Steps
 1. Define the comparator/action enums and their serialization format. ✅ (`filter/filterTypes.ts`)

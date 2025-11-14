@@ -39,17 +39,29 @@ export function evaluateFilterNode(node: FilterNode, context: FileContext): bool
 	return evaluateGroup(node, context);
 }
 
+type Quantifier = 'all' | 'any';
+type Truthiness = 'true' | 'false';
+
+function resolveGroupConfig(group: FilterGroup): { quantifier: Quantifier; truthiness: Truthiness } {
+	const quantifier: Quantifier = group.operator === 'any' ? 'any' : 'all';
+	const truthiness: Truthiness =
+		group.truthiness ?? (group.operator === 'none' ? 'false' : 'true');
+	return { quantifier, truthiness };
+}
+
 function evaluateGroup(group: FilterGroup, context: FileContext): boolean {
 	if (!group.children.length) {
 		return true;
 	}
-	if (group.operator === 'all') {
-		return group.children.every((child) => evaluateFilterNode(child, context));
+	const { quantifier, truthiness } = resolveGroupConfig(group);
+	if (truthiness === 'true') {
+		return quantifier === 'all'
+			? group.children.every((child) => evaluateFilterNode(child, context))
+			: group.children.some((child) => evaluateFilterNode(child, context));
 	}
-	if (group.operator === 'none') {
-		return group.children.every((child) => !evaluateFilterNode(child, context));
-	}
-	return group.children.some((child) => evaluateFilterNode(child, context));
+	return quantifier === 'all'
+		? group.children.every((child) => !evaluateFilterNode(child, context))
+		: group.children.some((child) => !evaluateFilterNode(child, context));
 }
 
 function evaluateCondition(condition: FilterCondition, context: FileContext): boolean {

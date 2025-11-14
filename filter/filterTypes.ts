@@ -19,6 +19,7 @@ export interface FilterCondition {
 export interface FilterGroup {
 	type: 'group';
 	operator: 'all' | 'any' | 'none';
+	truthiness?: 'true' | 'false';
 	children: Array<FilterGroup | FilterCondition>;
 }
 

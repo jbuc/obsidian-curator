@@ -217,11 +217,19 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 	}
 
 	private renderFilterEngineSettings() {
-		this.containerEl.createEl('h3', { text: 'Filter Engine (beta)' });
+		this.containerEl.createEl('h3', { text: 'Criteria Engine (beta)' });
 
-		new Setting(this.containerEl)
-			.setName('Enable filter engine')
-			.setDesc('Use the new nested filter/action workflow. Legacy rules are ignored while this is enabled.')
+		const introCard = this.containerEl.createDiv({ cls: 'anm-criteria-hero' });
+		const introDesc = document.createDocumentFragment();
+		introDesc.append(
+			'The criteria engine allows you to create advanced rulesets to manage files based on a combination of individual or grouped criteria (similar to the filter in bases).',
+			document.createElement('br'),
+			'To get started, enable the criteria engine, add a rule, create your criteria, and set your actions. Once ready, activate the rule to apply changes to your vault.'
+		);
+
+		new Setting(introCard)
+			.setName('Use the criteria engine')
+			.setDesc(introDesc)
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.filter_engine_enabled).onChange(async (value) => {
 					this.plugin.settings.filter_engine_enabled = value;
@@ -245,16 +253,16 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 	private renderLegacyRulesNotice() {
 		const legacyDesc = document.createDocumentFragment();
 		legacyDesc.append(
-			'The original single-line rules have been deprecated. Existing configurations continue to run when the filter engine is disabled, but they are no longer editable from the UI.',
+			'The original single-line rules have been deprecated. Existing configurations continue to run when the criteria engine is disabled, but they are no longer editable from the UI.',
 			this.containerEl.createEl('br'),
-			'To migrate, recreate the logic using the filter engine JSON editor above (see docs/filter-engine-sample.json for examples).'
+			'To migrate, recreate the logic using the criteria engine JSON editor above (see docs/criteria-engine-sample.json for examples).'
 		);
 		new Setting(this.containerEl).setName('Legacy rules').setDesc(legacyDesc);
 	}
 
 	private renderFilterRulesJsonEditor() {
 		const details = this.containerEl.createEl('details', { cls: 'anm-json-editor' });
-		details.createEl('summary', { text: 'Advanced: edit filter rules as JSON' });
+		details.createEl('summary', { text: 'Advanced: edit criteria rules as JSON' });
 
 		const wrapper = details.createDiv();
 		let draftFilterRules = JSON.stringify(this.plugin.settings.filter_rules ?? [], null, 2);
@@ -281,9 +289,9 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 				const parsed = JSON.parse(draftFilterRules) as FilterRule[];
 				this.plugin.settings.filter_rules = parsed;
 				await this.plugin.saveSettings();
-				new Notice('Filter rules saved.');
+				new Notice('Criteria rules saved.');
 			} catch (error) {
-				console.error('[Auto Note Mover] Invalid filter rules JSON', error);
+				console.error('[Auto Note Mover] Invalid criteria rules JSON', error);
 				new Notice('Invalid JSON. Changes not saved.');
 			}
 		};

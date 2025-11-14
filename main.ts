@@ -8,7 +8,7 @@ import type { FilterRule, FilterNode, RuleAction } from 'filter/filterTypes';
 export default class AutoNoteMover extends Plugin {
 	settings: AutoNoteMoverSettings;
 
-	async onload() {
+async onload() {
 		await this.loadSettings();
 		const propertyRules = this.settings.property_rules;
 		const excludedFolder = this.settings.excluded_folder;
