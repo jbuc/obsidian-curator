@@ -7,6 +7,16 @@ import type { FilterRule, FilterNode, RuleAction } from 'filter/filterTypes';
 
 export default class AutoNoteMover extends Plugin {
 	settings: AutoNoteMoverSettings;
+	private processingFiles = new Set<string>();
+	private ignoreUntil: Map<string, number> = new Map();
+	private metadataFingerprints = new Map<
+		string,
+		{
+			hash: string;
+			updatedAt: number;
+		}
+	>();
+	private ruleFingerprints = new Map<string, Map<string, string>>();
 
 async onload() {
 		await this.loadSettings();
@@ -18,6 +28,11 @@ async onload() {
 				return;
 			}
 			if (!(file instanceof TFile)) return;
+			if (file.extension.toLowerCase() !== 'md') return;
+			const now = Date.now();
+			if (this.processingFiles.has(file.path)) return;
+			const skipUntil = this.ignoreUntil.get(file.path);
+			if (skipUntil && skipUntil > now) return;
 
 			// The rename event with no basename change will be terminated.
 			if (oldPath && oldPath.split('/').pop() === file.basename + '.' + file.extension) {
@@ -45,6 +60,16 @@ async onload() {
 			// Disable AutoNoteMover when "AutoNoteMover: disable" is present in the frontmatter.
 			if (isFmDisable(fileCache)) {
 				return;
+			}
+
+			const metadataHash = computeMetadataFingerprint(file, fileCache);
+			if (metadataHash) {
+				const previous = this.metadataFingerprints.get(file.path);
+				if (previous?.hash === metadataHash) {
+					return;
+				}
+				this.metadataFingerprints.set(file.path, { hash: metadataHash, updatedAt: now });
+				this.pruneMetadataFingerprints(now);
 			}
 
 			const handledByFilterEngine = await this.tryFilterEngine(file, fileCache);
@@ -263,6 +288,9 @@ async onload() {
 		if (!this.settings.filter_engine_enabled) {
 			return false;
 		}
+		if (file.extension.toLowerCase() !== 'md') {
+			return false;
+		}
 		const rules = this.settings.filter_rules ?? [];
 		if (!rules.length) {
 			return false;
@@ -298,14 +326,58 @@ async onload() {
 		}
 
 		const actionContext = { app: this.app, file };
+		this.processingFiles.add(file.path);
 		for (const match of matches) {
+			const usedProps = collectProperties(match.rule.filter);
+			const ruleHash = computeRuleFingerprint(match.rule.id, usedProps, context);
+			const existingForFile = this.ruleFingerprints.get(file.path);
+			if (ruleHash && existingForFile?.get(match.rule.id) === ruleHash) {
+				continue;
+			}
 			try {
 				await executeActions(match.actions, actionContext);
+				if (ruleHash) {
+					if (!existingForFile) {
+						this.ruleFingerprints.set(file.path, new Map([[match.rule.id, ruleHash]]));
+					} else {
+						existingForFile.set(match.rule.id, ruleHash);
+					}
+				}
 			} catch (error) {
 				console.error('[Auto Note Mover] Failed to execute actions for rule', match.rule?.name, error);
 			}
 		}
+		const cooldownMs = METADATA_CACHE_COOLDOWN_MS;
+		this.ignoreUntil.set(file.path, Date.now() + cooldownMs);
+		this.processingFiles.delete(file.path);
+		window.setTimeout(() => this.ignoreUntil.delete(file.path), cooldownMs * 2);
 		return true;
+	}
+
+	private pruneMetadataFingerprints(now: number) {
+		const files = this.app.vault.getMarkdownFiles();
+		const limit = Math.max(100, Math.floor(files.length * METADATA_CACHE_RATIO));
+		const cutoff = now - METADATA_RETENTION_MS;
+
+		for (const [path, entry] of this.metadataFingerprints.entries()) {
+			if (entry.updatedAt < cutoff) {
+				this.metadataFingerprints.delete(path);
+				this.ruleFingerprints.delete(path);
+			}
+		}
+
+		if (this.metadataFingerprints.size <= limit) {
+			return;
+		}
+
+		const sorted = Array.from(this.metadataFingerprints.entries()).sort(
+			(a, b) => a[1].updatedAt - b[1].updatedAt
+		);
+		while (this.metadataFingerprints.size > limit && sorted.length) {
+			const [path] = sorted.shift()!;
+			this.metadataFingerprints.delete(path);
+			this.ruleFingerprints.delete(path);
+		}
 	}
 }
 
@@ -319,6 +391,115 @@ const filterNodeUsesProperty = (node: FilterNode, property: string): boolean => 
 		return node.property?.toLowerCase() === property;
 	}
 	return node.children.some((child) => filterNodeUsesProperty(child, property));
+};
+
+const collectProperties = (node: FilterNode): Set<string> => {
+	const props = new Set<string>();
+	const visit = (n: FilterNode) => {
+		if (n.type === 'condition') {
+			if (n.property) {
+				props.add(n.property.toLowerCase());
+			}
+		} else {
+			n.children.forEach(visit);
+		}
+	};
+	visit(node);
+	return props;
+};
+
+const computeRuleFingerprint = (
+	ruleId: string,
+	properties: Set<string>,
+	context: {
+		file: TFile;
+		path: string;
+		folder: string;
+		name: string;
+		extension: string;
+		tags: string[];
+		frontmatter: Record<string, unknown>;
+		cache: CachedMetadata | null;
+		content?: string;
+	}
+): string | null => {
+	if (!properties.size) return null;
+	const payload: Record<string, unknown> = { ruleId };
+	const normalizedProps = Array.from(properties).map((p) => p.toLowerCase());
+
+	const maybeAdd = (key: string, value: unknown) => {
+		if (value === undefined) return;
+		payload[key] = value;
+	};
+
+	if (normalizedProps.some((p) => p === 'file.path' || p === 'path')) {
+		maybeAdd('path', context.path);
+	}
+	if (normalizedProps.some((p) => p === 'file.folder' || p === 'folder')) {
+		maybeAdd('folder', context.folder);
+	}
+	if (normalizedProps.some((p) => p === 'file.name' || p === 'name' || p === 'file.basename' || p === 'basename')) {
+		maybeAdd('name', context.name);
+	}
+	if (normalizedProps.some((p) => p === 'file.extension' || p === 'extension')) {
+		maybeAdd('extension', context.extension);
+	}
+	if (normalizedProps.some((p) => p === 'tags' || p === 'tag')) {
+		maybeAdd('tags', context.tags);
+	}
+	const frontmatterProps = normalizedProps.filter((p) => p.startsWith('frontmatter.'));
+	if (frontmatterProps.length) {
+		const fm: Record<string, unknown> = {};
+		frontmatterProps.forEach((p) => {
+			const key = p.replace(/^frontmatter\./, '');
+			if (key) {
+				fm[key] = context.frontmatter?.[key];
+			}
+		});
+		maybeAdd('frontmatter', fm);
+	}
+	if (normalizedProps.some((p) => p === 'file.content' || p === 'content')) {
+		maybeAdd('content', context.content ?? null);
+	}
+
+	try {
+		return JSON.stringify(payload);
+	} catch (error) {
+		console.warn('[Auto Note Mover] Failed to compute rule fingerprint', error);
+		return null;
+	}
+};
+
+const computeMetadataFingerprint = (file: TFile, fileCache: CachedMetadata | null): string | null => {
+	if (!fileCache) return null;
+	const safeFrontmatter = (() => {
+		const fm = fileCache.frontmatter;
+		if (!fm) return null;
+		const clone: Record<string, unknown> = {};
+		Object.entries(fm).forEach(([key, value]) => {
+			if (key === 'position') return;
+			clone[key] = value;
+		});
+		return clone;
+	})();
+	const tags = getAllTags(fileCache) ?? [];
+	const info = {
+		path: file.path,
+		name: file.basename,
+		folder: file.parent?.path ?? '',
+		extension: file.extension,
+	};
+	const payload = {
+		info,
+		fm: safeFrontmatter,
+		tags,
+	};
+	try {
+		return JSON.stringify(payload);
+	} catch (error) {
+		console.warn('[Auto Note Mover] Failed to hash metadata for fingerprinting', error);
+		return null;
+	}
 };
 
 const convertLegacyPropertyRules = (legacyRules: AutoNoteMoverSettings['property_rules']): FilterRule[] => {
@@ -386,3 +567,7 @@ const convertLegacyPropertyRules = (legacyRules: AutoNoteMoverSettings['property
 
 	return migrated;
 };
+
+const METADATA_CACHE_COOLDOWN_MS = 1_000;
+const METADATA_RETENTION_MS = 30 * 60 * 1_000; // 30 minutes
+const METADATA_CACHE_RATIO = 0.5; // max 50% of vault markdown file count

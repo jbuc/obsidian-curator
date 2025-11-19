@@ -1,6 +1,10 @@
-# Auto Note Mover
+# Auto Organizer
 
-Auto Note Mover will automatically move the active notes to their respective folders according to the rules.
+Auto Organizer is a more complex and advanced fork of Auto Note Mover by Farux. It is designed to be used by users who need more control over the conditions necessary to trigger an action. It also provides the opportunity to conduct multiple actions on a note. It can be triggered either manually or automatically when a file has been changed.
+
+Examples:
+- if I add a frontmatter.status property of "done" to a note that has a frontmatter.type property of "task" the note will be moved to my "To Do/Tasks/Done" folder and will apply the template "task complete" to the note. 
+- if I add the tag "meeting" to a file it will prepend today's date to the title. 
 
 ## How it works
 
@@ -23,7 +27,6 @@ There are two types of triggers for Auto Note Mover.
 ### Automatic
 
 Triggered when you create, edit, or rename a note, and moves the note if it matches the rules.
-
 You can also activate the trigger with a command.
 
 ### Manual
@@ -36,7 +39,7 @@ You can trigger by command.
 
 1. Enable **Criteria engine** in the plugin settings (Settings → Community plugins → Auto Note Mover).
 2. Use the visual builder to compose your logic. Each rule lets you nest groups (All / Any + true/false) and add inline conditions for properties such as `file.name`, `file.folder`, `tags`, `frontmatter.status`, etc. Available comparators: `equals`, `contains`, `startsWith`, `endsWith`, `matchesRegex`, `exists`, `notExists`.
-3. Add one or more actions (move, apply template, rename, add/remove tag). Actions run top-to-bottom for that rule.
+3. Add one or more actions (move, apply template, rename, add/remove tag). Actions run top-to-bottom for that rule. If you have the Templater plugin enabled, the **apply template** action will try to route the template through Templater; otherwise it falls back to the raw file contents.
 4. Use the rule header toggles to enable/disable the rule or collapse it. “Stop on match” is implicit—leave later rules enabled only when you want them to run after a match.
 5. Need to share or bulk-edit rules? Expand **Advanced → Edit criteria rules as JSON** inside the settings pane. The current structure is also documented in `docs/criteria-engine-design.md` and you can copy starter examples from `docs/criteria-engine-sample.json`.
 

@@ -243,7 +243,7 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 		}
 
 		const builderContainer = this.containerEl.createDiv({ cls: 'anm-filter-builder-section' });
-		renderFilterRulesEditor(builderContainer, this.plugin.settings.filter_rules ?? [], async () => {
+		renderFilterRulesEditor(this.app, builderContainer, this.plugin.settings.filter_rules ?? [], async () => {
 			await this.plugin.saveSettings();
 		});
 

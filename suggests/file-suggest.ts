@@ -6,7 +6,7 @@
 // *    Availability: https://github.com/liamcain/obsidian-periodic-notes
 // *
 // ***************************************************************************************
-import { TAbstractFile, TFolder } from 'obsidian';
+import { TAbstractFile, TFolder, TFile } from 'obsidian';
 
 import { TextInputSuggest } from './suggest';
 
@@ -62,6 +62,32 @@ export class FolderSuggest extends TextInputSuggest<TFolder> {
 	}
 
 	selectSuggestion(file: TFolder): void {
+		this.inputEl.value = file.path;
+		this.inputEl.trigger('input');
+		this.close();
+	}
+}
+
+export class TemplateFileSuggest extends TextInputSuggest<TFile> {
+	getSuggestions(inputStr: string): TFile[] {
+		const abstractFiles = this.app.vault.getAllLoadedFiles();
+		const files: TFile[] = [];
+		const lower = inputStr.toLowerCase();
+
+		abstractFiles.forEach((file: TAbstractFile) => {
+			if (file instanceof TFile && file.path.toLowerCase().contains(lower)) {
+				files.push(file);
+			}
+		});
+
+		return files;
+	}
+
+	renderSuggestion(file: TFile, el: HTMLElement): void {
+		el.setText(file.path);
+	}
+
+	selectSuggestion(file: TFile): void {
 		this.inputEl.value = file.path;
 		this.inputEl.trigger('input');
 		this.close();

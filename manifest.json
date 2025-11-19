@@ -1,10 +1,10 @@
 {
-	"id": "auto-note-mover",
-	"name": "My Auto Note Mover",
-	"version": "1.2.2",
+	"id": "auto-organizer",
+	"name": "Auto Organizer",
+	"version": "0.1",
 	"minAppVersion": "0.12.0",
-	"description": "Auto Note Mover will automatically update the active note based on user configured rules.",
-	"author": "faru",
-	"authorUrl": "https://github.com/farux/",
+	"description": "This fork of Farux's Auto Note Mover that allows the advanced configuration of nestable rules and multiple actions.",
+	"author": "jbuc",
+	"authorUrl": "https://github.com/jbuc/",
 	"isDesktopOnly": false
 }

@@ -1,5 +1,14 @@
 import { FilterRule, FilterNode, FilterGroup, FilterCondition, RuleAction } from 'filter/filterTypes';
-import { Setting, ExtraButtonComponent, ButtonComponent, DropdownComponent, TextComponent, ToggleComponent } from 'obsidian';
+import {
+	Setting,
+	ExtraButtonComponent,
+	ButtonComponent,
+	DropdownComponent,
+	TextComponent,
+	ToggleComponent,
+	App,
+} from 'obsidian';
+import { TemplateFileSuggest } from 'suggests/file-suggest';
 
 type OnChange = () => Promise<void> | void;
 
@@ -46,6 +55,7 @@ const updateGroupOperator = (group: FilterGroup, quantifier: QuantifierOption, t
 const getGroupModeValue = (group: FilterGroup) => `${getGroupQuantifier(group)}:${getGroupTruthiness(group)}`;
 
 export const renderFilterRulesEditor = (
+	app: App,
 	containerEl: HTMLElement,
 	rules: FilterRule[],
 	onChange: OnChange
@@ -187,7 +197,7 @@ export const renderFilterRulesEditor = (
 		const body = card.createDiv('anm-rule-body');
 		renderFilterNodeEditor(body, rule.filter, null, null, notify, notifyAndRefresh, true);
 		body.createEl('p', { text: 'Make the following changes:', cls: 'anm-actions-heading' });
-		renderActionsEditor(body, rule.actions, notify, notifyAndRefresh);
+		renderActionsEditor(app, body, rule.actions, notify, notifyAndRefresh);
 	};
 
 	const renderFilterNodeEditor = (
@@ -329,6 +339,7 @@ export const renderFilterRulesEditor = (
 	};
 
 const renderActionsEditor = (
+	app: App,
 	container: HTMLElement,
 	actions: RuleAction[],
 	notifyChange: () => Promise<void>,
@@ -351,7 +362,7 @@ const renderActionsEditor = (
 		});
 
 		const fieldsWrapper = line.createDiv('anm-action-fields');
-		renderActionFields(fieldsWrapper, action, notifyChange);
+		renderActionFields(app, fieldsWrapper, action, notifyChange);
 
 		actionSetting.addExtraButton((button) => {
 			button.setIcon('trash');
@@ -376,7 +387,7 @@ const renderActionsEditor = (
 	});
 };
 
-const renderActionFields = (container: HTMLElement, action: RuleAction, notifyChange: () => Promise<void>) => {
+const renderActionFields = (app: App, container: HTMLElement, action: RuleAction, notifyChange: () => Promise<void>) => {
 	switch (action.type) {
 		case 'move': {
 			const targetInput = new TextComponent(container);
@@ -392,6 +403,7 @@ const renderActionFields = (container: HTMLElement, action: RuleAction, notifyCh
 			const templateInput = new TextComponent(container);
 			templateInput.inputEl.placeholder = 'Template path (relative to vault)';
 			templateInput.setValue(action.templatePath ?? '');
+			new TemplateFileSuggest(app, templateInput.inputEl);
 			templateInput.onChange(async (value) => {
 				action.templatePath = value;
 				await notifyChange();
