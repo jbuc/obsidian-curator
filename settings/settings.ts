@@ -1,9 +1,9 @@
 import AutoNoteMover from 'main';
 import { App, PluginSettingTab } from 'obsidian';
 import { FilterRule } from 'filter/filterTypes';
-import { renderFilterEngineSettings } from './ui/FilterEngineSettings';
+import { renderRuleGroupsSection, renderTrackedProperties, renderApplyRulesButton, renderFilterRulesJsonEditor, renderDryRunButton } from './ui/FilterEngineSettings';
 import { renderExcludedFolderSettings } from './ui/ExcludedFolderSettings';
-import { renderGeneralSettings, renderLegacyRulesNotice } from './ui/GeneralSettings';
+import { renderGeneralSettings, renderDebugSettings } from './ui/GeneralSettings';
 
 export interface PropertyRule {
 	property: string;
@@ -19,6 +19,7 @@ export interface ExcludedFolder {
 export interface TrackedProperty {
 	key: string;
 	label?: string;
+	weight?: number;
 }
 
 export interface RuleGroup {
@@ -39,6 +40,8 @@ export interface AutoNoteMoverSettings {
 	rule_groups: RuleGroup[];
 	filter_rules_migrated?: boolean;
 	tracked_properties: TrackedProperty[];
+	conflict_resolution: 'overwrite' | 'skip' | 'rename';
+	debug_mode: boolean;
 }
 
 export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
@@ -52,17 +55,20 @@ export const DEFAULT_SETTINGS: AutoNoteMoverSettings = {
 	rule_groups: [],
 	filter_rules_migrated: false,
 	tracked_properties: [
-		{ key: 'file.path', label: 'path' },
-		{ key: 'file.folder', label: 'folder' },
-		{ key: 'file.name', label: 'name' },
-		{ key: 'file.extension', label: 'extension' },
-		{ key: 'file.tags', label: 'tags' },
-		{ key: 'prop.type', label: 'type' },
+		{ key: 'file.path', label: 'path', weight: 1 },
+		{ key: 'file.folder', label: 'folder', weight: 1 },
+		{ key: 'file.name', label: 'name', weight: 1 },
+		{ key: 'file.extension', label: 'extension', weight: 1 },
+		{ key: 'file.tags', label: 'tags', weight: 10 },
+		{ key: 'prop.type', label: 'type', weight: 5 },
 	],
+	conflict_resolution: 'rename',
+	debug_mode: false,
 };
 
 export class AutoNoteMoverSettingTab extends PluginSettingTab {
 	plugin: AutoNoteMover;
+	activeTab: 'rules' | 'universal' | 'diagnosis' = 'rules';
 
 	constructor(app: App, plugin: AutoNoteMover) {
 		super(app, plugin);
@@ -77,9 +83,43 @@ export class AutoNoteMoverSettingTab extends PluginSettingTab {
 
 		const refresh = () => this.display();
 
-		renderGeneralSettings(this.app, this.plugin, containerEl, refresh);
-		renderFilterEngineSettings(this.app, this.plugin, containerEl, refresh);
-		renderLegacyRulesNotice(containerEl);
-		renderExcludedFolderSettings(this.app, this.plugin, containerEl, refresh);
+		// Tab Header
+		const tabHeader = containerEl.createDiv('anm-settings-tabs');
+		tabHeader.style.display = 'flex';
+		tabHeader.style.marginBottom = '20px';
+		tabHeader.style.borderBottom = '1px solid var(--background-modifier-border)';
+
+		const createTab = (id: typeof this.activeTab, label: string) => {
+			const tab = tabHeader.createDiv('anm-settings-tab');
+			tab.innerText = label;
+			tab.style.padding = '10px 20px';
+			tab.style.cursor = 'pointer';
+			tab.style.fontWeight = this.activeTab === id ? 'bold' : 'normal';
+			tab.style.borderBottom = this.activeTab === id ? '2px solid var(--interactive-accent)' : 'none';
+			tab.style.color = this.activeTab === id ? 'var(--text-normal)' : 'var(--text-muted)';
+
+			tab.onclick = () => {
+				this.activeTab = id;
+				refresh();
+			};
+		};
+
+		createTab('rules', 'Rules');
+		createTab('universal', 'Universal Settings');
+		createTab('diagnosis', 'Diagnosis');
+
+		// Tab Content
+		if (this.activeTab === 'rules') {
+			renderRuleGroupsSection(this.app, this.plugin, containerEl, refresh);
+		} else if (this.activeTab === 'universal') {
+			renderGeneralSettings(this.app, this.plugin, containerEl, refresh);
+			renderTrackedProperties(this.plugin, containerEl, refresh);
+			renderExcludedFolderSettings(this.app, this.plugin, containerEl, refresh);
+		} else if (this.activeTab === 'diagnosis') {
+			renderDebugSettings(this.plugin, containerEl, refresh);
+			renderDryRunButton(this.plugin, containerEl);
+			renderApplyRulesButton(this.plugin, containerEl);
+			renderFilterRulesJsonEditor(this.plugin, containerEl, refresh);
+		}
 	}
 }

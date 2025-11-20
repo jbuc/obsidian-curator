@@ -1,17 +1,20 @@
 import { CoreService } from '../services/CoreService';
 import { MetadataService } from '../services/MetadataService';
+import { HistoryService } from '../services/HistoryService';
 import { App, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../settings/settings';
 
 describe('CoreService', () => {
     let app: App;
     let metadataService: MetadataService;
+    let historyService: HistoryService;
     let coreService: CoreService;
 
     beforeEach(() => {
         app = new App();
         metadataService = new MetadataService(app);
-        coreService = new CoreService(app, DEFAULT_SETTINGS, metadataService);
+        historyService = new HistoryService(app);
+        coreService = new CoreService(app, DEFAULT_SETTINGS, metadataService, historyService);
     });
 
     test('should ignore non-markdown files', async () => {

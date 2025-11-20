@@ -6,12 +6,18 @@ import { evaluateRules } from 'filter/filterEvaluator';
 import { executeActions } from 'filter/actionExecutor';
 import { FilterNode } from 'filter/filterTypes';
 import { MetadataService } from './MetadataService';
+import { HistoryService } from './HistoryService';
 
 export class CoreService {
     private processingFiles = new Set<string>();
     private runningApplyPromise: Promise<void> | null = null;
 
-    constructor(private app: App, private settings: AutoNoteMoverSettings, private metadataService: MetadataService) { }
+    constructor(
+        private app: App,
+        private settings: AutoNoteMoverSettings,
+        private metadataService: MetadataService,
+        private historyService: HistoryService
+    ) { }
 
     updateSettings(settings: AutoNoteMoverSettings) {
         this.settings = settings;
@@ -22,6 +28,10 @@ export class CoreService {
             return;
         }
         if (file.extension.toLowerCase() !== 'md') return;
+
+        if (this.settings.debug_mode) {
+            console.log(`[Auto Note Mover] Checking file: ${file.path}`);
+        }
 
         if (this.processingFiles.has(file.path)) return;
         if (this.metadataService.shouldIgnore(file)) return;
@@ -47,11 +57,14 @@ export class CoreService {
         }
 
         if (!this.metadataService.hasMetadataChanged(file, fileCache, caller)) {
+            if (this.settings.debug_mode) {
+                console.log(`[Auto Note Mover] Metadata not changed for ${file.path}, skipping.`);
+            }
             return;
         }
 
-        const handledByFilterEngine = await this.tryFilterEngine(file, fileCache);
-        if (handledByFilterEngine) {
+        const { handled } = await this.tryFilterEngine(file, fileCache);
+        if (handled) {
             return;
         }
 
@@ -149,19 +162,19 @@ export class CoreService {
         }
     }
 
-    private async tryFilterEngine(file: TFile, fileCache: CachedMetadata | null): Promise<boolean> {
+    async getMatchingRules(file: TFile, fileCache: CachedMetadata | null): Promise<{ rule: FilterRule; actions: any[] }[]> {
         if (!this.settings.filter_engine_enabled) {
-            return false;
+            return [];
         }
         if (this.isInExcludedFolder(file)) {
-            return false;
+            return [];
         }
         if (file.extension.toLowerCase() !== 'md') {
-            return false;
+            return [];
         }
         const rules = this.collectEnabledRules(this.settings.rule_groups ?? [], this.settings.filter_rules ?? []);
         if (!rules.length) {
-            return false;
+            return [];
         }
 
         const requiresContent = this.rulesRequireProperty(rules, 'file.content');
@@ -188,24 +201,55 @@ export class CoreService {
             content,
         };
 
-        const matches = evaluateRules(rules, context);
+        return evaluateRules(rules, context, this.settings.tracked_properties, this.settings.debug_mode);
+    }
+
+    private async tryFilterEngine(file: TFile, fileCache: CachedMetadata | null, dryRun = false): Promise<{ handled: boolean; logs: string[] }> {
+        const matches = await this.getMatchingRules(file, fileCache);
         if (!matches.length) {
-            return false;
+            if (this.settings.debug_mode && !dryRun) {
+                console.log(`[Auto Note Mover] No matching rules for ${file.path}`);
+            }
+            return { handled: false, logs: [] };
         }
 
-        const actionContext = { app: this.app, file };
-        this.processingFiles.add(file.path);
+        if (this.settings.debug_mode && !dryRun) {
+            console.log(`[Auto Note Mover] Found ${matches.length} matching rules for ${file.path}`);
+        }
+
+        const actionContext = {
+            app: this.app,
+            file,
+            historyService: this.historyService,
+            conflictResolution: this.settings.conflict_resolution,
+            dryRun,
+            trackedProperties: this.settings.tracked_properties
+        };
+
+        if (!dryRun) {
+            this.processingFiles.add(file.path);
+        }
+
+        const allLogs: string[] = [];
         for (const match of matches) {
             try {
-                await executeActions(match.actions, actionContext);
+                if (this.settings.debug_mode && !dryRun) {
+                    console.log(`[Auto Note Mover] Executing actions for rule: ${match.rule.name}`);
+                }
+                const logs = await executeActions(match.actions, actionContext);
+                if (dryRun && logs.length > 0) {
+                    allLogs.push(`Rule "${match.rule.name}": ${logs.join(', ')}`);
+                }
             } catch (error) {
                 console.error('[Auto Note Mover] Failed to execute actions for rule', match.rule?.name, error);
             }
         }
 
-        this.metadataService.setIgnoreCooldown(file);
-        this.processingFiles.delete(file.path);
-        return true;
+        if (!dryRun) {
+            this.metadataService.setIgnoreCooldown(file);
+            this.processingFiles.delete(file.path);
+        }
+        return { handled: true, logs: allLogs };
     }
 
     async applyRulesToAllFiles(): Promise<void> {
@@ -224,8 +268,8 @@ export class CoreService {
                     if (excluded) {
                         continue;
                     }
-                    const result = await this.tryFilterEngine(file, cache ?? null);
-                    if (result) {
+                    const { handled } = await this.tryFilterEngine(file, cache ?? null);
+                    if (handled) {
                         changed += 1;
                     }
                     processed += 1;
@@ -245,6 +289,21 @@ export class CoreService {
             }
         })();
         return this.runningApplyPromise;
+    }
+
+    async runDryRun(): Promise<string[]> {
+        const files = this.app.vault.getMarkdownFiles();
+        const report: string[] = [];
+        for (const file of files) {
+            if (this.isInExcludedFolder(file)) continue;
+            const cache = this.app.metadataCache.getFileCache(file);
+            const { handled, logs } = await this.tryFilterEngine(file, cache ?? null, true);
+            if (handled && logs.length > 0) {
+                report.push(`File: ${file.path}`);
+                logs.forEach(log => report.push(`  - ${log}`));
+            }
+        }
+        return report;
     }
 
     private isInExcludedFolder(file: TFile): boolean {

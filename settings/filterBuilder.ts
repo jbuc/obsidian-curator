@@ -8,7 +8,7 @@ import {
 	ToggleComponent,
 	App,
 } from 'obsidian';
-import { TemplateFileSuggest } from 'suggests/file-suggest';
+import { TemplateFileSuggest, FolderSuggest } from 'suggests/file-suggest';
 import { arrayMove } from 'utils/Utils';
 
 type OnChange = () => Promise<void> | void;
@@ -34,11 +34,11 @@ const GROUP_MODES: Array<{
 	quantifier: QuantifierOption;
 	truthiness: TruthinessOption;
 }> = [
-	{ value: 'all:true', label: 'All of the following are true', quantifier: 'all', truthiness: 'true' },
-	{ value: 'any:true', label: 'Any of the following are true', quantifier: 'any', truthiness: 'true' },
-	{ value: 'all:false', label: 'All of the following are false', quantifier: 'all', truthiness: 'false' },
-	{ value: 'any:false', label: 'Any of the following are false', quantifier: 'any', truthiness: 'false' },
-];
+		{ value: 'all:true', label: 'All of the following are true', quantifier: 'all', truthiness: 'true' },
+		{ value: 'any:true', label: 'Any of the following are true', quantifier: 'any', truthiness: 'true' },
+		{ value: 'all:false', label: 'All of the following are false', quantifier: 'all', truthiness: 'false' },
+		{ value: 'any:false', label: 'Any of the following are false', quantifier: 'any', truthiness: 'false' },
+	];
 
 const getGroupQuantifier = (group: FilterGroup): QuantifierOption => (group.operator === 'any' ? 'any' : 'all');
 
@@ -167,18 +167,16 @@ export const renderFilterRulesEditor = (
 			});
 		});
 
-		headerSetting.addExtraButton((button) => {
-			const sync = () => {
-				button.setIcon(rule.stopOnMatch ? 'hand' : 'hand-left');
-				button.setTooltip(rule.stopOnMatch ? 'Stop processing later groups when matched' : 'Continue to later groups when matched');
-			};
-			sync();
-			button.onClick(async () => {
-				rule.stopOnMatch = !rule.stopOnMatch;
-				sync();
+		createFlagButton(
+			headerSetting.controlEl,
+			'hand',
+			'Stop processing later groups when matched',
+			!!rule.stopOnMatch,
+			async (value) => {
+				rule.stopOnMatch = value;
 				await notify();
-			});
-		});
+			}
+		);
 
 		if (index > 0) {
 			headerSetting.addExtraButton((button) => {
@@ -218,7 +216,7 @@ export const renderFilterRulesEditor = (
 			updateCollapseControl(collapseButton, initiallyCollapsed);
 		}
 
-			headerSetting.addExtraButton((button) => {
+		headerSetting.addExtraButton((button) => {
 			button.setIcon('copy');
 			button.setTooltip('Duplicate rule');
 			button.onClick(async () => {
@@ -227,7 +225,7 @@ export const renderFilterRulesEditor = (
 				await notifyAndRefresh();
 			});
 		});
-			headerSetting.addExtraButton((button) => {
+		headerSetting.addExtraButton((button) => {
 			button.setIcon('trash');
 			button.setTooltip('Delete rule');
 			button.onClick(async () => {
@@ -411,195 +409,206 @@ export const renderFilterRulesEditor = (
 		}
 	};
 
-const renderActionsEditor = (
-	app: App,
-	container: HTMLElement,
-	actions: RuleAction[],
-	trackedProperties: TrackedProperty[],
-	notifyChange: () => Promise<void>,
-	notifyAndRefresh: () => Promise<void>
-) => {
-	actions.forEach((action, index) => {
-		const actionSetting = new Setting(container);
-		actionSetting.settingEl.addClass('anm-action-row');
-		actionSetting.setName('');
-		actionSetting.setDesc('');
-		actionSetting.infoEl.empty();
-		const line = actionSetting.infoEl.createDiv('anm-action-line');
-		const typeWrapper = line.createDiv('anm-action-type');
-		const typeSelect = new DropdownComponent(typeWrapper);
-		ACTION_TYPES.forEach((type) => typeSelect.addOption(type, type));
-		typeSelect.setValue(action.type);
-		typeSelect.onChange(async (value) => {
-			actions[index] = createDefaultAction(value as RuleAction['type']);
-			await notifyAndRefresh();
+	const renderActionsEditor = (
+		app: App,
+		container: HTMLElement,
+		actions: RuleAction[],
+		trackedProperties: TrackedProperty[],
+		notifyChange: () => Promise<void>,
+		notifyAndRefresh: () => Promise<void>
+	) => {
+		actions.forEach((action, index) => {
+			const actionSetting = new Setting(container);
+			actionSetting.settingEl.addClass('anm-action-row');
+			actionSetting.setName('');
+			actionSetting.setDesc('');
+			actionSetting.infoEl.empty();
+			const line = actionSetting.infoEl.createDiv('anm-action-line');
+			const typeWrapper = line.createDiv('anm-action-type');
+			const typeSelect = new DropdownComponent(typeWrapper);
+			ACTION_TYPES.forEach((type) => typeSelect.addOption(type, type));
+			typeSelect.setValue(action.type);
+			typeSelect.onChange(async (value) => {
+				actions[index] = createDefaultAction(value as RuleAction['type']);
+				await notifyAndRefresh();
+			});
+
+			const fieldsWrapper = line.createDiv('anm-action-fields');
+			renderActionFields(app, fieldsWrapper, action, trackedProperties, notifyChange);
+
+			if (index > 0) {
+				actionSetting.addExtraButton((button) => {
+					button.setIcon('up-chevron-glyph');
+					button.setTooltip('Move action up');
+					button.onClick(async () => {
+						arrayMove(actions, index, index - 1);
+						await notifyAndRefresh();
+					});
+				});
+			}
+			if (index < actions.length - 1) {
+				actionSetting.addExtraButton((button) => {
+					button.setIcon('down-chevron-glyph');
+					button.setTooltip('Move action down');
+					button.onClick(async () => {
+						arrayMove(actions, index, index + 1);
+						await notifyAndRefresh();
+					});
+				});
+			}
+
+			actionSetting.addExtraButton((button) => {
+				button.setIcon('trash');
+				button.setTooltip('Remove action');
+				button.onClick(async () => {
+					actions.splice(index, 1);
+					await notifyAndRefresh();
+				});
+			});
 		});
 
-		const fieldsWrapper = line.createDiv('anm-action-fields');
-		renderActionFields(app, fieldsWrapper, action, trackedProperties, notifyChange);
-
-		if (index > 0) {
-			actionSetting.addExtraButton((button) => {
-				button.setIcon('up-chevron-glyph');
-				button.setTooltip('Move action up');
-				button.onClick(async () => {
-					arrayMove(actions, index, index - 1);
-					await notifyAndRefresh();
-				});
-			});
-		}
-		if (index < actions.length - 1) {
-			actionSetting.addExtraButton((button) => {
-				button.setIcon('down-chevron-glyph');
-				button.setTooltip('Move action down');
-				button.onClick(async () => {
-					arrayMove(actions, index, index + 1);
-					await notifyAndRefresh();
-				});
-			});
-		}
-
-		actionSetting.addExtraButton((button) => {
-			button.setIcon('trash');
-			button.setTooltip('Remove action');
+		const addActionSetting = new Setting(container);
+		addActionSetting.settingEl.addClass('anm-add-action');
+		addActionSetting.setName('');
+		addActionSetting.setDesc('');
+		addActionSetting.addButton((button) => {
+			button.setButtonText('+ add action');
 			button.onClick(async () => {
-				actions.splice(index, 1);
+				actions.push(createDefaultAction('move'));
 				await notifyAndRefresh();
 			});
 		});
-	});
-
-	const addActionSetting = new Setting(container);
-	addActionSetting.settingEl.addClass('anm-add-action');
-	addActionSetting.setName('');
-	addActionSetting.setDesc('');
-	addActionSetting.addButton((button) => {
-		button.setButtonText('+ add action');
-		button.onClick(async () => {
-			actions.push(createDefaultAction('move'));
-			await notifyAndRefresh();
-		});
-	});
-};
-
-const renderActionFields = (
-	app: App,
-	container: HTMLElement,
-	action: RuleAction,
-	trackedProperties: TrackedProperty[],
-	notifyChange: () => Promise<void>
-) => {
-	switch (action.type) {
-		case 'move': {
-			const targetInput = new TextComponent(container);
-			targetInput.inputEl.placeholder = 'Destination folder';
-			targetInput.setValue(action.targetFolder ?? '');
-			targetInput.onChange(async (value) => {
-				action.targetFolder = value;
-				await notifyChange();
-			});
-			break;
-		}
-		case 'applyTemplate': {
-			const templateInput = new TextComponent(container);
-			templateInput.inputEl.placeholder = 'Template path (relative to vault)';
-			templateInput.setValue(action.templatePath ?? '');
-			new TemplateFileSuggest(app, templateInput.inputEl);
-			templateInput.onChange(async (value) => {
-				action.templatePath = value;
-				await notifyChange();
-			});
-			const modeSelect = new DropdownComponent(container);
-			modeSelect.addOption('prepend', 'prepend');
-			modeSelect.addOption('append', 'append');
-			modeSelect.addOption('replace', 'replace');
-			modeSelect.setValue(action.mode ?? 'prepend');
-			modeSelect.onChange(async (value) => {
-				action.mode = value as typeof action.mode;
-				await notifyChange();
-			});
-			break;
-		}
-		case 'rename': {
-			const prefix = new TextComponent(container);
-			prefix.inputEl.placeholder = 'Prefix';
-			prefix.setValue(action.prefix ?? '');
-			prefix.onChange(async (value) => {
-				action.prefix = value || undefined;
-				await notifyChange();
-			});
-			const suffix = new TextComponent(container);
-			suffix.inputEl.placeholder = 'Suffix';
-			suffix.setValue(action.suffix ?? '');
-			suffix.onChange(async (value) => {
-				action.suffix = value || undefined;
-				await notifyChange();
-			});
-			const replace = new TextComponent(container);
-			replace.inputEl.placeholder = 'Replace basename';
-			replace.setValue(action.replace ?? '');
-			replace.onChange(async (value) => {
-				action.replace = value || undefined;
-				await notifyChange();
-			});
-			break;
-		}
-		case 'setProperty': {
-			const propertySelect = new DropdownComponent(container);
-			propertySelect.addOption('', 'Property');
-			const definedProps = trackedProperties
-				.map((entry) => ({
-					key: entry.key?.trim(),
-					label: entry.label?.trim(),
-				}))
-				.filter((entry) => !!entry.key) as Array<{ key: string; label?: string }>;
-			definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
-			const initial = action.property ?? '';
-			if (initial && !definedProps.find((entry) => entry.key === initial)) {
-				propertySelect.addOption(initial, initial);
-			}
-			propertySelect.setValue(initial);
-			propertySelect.onChange(async (value) => {
-				action.property = value;
-				await notifyChange();
-			});
-			const valueInput = new TextComponent(container);
-			valueInput.inputEl.placeholder = 'Value';
-			valueInput.setValue(action.value ?? '');
-			valueInput.onChange(async (value) => {
-				action.value = value;
-				await notifyChange();
-			});
-			break;
-		}
-		default:
-			container.createSpan({ text: 'Unsupported action type.' });
-	}
-};
-
-const createFlagButton = (
-	container: HTMLElement,
-	icon: string,
-	tooltip: string,
-	value: boolean,
-	onChange: (value: boolean) => Promise<void>
-) => {
-	const button = new ExtraButtonComponent(container);
-	button.setIcon(icon);
-	button.setTooltip(tooltip);
-	const el = button.extraSettingsEl;
-	el.addClass('anm-flag-button');
-	const sync = (next: boolean) => {
-		el.toggleClass('is-active', next);
 	};
-	sync(value);
-	button.onClick(async () => {
-		const next = !el.hasClass('is-active');
-		sync(next);
-		await onChange(next);
-	});
-	return button;
-};
+
+	const renderActionFields = (
+		app: App,
+		container: HTMLElement,
+		action: RuleAction,
+		trackedProperties: TrackedProperty[],
+		notifyChange: () => Promise<void>
+	) => {
+		switch (action.type) {
+			case 'move': {
+				const targetInput = new TextComponent(container);
+				targetInput.inputEl.placeholder = 'Destination folder';
+				targetInput.setValue(action.targetFolder ?? '');
+				new FolderSuggest(app, targetInput.inputEl);
+				targetInput.onChange(async (value) => {
+					action.targetFolder = value;
+					await notifyChange();
+				});
+
+				const createFolderSetting = new Setting(container);
+				createFolderSetting.setName('Create folder if it doesn\'t exist');
+				createFolderSetting.addToggle(toggle => {
+					toggle.setValue(action.createFolderIfMissing ?? false);
+					toggle.onChange(async (value) => {
+						action.createFolderIfMissing = value;
+						await notifyChange();
+					});
+				});
+				break;
+			}
+			case 'applyTemplate': {
+				const templateInput = new TextComponent(container);
+				templateInput.inputEl.placeholder = 'Template path (relative to vault)';
+				templateInput.setValue(action.templatePath ?? '');
+				new TemplateFileSuggest(app, templateInput.inputEl);
+				templateInput.onChange(async (value) => {
+					action.templatePath = value;
+					await notifyChange();
+				});
+				const modeSelect = new DropdownComponent(container);
+				modeSelect.addOption('prepend', 'prepend');
+				modeSelect.addOption('append', 'append');
+				modeSelect.addOption('replace', 'replace');
+				modeSelect.setValue(action.mode ?? 'prepend');
+				modeSelect.onChange(async (value) => {
+					action.mode = value as typeof action.mode;
+					await notifyChange();
+				});
+				break;
+			}
+			case 'rename': {
+				const prefix = new TextComponent(container);
+				prefix.inputEl.placeholder = 'Prefix';
+				prefix.setValue(action.prefix ?? '');
+				prefix.onChange(async (value) => {
+					action.prefix = value || undefined;
+					await notifyChange();
+				});
+				const suffix = new TextComponent(container);
+				suffix.inputEl.placeholder = 'Suffix';
+				suffix.setValue(action.suffix ?? '');
+				suffix.onChange(async (value) => {
+					action.suffix = value || undefined;
+					await notifyChange();
+				});
+				const replace = new TextComponent(container);
+				replace.inputEl.placeholder = 'Replace basename';
+				replace.setValue(action.replace ?? '');
+				replace.onChange(async (value) => {
+					action.replace = value || undefined;
+					await notifyChange();
+				});
+				break;
+			}
+			case 'setProperty': {
+				const propertySelect = new DropdownComponent(container);
+				propertySelect.addOption('', 'Property');
+				const definedProps = trackedProperties
+					.map((entry) => ({
+						key: entry.key?.trim(),
+						label: entry.label?.trim(),
+					}))
+					.filter((entry) => !!entry.key) as Array<{ key: string; label?: string }>;
+				definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
+				const initial = action.property ?? '';
+				if (initial && !definedProps.find((entry) => entry.key === initial)) {
+					propertySelect.addOption(initial, initial);
+				}
+				propertySelect.setValue(initial);
+				propertySelect.onChange(async (value) => {
+					action.property = value;
+					await notifyChange();
+				});
+				const valueInput = new TextComponent(container);
+				valueInput.inputEl.placeholder = 'Value';
+				valueInput.setValue(action.value ?? '');
+				valueInput.onChange(async (value) => {
+					action.value = value;
+					await notifyChange();
+				});
+				break;
+			}
+			default:
+				container.createSpan({ text: 'Unsupported action type.' });
+		}
+	};
+
+	const createFlagButton = (
+		container: HTMLElement,
+		icon: string,
+		tooltip: string,
+		value: boolean,
+		onChange: (value: boolean) => Promise<void>
+	) => {
+		const button = new ExtraButtonComponent(container);
+		button.setIcon(icon);
+		button.setTooltip(tooltip);
+		const el = button.extraSettingsEl;
+		el.addClass('anm-flag-button');
+		const sync = (next: boolean) => {
+			el.toggleClass('is-active', next);
+		};
+		sync(value);
+		button.onClick(async () => {
+			const next = !el.hasClass('is-active');
+			sync(next);
+			await onChange(next);
+		});
+		return button;
+	};
 
 	refresh();
 };
@@ -688,7 +697,7 @@ const injectFilterBuilderStyles = () => {
 	if (stylesInjected) return;
 	stylesInjected = true;
 	const style = document.createElement('style');
-style.textContent = `
+	style.textContent = `
 .anm-filter-toolbar .setting-item-control {
 	justify-content: flex-end;
 	gap: 0.5rem;

@@ -4,19 +4,26 @@ import { getTriggerIndicator, isFmDisable } from 'utils/Utils';
 import { CoreService } from 'services/CoreService';
 import { MetadataService } from 'services/MetadataService';
 import { LegacyMigrationService } from 'services/LegacyMigrationService';
+import { SimulationService } from 'services/SimulationService';
+import { HistoryService } from 'services/HistoryService';
+import { SimulationModal } from 'settings/ui/SimulationModal';
 
 export default class AutoNoteMover extends Plugin {
 	settings: AutoNoteMoverSettings;
 	coreService: CoreService;
 	metadataService: MetadataService;
 	legacyMigrationService: LegacyMigrationService;
+	simulationService: SimulationService;
+	historyService: HistoryService;
 
 	async onload() {
 		await this.loadSettings();
 
 		this.metadataService = new MetadataService(this.app);
-		this.coreService = new CoreService(this.app, this.settings, this.metadataService);
+		this.historyService = new HistoryService(this.app);
+		this.coreService = new CoreService(this.app, this.settings, this.metadataService, this.historyService);
 		this.legacyMigrationService = new LegacyMigrationService(this);
+		this.simulationService = new SimulationService(this.app, this.coreService);
 
 		// Show trigger indicator on status bar
 		let triggerIndicator: HTMLElement;
@@ -88,6 +95,14 @@ export default class AutoNoteMover extends Plugin {
 			name: 'Clear legacy Auto Note Mover configuration',
 			callback: () => {
 				void this.legacyMigrationService.clearLegacyConfiguration();
+			},
+		});
+
+		this.addCommand({
+			id: 'Run-Simulation',
+			name: 'Run simulation (dry run)',
+			callback: () => {
+				new SimulationModal(this.app, this.simulationService).open();
 			},
 		});
 

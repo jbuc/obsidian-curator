@@ -1,5 +1,6 @@
 import { CachedMetadata, normalizePath, TFile } from 'obsidian';
 import type { FilterCondition, FilterGroup, FilterNode, FilterRule, Comparator, RuleAction } from './filterTypes';
+import { TrackedProperty } from 'settings/settings';
 
 export interface FileContext {
 	file: TFile;
@@ -16,27 +17,47 @@ export interface FileContext {
 export interface EvaluatedRule {
 	rule: FilterRule;
 	actions: RuleAction[];
+	score: number;
 }
 
-export function evaluateRules(rules: FilterRule[], context: FileContext): EvaluatedRule[] {
+export function evaluateRules(rules: FilterRule[], context: FileContext, trackedProperties: TrackedProperty[] = [], debugMode = false): EvaluatedRule[] {
 	const matches: EvaluatedRule[] = [];
 	for (const rule of rules) {
 		if (!rule.enabled) continue;
-		if (evaluateFilterNode(rule.filter, context)) {
-			matches.push({ rule, actions: rule.actions });
-			if (rule.stopOnMatch) {
-				break;
+		if (debugMode) {
+			console.log(`[Auto Note Mover] Evaluating rule: ${rule.name}`);
+		}
+		const result = evaluateFilterNode(rule.filter, context, trackedProperties, debugMode);
+		if (result.matched) {
+			if (debugMode) {
+				console.log(`[Auto Note Mover] Rule '${rule.name}' matched with score ${result.score}.`);
 			}
+			matches.push({ rule, actions: rule.actions, score: result.score });
 		}
 	}
-	return matches;
+	// Sort by score descending
+	matches.sort((a, b) => b.score - a.score);
+
+	// Handle stopOnMatch logic AFTER sorting
+	const finalMatches: EvaluatedRule[] = [];
+	for (const match of matches) {
+		finalMatches.push(match);
+		if (match.rule.stopOnMatch) {
+			if (debugMode) {
+				console.log(`[Auto Note Mover] Rule '${match.rule.name}' has stopOnMatch enabled. Stopping evaluation.`);
+			}
+			break;
+		}
+	}
+
+	return finalMatches;
 }
 
-export function evaluateFilterNode(node: FilterNode, context: FileContext): boolean {
+export function evaluateFilterNode(node: FilterNode, context: FileContext, trackedProperties: TrackedProperty[], debugMode = false): { matched: boolean; score: number } {
 	if (node.type === 'condition') {
-		return evaluateCondition(node, context);
+		return evaluateCondition(node, context, trackedProperties, debugMode);
 	}
-	return evaluateGroup(node, context);
+	return evaluateGroup(node, context, trackedProperties, debugMode);
 }
 
 type Quantifier = 'all' | 'any';
@@ -49,28 +70,54 @@ function resolveGroupConfig(group: FilterGroup): { quantifier: Quantifier; truth
 	return { quantifier, truthiness };
 }
 
-function evaluateGroup(group: FilterGroup, context: FileContext): boolean {
+function evaluateGroup(group: FilterGroup, context: FileContext, trackedProperties: TrackedProperty[], debugMode = false): { matched: boolean; score: number } {
 	if (!group.children.length) {
-		return true;
+		return { matched: true, score: 0 };
 	}
 	const { quantifier, truthiness } = resolveGroupConfig(group);
+	const results = group.children.map((child) => evaluateFilterNode(child, context, trackedProperties, debugMode));
+
 	if (truthiness === 'true') {
-		return quantifier === 'all'
-			? group.children.every((child) => evaluateFilterNode(child, context))
-			: group.children.some((child) => evaluateFilterNode(child, context));
+		if (quantifier === 'all') {
+			const allMatched = results.every(r => r.matched);
+			const totalScore = results.reduce((sum, r) => sum + r.score, 0);
+			return { matched: allMatched, score: allMatched ? totalScore : 0 };
+		} else {
+			// ANY
+			const anyMatched = results.some(r => r.matched);
+			// For OR groups, we take the MAX score of matching children
+			const maxScore = results.filter(r => r.matched).reduce((max, r) => Math.max(max, r.score), 0);
+			return { matched: anyMatched, score: maxScore };
+		}
 	}
-	return quantifier === 'all'
-		? group.children.every((child) => !evaluateFilterNode(child, context))
-		: group.children.some((child) => !evaluateFilterNode(child, context));
+	// Truthiness false (NOT)
+	if (quantifier === 'all') {
+		// All must be FALSE
+		const allFalse = results.every(r => !r.matched);
+		return { matched: allFalse, score: 0 }; // Negative matches don't add score? Or should they? Let's say 0 for now.
+	} else {
+		// Any must be FALSE
+		const anyFalse = results.some(r => !r.matched);
+		return { matched: anyFalse, score: 0 };
+	}
 }
 
-function evaluateCondition(condition: FilterCondition, context: FileContext): boolean {
+function evaluateCondition(condition: FilterCondition, context: FileContext, trackedProperties: TrackedProperty[], debugMode = false): { matched: boolean; score: number } {
 	const propertyValue = resolvePropertyValue(condition.property, context);
 	let result = compareValues(propertyValue, condition.comparator, condition.value, condition.caseSensitive);
 	if (condition.negate) {
 		result = !result;
 	}
-	return result;
+	if (debugMode) {
+		console.log(`[Auto Note Mover] Condition: ${condition.property} (${String(propertyValue)}) ${condition.comparator} ${condition.value} => ${result}`);
+	}
+
+	if (result) {
+		const prop = trackedProperties.find(p => p.key === condition.property);
+		const weight = prop?.weight ?? 0;
+		return { matched: true, score: weight };
+	}
+	return { matched: false, score: 0 };
 }
 
 type ResolvedValue = string | string[] | undefined | null;

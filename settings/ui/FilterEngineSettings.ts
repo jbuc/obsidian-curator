@@ -41,7 +41,7 @@ export function renderFilterEngineSettings(app: App, plugin: AutoNoteMover, cont
     renderFilterRulesJsonEditor(plugin, containerEl, refreshCallback);
 }
 
-function renderApplyRulesButton(plugin: AutoNoteMover, container: HTMLElement) {
+export function renderApplyRulesButton(plugin: AutoNoteMover, container: HTMLElement) {
     const applySetting = new Setting(container);
     applySetting.setName('Apply rules to vault');
     applySetting.setDesc(
@@ -55,7 +55,51 @@ function renderApplyRulesButton(plugin: AutoNoteMover, container: HTMLElement) {
     });
 }
 
-function renderTrackedProperties(plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
+export function renderDryRunButton(plugin: AutoNoteMover, container: HTMLElement) {
+    const dryRunSetting = new Setting(container);
+    dryRunSetting.setName('Dry Run');
+    dryRunSetting.setDesc(
+        'Simulate running rules against your vault. Generates a report of what would happen without making changes.'
+    );
+
+    const reportContainer = container.createDiv({ cls: 'anm-dry-run-report' });
+    reportContainer.style.whiteSpace = 'pre-wrap';
+    reportContainer.style.fontFamily = 'var(--font-monospace)';
+    reportContainer.style.marginTop = '10px';
+    reportContainer.style.padding = '10px';
+    reportContainer.style.background = 'var(--background-secondary)';
+    reportContainer.style.borderRadius = '4px';
+    reportContainer.style.maxHeight = '300px';
+    reportContainer.style.overflowY = 'auto';
+    reportContainer.style.display = 'none';
+
+    dryRunSetting.addButton((button) => {
+        button.setButtonText('Run Simulation').setCta();
+        button.onClick(async () => {
+            button.setButtonText('Running...');
+            button.setDisabled(true);
+            reportContainer.style.display = 'block';
+            reportContainer.setText('Simulating...');
+
+            try {
+                const report = await plugin.coreService.runDryRun();
+                if (report.length === 0) {
+                    reportContainer.setText('No changes would be made.');
+                } else {
+                    reportContainer.setText(report.join('\n'));
+                }
+            } catch (error) {
+                console.error(error);
+                reportContainer.setText('Error running simulation. Check console.');
+            } finally {
+                button.setButtonText('Run Simulation');
+                button.setDisabled(false);
+            }
+        });
+    });
+}
+
+export function renderTrackedProperties(plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
     const card = container.createDiv({ cls: 'anm-tracked-properties' });
     new Setting(card)
         .setName('Reusable properties')
@@ -68,6 +112,7 @@ function renderTrackedProperties(plugin: AutoNoteMover, container: HTMLElement, 
             const setting = new Setting(list);
             let pendingKey = prop.key ?? '';
             let pendingLabel = prop.label ?? '';
+            let pendingWeight = prop.weight ?? 0;
             const syncLabel = () => {
                 setting.setName(pendingLabel || pendingKey || 'Property');
             };
@@ -105,6 +150,23 @@ function renderTrackedProperties(plugin: AutoNoteMover, container: HTMLElement, 
                 };
             });
             labelComponent?.inputEl.classList.add('anm-property-label');
+
+            let weightComponent: TextComponent | null = null;
+            setting.addText((text) => {
+                weightComponent = text;
+                text.setPlaceholder('1');
+                text.setValue(String(pendingWeight));
+                text.inputEl.type = 'number';
+                text.inputEl.style.width = '60px';
+                text.onChange((value) => {
+                    pendingWeight = Number(value);
+                });
+                text.inputEl.onblur = async () => {
+                    plugin.settings.tracked_properties[index].weight = pendingWeight;
+                    await plugin.saveSettings();
+                };
+            });
+            weightComponent?.inputEl.classList.add('anm-property-weight');
             setting.addExtraButton((btn) => {
                 btn.setIcon('trash');
                 btn.setTooltip('Remove');
@@ -131,7 +193,7 @@ function renderTrackedProperties(plugin: AutoNoteMover, container: HTMLElement, 
     refresh();
 }
 
-function renderRuleGroupsSection(app: App, plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
+export function renderRuleGroupsSection(app: App, plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
     const wrapper = container.createDiv({ cls: 'anm-rule-groups-section' });
     const render = () => {
         wrapper.empty();
@@ -242,7 +304,7 @@ function renderRuleGroupsSection(app: App, plugin: AutoNoteMover, container: HTM
     render();
 }
 
-function renderFilterRulesJsonEditor(plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
+export function renderFilterRulesJsonEditor(plugin: AutoNoteMover, container: HTMLElement, refreshCallback: () => void) {
     const details = container.createEl('details', { cls: 'anm-json-editor' });
     details.createEl('summary', { text: 'Advanced: edit criteria rules as JSON' });
 

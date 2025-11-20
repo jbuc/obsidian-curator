@@ -10,6 +10,22 @@ export function renderGeneralSettings(app: App, plugin: AutoNoteMover, container
         'Auto Note Mover will automatically move the active notes to their respective folders according to the rules.'
     );
 
+    const variableDesc = document.createDocumentFragment();
+    variableDesc.append(
+        'You can use the following variables in your destination paths and file names:',
+        document.createElement('br'),
+        descEl.createEl('code', { text: '{{title}}' }), ' or ', descEl.createEl('code', { text: '{{name}}' }), ': The file name.',
+        document.createElement('br'),
+        descEl.createEl('code', { text: '{{parent}}' }), ': The immediate parent folder name.',
+        document.createElement('br'),
+        descEl.createEl('code', { text: '{{date:YYYY-MM-DD}}' }), ': The current date (format customizable).',
+        document.createElement('br'),
+        descEl.createEl('code', { text: '{{frontmatter.key}}' }), ' or ', descEl.createEl('code', { text: '{{prop.key}}' }), ': Value of a frontmatter property.'
+    );
+    new Setting(containerEl)
+        .setName('Variable Reference')
+        .setDesc(variableDesc);
+
     const triggerDesc = document.createDocumentFragment();
     triggerDesc.append(
         'Choose how the trigger will be activated.',
@@ -57,14 +73,37 @@ export function renderGeneralSettings(app: App, plugin: AutoNoteMover, container
                 refreshCallback();
             });
         });
+
+    new Setting(containerEl)
+        .setName('Conflict Resolution')
+        .setDesc('What to do if a file with the same name already exists in the destination folder.')
+        .addDropdown((dropDown) =>
+            dropDown
+                .addOption('rename', 'Rename (e.g. Note (1))')
+                .addOption('overwrite', 'Overwrite')
+                .addOption('skip', 'Skip (do nothing)')
+                .setValue(plugin.settings.conflict_resolution)
+                .onChange(async (value: 'rename' | 'overwrite' | 'skip') => {
+                    plugin.settings.conflict_resolution = value;
+                    await plugin.saveSettings();
+                    refreshCallback();
+                })
+        );
+
+
 }
 
-export function renderLegacyRulesNotice(containerEl: HTMLElement) {
-    const legacyDesc = document.createDocumentFragment();
-    legacyDesc.append(
-        'The original single-line rules have been deprecated. Existing configurations continue to run when the criteria engine is disabled, but they are no longer editable from the UI.',
-        document.createElement('br'),
-        'To migrate, recreate the logic using the criteria engine JSON editor above (see docs/criteria-engine-sample.json for examples).'
-    );
-    new Setting(containerEl).setName('Legacy rules').setDesc(legacyDesc);
+export function renderDebugSettings(plugin: AutoNoteMover, containerEl: HTMLElement, refreshCallback: () => void) {
+    new Setting(containerEl)
+        .setName('Debug Mode')
+        .setDesc('Enable verbose logging to the developer console for debugging rules.')
+        .addToggle((toggle) => {
+            toggle.setValue(plugin.settings.debug_mode).onChange(async (value) => {
+                plugin.settings.debug_mode = value;
+                await plugin.saveSettings();
+                refreshCallback();
+            });
+        });
 }
+
+

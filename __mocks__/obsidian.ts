@@ -72,6 +72,6 @@ export function normalizePath(path: string) {
     return path; // Simple mock
 }
 
-export function getAllTags(cache: any) {
+export function getAllTags(cache: any): string[] {
     return [];
 }
