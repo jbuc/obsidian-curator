@@ -9,8 +9,10 @@ import {
 	App,
 } from 'obsidian';
 import { TemplateFileSuggest } from 'suggests/file-suggest';
+import { arrayMove } from 'utils/Utils';
 
 type OnChange = () => Promise<void> | void;
+type TrackedProperty = { key: string; label?: string };
 
 const COMPARATORS: FilterCondition['comparator'][] = [
 	'equals',
@@ -21,7 +23,7 @@ const COMPARATORS: FilterCondition['comparator'][] = [
 	'exists',
 ];
 
-const ACTION_TYPES: RuleAction['type'][] = ['move', 'applyTemplate', 'rename', 'addTag', 'removeTag'];
+const ACTION_TYPES: RuleAction['type'][] = ['move', 'applyTemplate', 'rename', 'setProperty'];
 
 type QuantifierOption = 'all' | 'any';
 type TruthinessOption = 'true' | 'false';
@@ -58,6 +60,7 @@ export const renderFilterRulesEditor = (
 	app: App,
 	containerEl: HTMLElement,
 	rules: FilterRule[],
+	trackedProperties: TrackedProperty[],
 	onChange: OnChange
 ): void => {
 	injectFilterBuilderStyles();
@@ -113,7 +116,7 @@ export const renderFilterRulesEditor = (
 		}
 
 		rules.forEach((rule, index) => {
-			renderRuleCard(wrapper, rule, index);
+			renderRuleCard(wrapper, rule, index, trackedProperties);
 		});
 
 		const addRuleSetting = new Setting(wrapper);
@@ -129,7 +132,12 @@ export const renderFilterRulesEditor = (
 		});
 	};
 
-	const renderRuleCard = (parent: HTMLElement, rule: FilterRule, index: number) => {
+	const renderRuleCard = (
+		parent: HTMLElement,
+		rule: FilterRule,
+		index: number,
+		trackedProps: TrackedProperty[]
+	) => {
 		const card = parent.createDiv('anm-rule-card');
 		const initiallyCollapsed = isRuleCollapsed(rule.id);
 		card.toggleClass('anm-collapsed', initiallyCollapsed);
@@ -159,10 +167,44 @@ export const renderFilterRulesEditor = (
 			});
 		});
 
+		headerSetting.addExtraButton((button) => {
+			const sync = () => {
+				button.setIcon(rule.stopOnMatch ? 'hand' : 'hand-left');
+				button.setTooltip(rule.stopOnMatch ? 'Stop processing later groups when matched' : 'Continue to later groups when matched');
+			};
+			sync();
+			button.onClick(async () => {
+				rule.stopOnMatch = !rule.stopOnMatch;
+				sync();
+				await notify();
+			});
+		});
+
+		if (index > 0) {
+			headerSetting.addExtraButton((button) => {
+				button.setIcon('up-chevron-glyph');
+				button.setTooltip('Move rule up');
+				button.onClick(async () => {
+					arrayMove(rules, index, index - 1);
+					await notifyAndRefresh();
+				});
+			});
+		}
+		if (index < rules.length - 1) {
+			headerSetting.addExtraButton((button) => {
+				button.setIcon('down-chevron-glyph');
+				button.setTooltip('Move rule down');
+				button.onClick(async () => {
+					arrayMove(rules, index, index + 1);
+					await notifyAndRefresh();
+				});
+			});
+		}
+
 		let collapseButton: ExtraButtonComponent | null = null;
 		headerSetting.addExtraButton((button) => {
 			collapseButton = button;
-			button.setIcon('chevron-up');
+			button.setIcon('chevrons-down-up');
 			button.setTooltip('Collapse rule');
 			button.onClick(() => {
 				const collapsed = !card.hasClass('anm-collapsed');
@@ -197,7 +239,7 @@ export const renderFilterRulesEditor = (
 		const body = card.createDiv('anm-rule-body');
 		renderFilterNodeEditor(body, rule.filter, null, null, notify, notifyAndRefresh, true);
 		body.createEl('p', { text: 'Make the following changes:', cls: 'anm-actions-heading' });
-		renderActionsEditor(app, body, rule.actions, notify, notifyAndRefresh);
+		renderActionsEditor(app, body, rule.actions, trackedProps, notify, notifyAndRefresh);
 	};
 
 	const renderFilterNodeEditor = (
@@ -288,10 +330,23 @@ export const renderFilterRulesEditor = (
 
 			const propertyField = line.createDiv('anm-condition-field');
 			propertyField.addClass('anm-condition-field--property');
-			const propertyInput = new TextComponent(propertyField);
-			propertyInput.inputEl.placeholder = 'key';
-			propertyInput.setValue(node.property ?? '');
-			propertyInput.onChange(async (value) => {
+			const propertySelect = new DropdownComponent(propertyField);
+			propertySelect.addOption('', 'select property');
+			const definedProps = trackedProperties
+				.map((entry) => ({
+					key: entry.key?.trim(),
+					label: entry.label?.trim(),
+				}))
+				.filter((entry) => !!entry.key) as Array<{ key: string; label?: string }>;
+			definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
+			const initial = node.property ?? '';
+			if (initial && !definedProps.find((entry) => entry.key === initial)) {
+				propertySelect.addOption(initial, initial);
+			}
+			if (initial) {
+				propertySelect.setValue(initial);
+			}
+			propertySelect.onChange(async (value) => {
 				node.property = value;
 				await notifyChange();
 			});
@@ -327,6 +382,24 @@ export const renderFilterRulesEditor = (
 			});
 
 			if (parentChildren && index !== null) {
+				if (index > 0) {
+					const upBtn = new ExtraButtonComponent(toolsBar);
+					upBtn.setIcon('up-chevron-glyph');
+					upBtn.setTooltip('Move up');
+					upBtn.onClick(async () => {
+						arrayMove(parentChildren, index, index - 1);
+						await notifyAndRefresh();
+					});
+				}
+				if (index < parentChildren.length - 1) {
+					const downBtn = new ExtraButtonComponent(toolsBar);
+					downBtn.setIcon('down-chevron-glyph');
+					downBtn.setTooltip('Move down');
+					downBtn.onClick(async () => {
+						arrayMove(parentChildren, index, index + 1);
+						await notifyAndRefresh();
+					});
+				}
 				const removeButton = new ExtraButtonComponent(toolsBar);
 				removeButton.setIcon('trash');
 				removeButton.setTooltip('Remove criteria');
@@ -342,6 +415,7 @@ const renderActionsEditor = (
 	app: App,
 	container: HTMLElement,
 	actions: RuleAction[],
+	trackedProperties: TrackedProperty[],
 	notifyChange: () => Promise<void>,
 	notifyAndRefresh: () => Promise<void>
 ) => {
@@ -362,7 +436,28 @@ const renderActionsEditor = (
 		});
 
 		const fieldsWrapper = line.createDiv('anm-action-fields');
-		renderActionFields(app, fieldsWrapper, action, notifyChange);
+		renderActionFields(app, fieldsWrapper, action, trackedProperties, notifyChange);
+
+		if (index > 0) {
+			actionSetting.addExtraButton((button) => {
+				button.setIcon('up-chevron-glyph');
+				button.setTooltip('Move action up');
+				button.onClick(async () => {
+					arrayMove(actions, index, index - 1);
+					await notifyAndRefresh();
+				});
+			});
+		}
+		if (index < actions.length - 1) {
+			actionSetting.addExtraButton((button) => {
+				button.setIcon('down-chevron-glyph');
+				button.setTooltip('Move action down');
+				button.onClick(async () => {
+					arrayMove(actions, index, index + 1);
+					await notifyAndRefresh();
+				});
+			});
+		}
 
 		actionSetting.addExtraButton((button) => {
 			button.setIcon('trash');
@@ -387,7 +482,13 @@ const renderActionsEditor = (
 	});
 };
 
-const renderActionFields = (app: App, container: HTMLElement, action: RuleAction, notifyChange: () => Promise<void>) => {
+const renderActionFields = (
+	app: App,
+	container: HTMLElement,
+	action: RuleAction,
+	trackedProperties: TrackedProperty[],
+	notifyChange: () => Promise<void>
+) => {
 	switch (action.type) {
 		case 'move': {
 			const targetInput = new TextComponent(container);
@@ -443,13 +544,30 @@ const renderActionFields = (app: App, container: HTMLElement, action: RuleAction
 			});
 			break;
 		}
-		case 'addTag':
-		case 'removeTag': {
-			const tagInput = new TextComponent(container);
-			tagInput.inputEl.placeholder = '#tag';
-			tagInput.setValue(action.tag ?? '');
-			tagInput.onChange(async (value) => {
-				action.tag = value;
+		case 'setProperty': {
+			const propertySelect = new DropdownComponent(container);
+			propertySelect.addOption('', 'Property');
+			const definedProps = trackedProperties
+				.map((entry) => ({
+					key: entry.key?.trim(),
+					label: entry.label?.trim(),
+				}))
+				.filter((entry) => !!entry.key) as Array<{ key: string; label?: string }>;
+			definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
+			const initial = action.property ?? '';
+			if (initial && !definedProps.find((entry) => entry.key === initial)) {
+				propertySelect.addOption(initial, initial);
+			}
+			propertySelect.setValue(initial);
+			propertySelect.onChange(async (value) => {
+				action.property = value;
+				await notifyChange();
+			});
+			const valueInput = new TextComponent(container);
+			valueInput.inputEl.placeholder = 'Value';
+			valueInput.setValue(action.value ?? '');
+			valueInput.onChange(async (value) => {
+				action.value = value;
 				await notifyChange();
 			});
 			break;
@@ -526,9 +644,8 @@ const createDefaultAction = (type: RuleAction['type']): RuleAction => {
 			return { type, templatePath: '', mode: 'prepend' };
 		case 'rename':
 			return { type };
-		case 'addTag':
-		case 'removeTag':
-			return { type, tag: '' };
+		case 'setProperty':
+			return { type, property: '', value: '' };
 		default:
 			return { type: 'move', targetFolder: '' };
 	}
@@ -547,7 +664,7 @@ const toggleCollapsedRule = (id: string, collapsed: boolean) => {
 const isRuleCollapsed = (id: string) => collapsedRuleState.has(id);
 
 const updateCollapseControl = (button: ExtraButtonComponent, collapsed: boolean) => {
-	button.setIcon(collapsed ? 'chevron-down' : 'chevron-up');
+	button.setIcon(collapsed ? 'chevrons-up-down' : 'chevrons-down-up');
 	button.setTooltip(collapsed ? 'Expand rule' : 'Collapse rule');
 };
 
@@ -589,6 +706,16 @@ style.textContent = `
     border-radius: 6px;
     border: 1px solid var(--color-base-30);
     background: var(--color-base-10);
+}
+.anm-rule-group {
+	border: 1px solid var(--color-base-30);
+	border-radius: 6px;
+	padding: 1rem;
+	background: var(--color-base-05);
+	margin-bottom: 1rem;
+}
+.anm-rule-group-body.is-collapsed {
+	display: none;
 }
 
 .anm-field-label-inline, .anm-logic-label {
@@ -693,7 +820,7 @@ style.textContent = `
 	flex: 0 0 auto;
 }
 .anm-condition-field--property {
-    width: 22%;
+    width: 26%;
 }
 .anm-condition-field--value {
     width:25%
@@ -703,6 +830,10 @@ style.textContent = `
 }
 .anm-condition-field--property input {
 	max-width: 100%;
+}
+.anm-condition-field--property select {
+	min-width: 10rem;
+	width: 100%;
 }
 .anm-condition-field--comparator select {
 }

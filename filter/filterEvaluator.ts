@@ -93,6 +93,7 @@ function resolvePropertyValue(property: string, context: FileContext): ResolvedV
 		case 'file.content':
 			return context.content ?? null;
 		case 'frontmatter':
+		case 'prop':
 			return JSON.stringify(context.frontmatter ?? {});
 		case 'tags':
 		case 'file.tags':
@@ -101,8 +102,8 @@ function resolvePropertyValue(property: string, context: FileContext): ResolvedV
 			break;
 	}
 
-	if (lower.startsWith('frontmatter.')) {
-		const fmKey = key.slice('frontmatter.'.length);
+	if (lower.startsWith('prop.')) {
+		const fmKey = key.slice('prop.'.length);
 		return getFrontmatterValue(context, fmKey);
 	}
 

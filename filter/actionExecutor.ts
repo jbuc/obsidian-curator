@@ -1,5 +1,5 @@
 import { App, normalizePath, Notice, TFile, TFolder } from 'obsidian';
-import type { RuleAction, MoveAction, ApplyTemplateAction, RenameAction, TagAction } from './filterTypes';
+import type { RuleAction, MoveAction, ApplyTemplateAction, RenameAction, SetPropertyAction } from './filterTypes';
 
 export interface ActionContext {
 	app: App;
@@ -21,9 +21,8 @@ export async function executeActions(actions: RuleAction[], context: ActionConte
 			case 'rename':
 				context.file = await executeRenameAction(action, context);
 				break;
-			case 'addTag':
-			case 'removeTag':
-				await executeTagAction(action, context);
+			case 'setProperty':
+				await executePropertyAction(action, context);
 				break;
 			default:
 				console.warn('[Auto Note Mover] Unsupported action type', action);
@@ -108,55 +107,80 @@ async function executeRenameAction(action: RenameAction, context: ActionContext)
 	return context.file;
 }
 
-async function executeTagAction(action: TagAction, context: ActionContext): Promise<void> {
-	const tag = action.tag?.trim();
-	if (!tag) {
-		console.warn('[Auto Note Mover] Tag action missing tag value.');
+async function executePropertyAction(action: SetPropertyAction, context: ActionContext): Promise<void> {
+	const key = action.property?.trim();
+	if (!key) {
+		console.warn('[Auto Note Mover] Property action missing property key.');
 		return;
 	}
-	const processFrontMatter = (context.app.fileManager as unknown as {
-		processFrontMatter?: (
-			file: TFile,
-			handler: (frontmatter: Record<string, unknown>) => void
-		) => Promise<void>;
-	}).processFrontMatter;
-
-	if (typeof processFrontMatter !== 'function') {
-		console.warn('[Auto Note Mover] processFrontMatter API unavailable; tag actions skipped.');
+	const value = action.value ?? '';
+	const updateFrontmatter = getFrontmatterUpdater(context.app);
+	if (key === 'tags' || key === 'file.tags') {
+		await setTagsValue(updateFrontmatter, value, context);
 		return;
 	}
-
-	try {
-		await processFrontMatter(context.file, (frontmatter: Record<string, unknown>) => {
-			const existing = normalizeTags(frontmatter.tags);
-			const set = new Set(existing);
-			if (action.type === 'addTag') {
-				set.add(tag);
+	if (key.startsWith('prop.')) {
+		const field = key.replace(/^prop\./i, '').trim();
+		if (!field) {
+			console.warn('[Auto Note Mover] Invalid frontmatter property key for action.');
+			return;
+		}
+		if (!updateFrontmatter) {
+			console.warn('[Auto Note Mover] Frontmatter API unavailable; property action skipped.');
+			return;
+		}
+		await updateFrontmatter(context.file, (frontmatter: Record<string, unknown>) => {
+			if (value === '') {
+				delete frontmatter[field];
 			} else {
-				set.delete(tag);
-			}
-			const next = Array.from(set);
-			if (!next.length) {
-				delete frontmatter.tags;
-			} else if (Array.isArray(frontmatter.tags)) {
-				frontmatter.tags = next;
-			} else {
-				frontmatter.tags = next.length === 1 ? next[0] : next;
+				frontmatter[field] = value;
 			}
 		});
-	} catch (error) {
-		console.error('[Auto Note Mover] Failed to update tags via action', error);
+		return;
 	}
+	console.warn('[Auto Note Mover] Unsupported property action key:', key);
 }
 
-function normalizeTags(input: unknown): string[] {
-	if (Array.isArray(input)) {
-		return input.map((tag) => String(tag)).filter(Boolean);
+async function setTagsValue(
+	updateFrontmatter: FrontmatterUpdater | null,
+	value: string,
+	context: ActionContext
+): Promise<void> {
+	if (!updateFrontmatter) {
+		console.warn('[Auto Note Mover] Frontmatter API unavailable; property action skipped.');
+		return;
 	}
-	if (typeof input === 'string') {
-		return input.split(',').map((tag) => tag.trim()).filter(Boolean);
+	const tags = value
+		.split(',')
+		.map((tag) => tag.trim())
+		.filter(Boolean);
+	await updateFrontmatter(context.file, (frontmatter: Record<string, unknown>) => {
+		if (!tags.length) {
+			delete frontmatter.tags;
+		} else if (tags.length === 1) {
+			frontmatter.tags = tags[0];
+		} else {
+			frontmatter.tags = tags;
+		}
+	});
+}
+
+type FrontmatterUpdater = (file: TFile, handler: (frontmatter: Record<string, unknown>) => void) => Promise<void>;
+
+function getFrontmatterUpdater(app: App): FrontmatterUpdater | null {
+	const vaultWithModify = app.vault as App['vault'] & {
+		modifyFrontMatter?: FrontmatterUpdater;
+	};
+	if (typeof vaultWithModify.modifyFrontMatter === 'function') {
+		return vaultWithModify.modifyFrontMatter.bind(app.vault);
 	}
-	return [];
+	const fm = (app.fileManager as unknown as {
+		processFrontMatter?: FrontmatterUpdater;
+	}).processFrontMatter;
+	if (typeof fm === 'function') {
+		return fm.bind(app.fileManager);
+	}
+	return null;
 }
 
 async function ensureFolderExists(app: App, folderPath: string, allowCreate = false): Promise<void> {

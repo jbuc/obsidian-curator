@@ -44,12 +44,13 @@ export interface RenameAction {
 	replace?: string;
 }
 
-export interface TagAction {
-	type: 'addTag' | 'removeTag';
-	tag: string;
+export interface SetPropertyAction {
+	type: 'setProperty';
+	property: string;
+	value?: string;
 }
 
-export type RuleAction = MoveAction | ApplyTemplateAction | RenameAction | TagAction;
+export type RuleAction = MoveAction | ApplyTemplateAction | RenameAction | SetPropertyAction;
 
 export interface FilterRule {
 	id: string;
