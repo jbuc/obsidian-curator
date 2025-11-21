@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to run on (e.g., feat/my-branch). Defaults to main.'
+        description: 'Branch to run on (e.g., feat/my-branch). Defaults to main.)'
         required: false
         default: 'main'
 
@@ -21,7 +21,7 @@ jobs:
         with:
           # Use the branch input provided by the user, or default to main
           ref: ${{ github.event.inputs.branch || 'main' }}
-          fetch-depth: 0 
+          fetch-depth: 0 # Required for the git push later
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,27 +29,33 @@ jobs:
           node-version: '20'
 
       - name: Generate Lock File (npm install)
-        # This resolves dependencies and updates package-lock.json
-        run: npm install
-
-      - name: Commit and Push Lock File
+        # 1. Ensure any old lock file is deleted so a fresh one is created
         run: |
-          # Check if the lock file has been modified or created
-          if git diff --exit-code -- package-lock.json; then
-            echo "::notice file=package-lock.json::Lock file is up to date. No commit needed."
-          else
-            echo "Changes detected. Committing package-lock.json..."
+          rm -f package-lock.json
+          npm install
+          echo "Lock file generated successfully in the runner."
+
+      - name: Commit and Push Lock File (Forced Logic)
+        run: |
+          # 1. Check if the working directory is dirty (i.e., new files exist)
+          # The -A flag adds new, modified, and deleted files.
+          git add package-lock.json
+          
+          # Check if there's anything to commit (status check after adding)
+          if git status --porcelain package-lock.json | grep -q '^\(A\|M\)'; then
+            echo "Changes detected on package-lock.json. Proceeding to commit."
             
             # Configure Git user
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             
-            # Add and Commit the file
-            git add package-lock.json
+            # Commit the staged file
             git commit -m "chore: auto-generated package-lock.json"
             
             # Push the commit to the branch
             git push
             
             echo "::notice file=package-lock.json::Successfully pushed new lock file."
+          else
+            echo "No new changes detected for package-lock.json after installation."
           fi
