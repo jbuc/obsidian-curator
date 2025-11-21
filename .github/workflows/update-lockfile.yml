@@ -25,8 +25,17 @@ jobs:
         # This generates the file based on your package.json
         run: npm install
 
-      - name: Commit and Push
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update package-lock.json"
-          file_pattern: package-lock.json
+     - name: Commit and Push (If Changed)
+        # Use a simpler check to see if git is dirty
+        run: |
+          git status
+          if [[ $(git status --porcelain) ]]; then
+            echo "Changes detected. Committing..."
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore: auto-update package-lock.json (forced commit)"
+            git push
+          else
+            echo "No changes detected by Git after npm install."
+          fi
