@@ -1,102 +1,148 @@
-# Auto Organizer
+# Curator
 
-Auto Organizer is a more complex and advanced fork of Auto Note Mover by Farux. It is designed to be used by users who need more control over the conditions necessary to trigger an action. It also provides the opportunity to conduct multiple actions on a note. It can be triggered either manually or automatically when a file has been changed.
+![Curator Logo](assets/icon.png)
 
-Examples:
-- if I add a frontmatter.status property of "done" to a note that has a frontmatter.type property of "task" the note will be moved to my "To Do/Tasks/Done" folder and will apply the template "task complete" to the note. 
-- if I add the tag "meeting" to a file it will prepend today's date to the title. 
+**Curator** is an Obsidian plugin that automatically organizes your vault with powerful, rule-based automation. Move, rename, template, and tag your notes based on their properties, tags, and content—all without lifting a finger.
 
-## How it works
+## ✨ Key Features
 
-Create one or more **criteria rules**. Each rule combines:
+- 🎯 **Rule-Based Automation** - Create sophisticated rules with nested conditions (AND/OR/NOT logic)
+- 📁 **Smart File Organization** - Automatically move notes to the right folders
+- 🏷️ **Dynamic Properties** - Set or update frontmatter based on your rules
+- 📝 **Template Integration** - Apply templates automatically (works with Templater)
+- 🔄 **Batch Renaming** - Add prefixes, suffixes, or completely rename files
+- 🧪 **Dry Run Mode** - Test your rules safely before applying them
+- 📊 **Weighted Prioritization** - Control which rules take precedence
+- 🔍 **Debug Mode** - Verbose logging for troubleshooting
+- 🎨 **Tabbed Settings** - Clean, organized interface
 
-- A nested criteria tree (groups + conditions) that decides when the rule matches.
-- One or more actions (move, apply template, rename, etc.) that run sequentially when the rule fires.
-- Optional `stopOnMatch` behavior to short-circuit once the actions complete.
+## 📦 Installation
 
-When the active note matches the rule, Auto Note Mover will move the note to the destination folder.
+### From Obsidian Community Plugins
 
-If you create a new note from a link in an existing note or from another plugin, Auto Note Mover will move those notes to the folder you want, so you don't have to worry about where or how to create the note.
+1. Open **Settings** → **Community Plugins**
+2. Browse and search for **"Curator"**
+3. Click **Install**, then **Enable**
 
-If the rule is matched but the destination folder is not found, or if the destination folder has a note with the same name, a warning will be displayed and the move will be aborted.
+### Manual Installation
 
-## Triggers
+1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/jbuc/obsidian-curator/releases)
+2. Create a folder named `curator` in your vault's `.obsidian/plugins/` directory
+3. Place both files in that folder
+4. Reload Obsidian and enable the plugin
 
-There are two types of triggers for Auto Note Mover.
+## 🚀 Quick Start
 
-### Automatic
+1. **Open Settings** → Navigate to Curator settings
+2. **Choose Trigger Mode**:
+   - **Automatic**: Rules run when you create, edit, or rename notes
+   - **Manual**: Rules only run via command palette
+3. **Create Your First Rule**:
+   - Click **"Add Rule"** in the Rules tab
+   - Set conditions (e.g., "If tag equals 'meeting'")
+   - Add actions (e.g., "Move to 'Meetings' folder")
+   - Save and test!
 
-Triggered when you create, edit, or rename a note, and moves the note if it matches the rules.
-You can also activate the trigger with a command.
+## 🎓 Example Use Cases
 
-### Manual
+### Daily Note Organization
+Move daily notes to dated folders automatically:
+```
+Condition: file.name starts with "Daily-"
+Action: Move to "Journal/{{date:YYYY}}/{{date:MM}}"
+```
 
-Will not automatically move notes.
+### Project-Based Filing
+Organize project notes by their frontmatter:
+```
+Condition: frontmatter.project exists
+Action: Move to "Projects/{{frontmatter.project}}"
+```
 
-You can trigger by command.
+### Task Completion
+Auto-archive completed tasks:
+```
+Condition: frontmatter.status equals "done" AND tags contains "task"
+Actions: 
+  1. Move to "Archive/Tasks"
+  2. Apply template "task-complete"
+  3. Set property "completed" to "{{date:YYYY-MM-DD}}"
+```
 
-## Criteria rules (beta)
+### Meeting Notes
+Organize meeting notes with auto-dating:
+```
+Condition: tags contains "meeting"
+Actions:
+  1. Rename with prefix "{{date:YYYY-MM-DD}} - "
+  2. Move to "Meetings/{{date:YYYY}}"
+```
 
-1. Enable **Criteria engine** in the plugin settings (Settings → Community plugins → Auto Note Mover).
-2. Use the visual builder to compose your logic. Each rule lets you nest groups (All / Any + true/false) and add inline conditions for properties such as `file.name`, `file.folder`, `tags`, `frontmatter.status`, etc. Available comparators: `equals`, `contains`, `startsWith`, `endsWith`, `matchesRegex`, `exists`, `notExists`.
-3. Add one or more actions (move, apply template, rename, add/remove tag). Actions run top-to-bottom for that rule. If you have the Templater plugin enabled, the **apply template** action will try to route the template through Templater; otherwise it falls back to the raw file contents.
-4. Use the rule header toggles to enable/disable the rule or collapse it. “Stop on match” is implicit—leave later rules enabled only when you want them to run after a match.
-5. Need to share or bulk-edit rules? Expand **Advanced → Edit criteria rules as JSON** inside the settings pane. The current structure is also documented in `docs/criteria-engine-design.md` and you can copy starter examples from `docs/criteria-engine-sample.json`.
+## 🔧 Advanced Features
 
-Tips:
+### Variable System
+Use variables in your destination paths and property values:
 
-- Tags are automatically normalized so `#project` and `project` both match when you specify the `tags` property.
-- Frontmatter arrays (e.g., `status: [planning, drafting]`) are checked entry by entry, so matching either value moves the note.
-- Regex conditions support both raw patterns (`project`) and literal syntax (`/pattern/flags`).
-- Use descriptive property names (e.g., `frontmatter.type`) to avoid confusion with similarly named fields in different contexts.
-- Upgrading from the old property rules? Your existing configuration is migrated automatically the next time the plugin loads so you can continue editing it in the new builder.
+- `{{title}}` or `{{name}}` - The file name
+- `{{parent}}` - Immediate parent folder name
+- `{{file.folder}}` - Full folder path
+- `{{date:YYYY-MM-DD}}` - Current date (customizable format)
+- `{{frontmatter.key}}` or `{{prop.key}}` - Frontmatter property value
+- `{{label}}` - Reusable property labels (define in Universal Settings)
 
-## Legacy property rules (deprecated)
+### Dry Run Mode
+Test your rules without making any changes:
 
-The original UI for simple tag/title-to-folder rules has been removed, but existing configurations continue to run when the criteria engine is disabled.
+1. Go to **Diagnosis** tab
+2. Click **"Run Dry Run"**
+3. Review what would happen to each file
+4. Adjust rules as needed
 
-1. Enter the property you want to evaluate (for example: tags, type, status, folder, path).
-2. Provide the exact value to match for that property.
-3. (Optional) Define a title pattern using JavaScript regular expressions if you want to move notes based on their name.
-4. Choose the destination folder for matching notes.
-5. Rules run from top to bottom. Notes are moved by the **first matching rule.**
+### Weighted Prioritization
+Control which rules run first by setting property weights in **Universal Settings**. Higher-weighted properties score higher when matched.
 
-Legacy tips still apply while this mode is enabled:
+### Debug Mode
+Enable verbose logging in **Universal Settings** → **Debug Mode** to see exactly how rules are evaluated.
 
-- Tags are automatically normalized so `#project` and `project` both match when you specify the `tags` property.
-- Frontmatter arrays (e.g., `status: [planning, drafting]`) are checked entry by entry, so matching either value moves the note.
-- Title patterns always use JavaScript regular expressions (e.g., `^Daily-\\d+$`).
-- Use the `title` or `name` property for exact matches; rely on the Title Pattern field when you need regex-based matching.
-- Use descriptive property names (e.g., `frontmatter.type`) to avoid confusion with similarly named fields in different contexts.
+## 📚 Documentation
 
-## Notice
+- **Rules Tab**: Create and manage automation rules
+- **Universal Settings**: Configure trigger mode, variables, and debug options
+- **Diagnosis**: Test rules with dry run and view diagnostics
 
-1. Attached files will not be moved, but they will still appear in the note.
-2. Auto Note Mover will not move notes that have "**AutoNoteMover: disable**" in the frontmatter.
+## 💡 Tips & Tricks
 
-## Example configurations
+- Use **descriptive rule names** to keep your setup organized
+- Enable **"Stop on Match"** on rules to prevent multiple rules from affecting the same file
+- Test new rules in **Dry Run** mode first
+- Use the **{{parent}}** variable for folder-based organization
+- Combine multiple actions in one rule for complex workflows
+- Regular expressions are supported in conditions for pattern matching
 
-Rather see the JSON directly? Open `docs/criteria-engine-sample.json` for a handful of pre-built rule sets (daily notes, tag routing, project boards, etc.) that can be pasted into the advanced editor. The file mirrors what the UI produces, so it’s safe to tweak and import.
+## 🐛 Troubleshooting
 
+### Notes don't move
+- Check that trigger mode is set to "Automatic"
+- Verify your rule conditions are correct
+- Make sure the destination folder exists (or enable "Create folder if missing")
+- Check that the note doesn't have `AutoNoteMover: disable` in frontmatter
 
-## Troubleshooting
+### Duplicate notes
+This can happen with sync software (iCloud, Dropbox, etc.) if editing overlaps with sync timing. The sync software might lock the file during the move operation.
 
-### 1. Notes do not move.
+### Need more help?
+Enable **Debug Mode** in Universal Settings to see detailed logs of rule evaluation.
 
-Make sure that the rules are correct, that no excluded folders are set, and that they are not disabled in the frontmatter.
-Another possibility is that if the vault is monitored by a real-time sync software like Dropbox, if the editing overlaps with the timing of the sync, the sync software might lock the note and prevent it from being moved.
+## 🙏 Attribution
 
-### 2. Duplicate notes
-Check your sync software.
+- Inspired by and forked from [Auto Note Mover](https://github.com/farux/obsidian-auto-note-mover) by Farux
+- File suggest components by [Liam Cain](https://github.com/liamcain) from [Periodic Notes](https://github.com/liamcain/obsidian-periodic-notes)
+- Uses [Popper.js](https://popper.js.org/) for UI positioning
 
-Duplicate notes due to iCloud glitches have been reported.
-https://github.com/farux/obsidian-auto-note-mover/issues/19
+## 📝 License
 
-## Attribution
-suggest.ts and file-suggest.ts are copyrighted works of Liam Cain (https://github.com/liamcain) obsidian-periodic-notes (https://github.com/liamcain/obsidian-periodic-notes).
+MIT License - see [LICENSE](LICENSE) file for details.
 
-popper.js https://popper.js.org/
+---
 
-
-## Special Thanks
-Thanks to [@pjeby](https://github.com/pjeby) for his help in creating this plugin.
+**Made with ❤️ by [jbuc](https://github.com/jbuc)**

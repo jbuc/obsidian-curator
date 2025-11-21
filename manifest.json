@@ -1,9 +1,9 @@
 {
-	"id": "auto-organizer",
-	"name": "Auto Organizer",
-	"version": "0.1",
+	"id": "curator",
+	"name": "Curator",
+	"version": "1.0.0",
 	"minAppVersion": "0.12.0",
-	"description": "This fork of Farux's Auto Note Mover that allows the advanced configuration of nestable rules and multiple actions.",
+	"description": "Automatically organize your notes with powerful rule-based automation. Move, rename, and template notes based on their properties, tags, and content.",
 	"author": "jbuc",
 	"authorUrl": "https://github.com/jbuc/",
 	"isDesktopOnly": false
