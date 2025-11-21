@@ -19,9 +19,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Use the branch input provided by the user, or default to main
+          # Check out the correct branch to ensure the push works properly
           ref: ${{ github.event.inputs.branch || 'main' }}
-          fetch-depth: 0 # Required for the git push later
+          fetch-depth: 0 
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,30 +29,25 @@ jobs:
           node-version: '20'
 
       - name: Generate Lock File (npm install)
-        # 1. Ensure any old lock file is deleted so a fresh one is created
         run: |
           rm -f package-lock.json
           npm install
           echo "Lock file generated successfully in the runner."
 
-      - name: Commit and Push Lock File (Forced Logic)
+      - name: Commit and Push Lock File (Force Add)
         run: |
-          # 1. Check if the working directory is dirty (i.e., new files exist)
-          # The -A flag adds new, modified, and deleted files.
-          git add package-lock.json
+          # The -f flag forces the file to be added, ignoring .gitignore
+          git add -f package-lock.json
           
-          # Check if there's anything to commit (status check after adding)
+          # Check if there's anything to commit after the force add
           if git status --porcelain package-lock.json | grep -q '^\(A\|M\)'; then
             echo "Changes detected on package-lock.json. Proceeding to commit."
             
-            # Configure Git user
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             
-            # Commit the staged file
-            git commit -m "chore: auto-generated package-lock.json"
+            git commit -m "chore: auto-generated package-lock.json (forced commit)"
             
-            # Push the commit to the branch
             git push
             
             echo "::notice file=package-lock.json::Successfully pushed new lock file."
