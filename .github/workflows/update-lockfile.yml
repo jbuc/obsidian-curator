@@ -1,41 +1,55 @@
-name: Maintenance - Update Lock File
-
-# 1. Only run this manually when YOU decide to update dependencies
-on:
-  workflow_dispatch:
-
-jobs:
-  generate-lock-file:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # Required to push the new lock file
+      contents: write # CRUCIAL: Must have write permission to push the file
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Use the branch input provided by the user, or default to main
+        default: 'main'
+        description: 'Branch to run on (e.g., feat/my-branch). Defaults to main.'
+        required: false
+
+jobs:
+  generate-lock-file:
+    runs-on: ubuntu-latest
+    permissions:
+name: Maintenance - Update Lock File
+
+# This workflow is ONLY triggered manually by the user
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+          ref: ${{ github.event.inputs.branch || 'main' }}
+          fetch-depth: 0 
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Generate Lock File
-        # This generates the file based on your package.json
+      - name: Generate Lock File (npm install)
+        # This resolves dependencies and updates package-lock.json
         run: npm install
 
-     - name: Commit and Push (If Changed)
-        # Use a simpler check to see if git is dirty
+      - name: Commit and Push Lock File
         run: |
-          git status
-          if [[ $(git status --porcelain) ]]; then
-            echo "Changes detected. Committing..."
+          # Check if the lock file has been modified or created
+          if git diff --exit-code -- package-lock.json; then
+            echo "::notice file=package-lock.json::Lock file is up to date. No commit needed."
+          else
+            echo "Changes detected. Committing package-lock.json..."
+            
+            # Configure Git user
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            
+            # Add and Commit the file
             git add package-lock.json
-            git commit -m "chore: auto-update package-lock.json (forced commit)"
+            git commit -m "chore: auto-generated package-lock.json"
+            
+            # Push the commit to the branch
             git push
-          else
-            echo "No changes detected by Git after npm install."
+            
+            echo "::notice file=package-lock.json::Successfully pushed new lock file."
           fi
