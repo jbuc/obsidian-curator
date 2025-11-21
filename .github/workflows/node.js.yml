@@ -1,31 +1,66 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI
+name: Build and Deploy Obsidian Plugin
 
 on:
   push:
+    # Only run deployment logic on 'main' branch pushes
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  # We will remove 'pull_request' to prevent accidental pushes
+  # to the main branch from a PR build.
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
+    
+    # Use a single, stable Node.js version for the build
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    
+    - name: Set up Node.js 20.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '20.x' # A single, stable version is sufficient
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+        
+    - name: Install Dependencies
+      run: npm ci
+      
+    - name: Build Plugin Files
+      run: npm run build # This command must generate your plugin files (main.js, manifest.json, styles.css)
+      
+    # 🌟 NEW STEP: Upload the files that need to be pushed
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: plugin-artifacts
+        path: |
+          main.js # Adjust these paths based on where your build command puts them
+          manifest.json 
+          styles.css
+          # Add any other files you need to deploy
+
+  # 🌟 NEW JOB: Deploy (Commit and Push) the built files
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build # This job will only run after 'build' succeeds
+
+    steps:
+    # 🌟 NEW STEP: Download the built files from the previous job
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: plugin-artifacts
+        
+    # Checkout the repository again to prepare for a commit
+    # We use GITHUB_TOKEN to perform the commit/push
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }} # Uses the default token with write permissions
+
+    # 🌟 NEW STEP: Auto-commit and push the changed files
+    - name: Commit and Push Built Files
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "🤖 CI: Deploy built files [skip ci]"
+        branch: main # Push back to the main branch
+        # The default commit author is usually fine, but can be customized
+
