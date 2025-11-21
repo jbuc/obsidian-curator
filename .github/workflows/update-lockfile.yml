@@ -1,0 +1,32 @@
+name: Maintenance - Update Lock File
+
+# 1. Only run this manually when YOU decide to update dependencies
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-lock-file:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push the new lock file
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Lock File
+        # This generates the file based on your package.json
+        run: npm install
+
+      - name: Commit and Push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update package-lock.json"
+          file_pattern: package-lock.json
