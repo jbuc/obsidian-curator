@@ -38,12 +38,26 @@ interface ActionMove {
 	targetFolder: string;
 }
 
-interface ActionTag {
-	type: 'addTag' | 'removeTag';
-	tag: string;
+interface ActionRename {
+	type: 'rename';
+	prefix?: string;
+	suffix?: string;
+	replace?: string;
 }
 
-type RuleAction = ActionMove | ActionTag | /* future */ ActionRunCommand;
+interface ActionApplyTemplate {
+	type: 'applyTemplate';
+	templatePath: string;
+	mode: 'prepend' | 'append' | 'replace';
+}
+
+interface ActionSetProperty {
+	type: 'setProperty';
+	property: string;
+	value?: string;
+}
+
+type RuleAction = ActionMove | ActionRename | ActionApplyTemplate | ActionSetProperty;
 ```
 
 ### Rule

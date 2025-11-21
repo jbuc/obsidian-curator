@@ -1,13 +1,10 @@
 import { App, CachedMetadata, normalizePath, Notice, parseFrontMatterEntry, TFile, TFolder } from 'obsidian';
 
 // Disable AutoNoteMover when "AutoNoteMover: disable" is present in the frontmatter.
-export const isFmDisable = (fileCache: CachedMetadata) => {
+export const isFmDisable = (fileCache: CachedMetadata | null | undefined) => {
+	if (!fileCache?.frontmatter) return false;
 	const fm = parseFrontMatterEntry(fileCache.frontmatter, 'AutoNoteMover');
-	if (fm === 'disable') {
-		return true;
-	} else {
-		return false;
-	}
+	return fm === 'disable';
 };
 
 const folderOrFile = (app: App, path: string) => {
