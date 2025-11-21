@@ -5,9 +5,9 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "feat/filter-engine" ]
+    branches: [ "feat/main" ]
   pull_request:
-    branches: [ "feat/filter-engine" ]
+    branches: [ "feat/main" ]
 
 jobs:
   build:
