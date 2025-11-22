@@ -1,0 +1,45 @@
+name: Maintenance - Update Lock File
+
+# This workflow is ONLY triggered manually by the user
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run on (e.g., feat/my-branch). Defaults to main.)'
+        required: false
+        default: 'main'
+
+jobs:
+  generate-lock-file:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push the new file
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Use the branch input provided by the user, or default to main
+          ref: ${{ github.event.inputs.branch || 'main' }}
+          fetch-depth: 0 # Required for the git auto-commit action
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 1. Generate package-lock.json
+        # This resolves dependencies based on package.json and updates package-lock.json
+        run: npm install
+
+      - name: 2. Copy Lock Content to Unignored TXT File
+        # Copies the generated content into a file Git is allowed to track.
+        run: cp package-lock.json package-lock-manifest.txt
+
+      - name: 3. Commit and Push the Manifest File
+        # Commits the new, unignored package-lock-manifest.txt file.
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-update package-lock-manifest.txt"
+          file_pattern: package-lock-manifest.txt
+          branch: ${{ github.event.inputs.branch || 'main' }}
