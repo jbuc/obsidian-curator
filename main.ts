@@ -53,14 +53,22 @@ export default class AutoNoteMover extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, {
-			identifiers: [],
+		const DEFAULT_SETTINGS: CuratorConfig = {
+			identifiers: [
+				{ id: 'default-tag-todo', name: 'Has #todo', type: 'tag', config: { tag: '#todo' } },
+				{ id: 'default-folder-daily', name: 'In Daily Notes', type: 'folder', config: { folder: 'Daily Notes' } }
+			],
 			groups: [],
-			triggers: [],
+			triggers: [
+				{ id: 'default-trigger-modify', name: 'On File Modified', type: 'obsidian_event', event: 'modify' },
+				{ id: 'default-trigger-create', name: 'On File Created', type: 'obsidian_event', event: 'create' },
+				{ id: 'default-trigger-startup', name: 'On Obsidian Startup', type: 'system_event', event: 'startup' }
+			],
 			actions: [],
-			jobs: [],
 			rulesets: []
-		}, await this.loadData());
+		};
+
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
 	async saveSettings() {
