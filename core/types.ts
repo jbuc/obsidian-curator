@@ -71,24 +71,25 @@ export interface Action {
 }
 
 /**
- * A sequence of actions to run.
+ * A rule within a ruleset.
+ * Defines a condition (Group) and a sequence of Actions.
  */
-export interface Job {
-    id: string;
-    name: string;
-    actionIds: string[]; // Ordered list of Action IDs
+export interface Rule {
+    groupId?: string; // If null/undefined, runs always (unless stopped by previous rule?)
+    // For "else if" logic, we might need a way to say "only if previous didn't match"?
+    // For now, let's assume sequential execution.
+    actionIds: string[];
 }
 
 /**
- * Maps Triggers -> Groups -> Jobs.
+ * Maps Triggers -> Rules.
  */
 export interface Ruleset {
     id: string;
     name: string;
     enabled: boolean;
     triggerId: string;
-    groupId: string; // The group of files this ruleset applies to
-    jobId: string; // The job to run
+    rules: Rule[];
 }
 
 /**
@@ -99,6 +100,6 @@ export interface CuratorConfig {
     groups: Group[];
     triggers: Trigger[];
     actions: Action[];
-    jobs: Job[];
+    // jobs: Job[]; // Removed
     rulesets: Ruleset[];
 }

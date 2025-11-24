@@ -5,7 +5,6 @@ import { IdentifierService } from 'core/IdentifierService';
 import { GroupService } from 'core/GroupService';
 import { TriggerService } from 'core/TriggerService';
 import { ActionService } from 'core/ActionService';
-import { JobService } from 'core/JobService';
 import { RulesetService } from 'core/RulesetService';
 import { CuratorSettingsTab } from 'ui/CuratorSettingsTab';
 
@@ -16,7 +15,6 @@ export default class AutoNoteMover extends Plugin {
 	private groupService: GroupService;
 	private triggerService: TriggerService;
 	private actionService: ActionService;
-	private jobService: JobService;
 	private rulesetService: RulesetService;
 
 	async onload() {
@@ -28,13 +26,10 @@ export default class AutoNoteMover extends Plugin {
 		this.groupService = new GroupService(this.app, this.identifierService);
 		this.triggerService = new TriggerService(this.app);
 		this.actionService = new ActionService(this.app, this.binder);
-		this.jobService = new JobService(this.app, this.actionService, this.binder);
-
 		this.rulesetService = new RulesetService(
 			this.app,
 			this.triggerService,
 			this.groupService,
-			this.jobService,
 			this.binder,
 			this.identifierService,
 			this.actionService

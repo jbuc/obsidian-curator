@@ -3,9 +3,8 @@ import { IdentifierService } from '../core/IdentifierService';
 import { GroupService } from '../core/GroupService';
 import { TriggerService } from '../core/TriggerService';
 import { ActionService } from '../core/ActionService';
-import { JobService } from '../core/JobService';
 import { RulesetService } from '../core/RulesetService';
-import { CuratorConfig } from '../core/types';
+import { CuratorConfig, Action } from '../core/types';
 
 // Mock Obsidian module
 jest.mock('obsidian', () => ({
@@ -44,7 +43,6 @@ describe('Curator End-to-End', () => {
     let groupService: GroupService;
     let triggerService: TriggerService;
     let actionService: ActionService;
-    let jobService: JobService;
     let rulesetService: RulesetService;
     let mockApp: App;
 
@@ -58,7 +56,8 @@ describe('Curator End-to-End', () => {
                 adapter: {
                     exists: jest.fn().mockResolvedValue(false)
                 },
-                createFolder: jest.fn().mockResolvedValue(undefined)
+                createFolder: jest.fn().mockResolvedValue(undefined),
+                getMarkdownFiles: jest.fn().mockReturnValue([])
             },
             metadataCache: {
                 getFileCache: jest.fn().mockReturnValue({
@@ -77,12 +76,10 @@ describe('Curator End-to-End', () => {
         groupService = new GroupService(mockApp, identifierService);
         triggerService = new TriggerService(mockApp);
         actionService = new ActionService(mockApp, binderService);
-        jobService = new JobService(mockApp, actionService, binderService);
         rulesetService = new RulesetService(
             mockApp,
             triggerService,
             groupService,
-            jobService,
             binderService,
             identifierService,
             actionService
@@ -104,11 +101,16 @@ describe('Curator End-to-End', () => {
             actions: [
                 { id: 'a1', name: 'Move to /Archive', type: 'move', config: { folder: 'Archive', createIfMissing: true } }
             ],
-            jobs: [
-                { id: 'j1', name: 'Archive Job', actionIds: ['a1'] }
-            ],
             rulesets: [
-                { id: 'r1', name: 'Archive Test Notes', enabled: true, triggerId: 't1', groupId: 'g1', jobId: 'j1' }
+                {
+                    id: 'r1',
+                    name: 'Archive Test Notes',
+                    enabled: true,
+                    triggerId: 't1',
+                    rules: [
+                        { groupId: 'g1', actionIds: ['a1'] }
+                    ]
+                }
             ]
         };
 
@@ -172,7 +174,7 @@ describe('Curator End-to-End', () => {
     });
 
     test('ActionService should move file', async () => {
-        const action: any = {
+        const action: Action = {
             id: 'a1',
             name: 'Move Action',
             type: 'move',
@@ -199,9 +201,16 @@ describe('Curator End-to-End', () => {
                 }
             ],
             actions: [],
-            jobs: [],
             rulesets: [
-                { id: 'r_folder', name: 'Folder Rule', enabled: true, triggerId: 't_folder', groupId: 'g1', jobId: 'j1' }
+                {
+                    id: 'r_folder',
+                    name: 'Folder Rule',
+                    enabled: true,
+                    triggerId: 't_folder',
+                    rules: [
+                        { actionIds: [] } // No actions needed for this test, just checking trigger
+                    ]
+                }
             ]
         };
 
@@ -241,9 +250,14 @@ describe('Curator End-to-End', () => {
                 }
             ],
             actions: [],
-            jobs: [],
             rulesets: [
-                { id: 'r_startup', name: 'Startup Rule', enabled: true, triggerId: 't_startup', groupId: 'g1', jobId: 'j1' }
+                {
+                    id: 'r_startup',
+                    name: 'Startup Rule',
+                    enabled: true,
+                    triggerId: 't_startup',
+                    rules: []
+                }
             ]
         };
 
@@ -278,9 +292,14 @@ describe('Curator End-to-End', () => {
                 }
             ],
             actions: [],
-            jobs: [],
             rulesets: [
-                { id: 'r_startup_future', name: 'Startup Rule Future', enabled: true, triggerId: 't_startup_future', groupId: 'g1', jobId: 'j1' }
+                {
+                    id: 'r_startup_future',
+                    name: 'Startup Rule Future',
+                    enabled: true,
+                    triggerId: 't_startup_future',
+                    rules: []
+                }
             ]
         };
 

@@ -1,8 +1,7 @@
 import { App, TFile } from 'obsidian';
-import { Ruleset, Group, Job, Trigger, Identifier, Action, CuratorConfig } from './types';
+import { Ruleset, Group, Trigger, Identifier, Action, CuratorConfig, Rule } from './types';
 import { TriggerService } from './TriggerService';
 import { GroupService } from './GroupService';
-import { JobService } from './JobService';
 import { BinderService } from './BinderService';
 import { IdentifierService } from './IdentifierService';
 import { ActionService } from './ActionService';
@@ -11,20 +10,18 @@ export class RulesetService {
     private app: App;
     private triggerService: TriggerService;
     private groupService: GroupService;
-    private jobService: JobService;
     private binder: BinderService;
     private identifierService: IdentifierService;
     private actionService: ActionService;
 
     private rulesets: Ruleset[] = [];
     private groups: Map<string, Group> = new Map();
-    private jobs: Map<string, Job> = new Map();
+    private actions: Map<string, Action> = new Map();
 
     constructor(
         app: App,
         triggerService: TriggerService,
         groupService: GroupService,
-        jobService: JobService,
         binder: BinderService,
         identifierService: IdentifierService,
         actionService: ActionService
@@ -32,7 +29,6 @@ export class RulesetService {
         this.app = app;
         this.triggerService = triggerService;
         this.groupService = groupService;
-        this.jobService = jobService;
         this.binder = binder;
         this.identifierService = identifierService;
         this.actionService = actionService;
@@ -44,23 +40,18 @@ export class RulesetService {
         this.groups.clear();
         config.groups.forEach(g => this.groups.set(g.id, g));
 
-        this.jobs.clear();
-        config.jobs.forEach(j => this.jobs.set(j.id, j));
+        this.actions.clear();
+        config.actions.forEach(a => this.actions.set(a.id, a));
 
         // Update dependencies
         this.groupService.updateIdentifiers(config.identifiers);
-        this.jobService.updateActions(config.actions);
 
         // Re-register triggers
-        // For now, we just register a generic handler for all triggers referenced in enabled rulesets
         const activeTriggerIds = new Set(this.rulesets.filter(r => r.enabled).map(r => r.triggerId));
 
-        // We need to register the triggers with the TriggerService if they are new
         config.triggers.forEach(t => {
-            // console.log(`[DEBUG] Checking trigger ${t.id} for registration. Active? ${activeTriggerIds.has(t.id)}`);
             if (activeTriggerIds.has(t.id)) {
                 this.triggerService.registerTrigger(t, (triggerId, file) => {
-                    // console.log(`[DEBUG] Callback for trigger ${triggerId} fired`);
                     this.handleTrigger(triggerId, file);
                 });
             }
@@ -68,30 +59,46 @@ export class RulesetService {
     }
 
     private async handleTrigger(triggerId: string, file: TFile) {
-        // console.log(`[DEBUG] RulesetService handling trigger ${triggerId}`);
-        // throw new Error(`handleTrigger called for ${triggerId}. Rulesets count: ${this.rulesets.length}`);
         // Find all enabled rulesets that use this trigger
         const matchingRulesets = this.rulesets.filter(r => r.enabled && r.triggerId === triggerId);
 
         for (const ruleset of matchingRulesets) {
-            const group = this.groups.get(ruleset.groupId);
-            if (!group) {
-                this.binder.log('warning', `Ruleset ${ruleset.name} references missing group ${ruleset.groupId}`, file.path);
+            this.binder.log('info', `Processing Ruleset: ${ruleset.name}`, file.path);
+
+            for (const rule of ruleset.rules) {
+                let match = true;
+
+                // Check Group Condition if present
+                if (rule.groupId) {
+                    const group = this.groups.get(rule.groupId);
+                    if (!group) {
+                        this.binder.log('warning', `Rule in ${ruleset.name} references missing group ${rule.groupId}`, file.path);
+                        match = false;
+                    } else {
+                        match = this.groupService.isInGroup(file, group);
+                    }
+                }
+
+                if (match) {
+                    this.binder.log('info', `Rule matched. Executing actions.`, file.path);
+                    await this.executeActions(rule.actionIds, file);
+                }
+            }
+        }
+    }
+
+    private async executeActions(actionIds: string[], file: TFile) {
+        for (const actionId of actionIds) {
+            const action = this.actions.get(actionId);
+            if (!action) {
+                this.binder.log('error', `Missing action ${actionId}`, file.path);
                 continue;
             }
 
-            // throw new Error(`Checking group ${group.name} for file ${file.path}`);
-            if (this.groupService.isInGroup(file, group)) {
-                // throw new Error(`Group matched! Running job ${ruleset.jobId}`);
-                const job = this.jobs.get(ruleset.jobId);
-                if (!job) {
-                    this.binder.log('warning', `Ruleset ${ruleset.name} references missing job ${ruleset.jobId}`, file.path);
-                    continue;
-                }
-
-                this.binder.log('info', `Ruleset ${ruleset.name} matched. Running job ${job.name}.`, file.path);
-                console.error('[DEBUG] Running job:', JSON.stringify(job));
-                await this.jobService.runJob(job, file);
+            try {
+                await this.actionService.executeAction(file, action);
+            } catch (error) {
+                this.binder.log('error', `Failed to execute action ${action.name}`, file.path, error);
             }
         }
     }

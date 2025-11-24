@@ -1,12 +1,12 @@
 import { App, Setting } from 'obsidian';
-import { CuratorConfig, Identifier, Group, Trigger, Action, Job } from '../../core/types';
+import { CuratorConfig, Identifier, Group, Trigger, Action } from '../../core/types';
 
 export class DefinitionsTab {
     private app: App;
     private containerEl: HTMLElement;
     private config: CuratorConfig;
     private onUpdate: (config: CuratorConfig) => void;
-    private activeSection: 'identifiers' | 'groups' | 'triggers' | 'actions' | 'jobs' = 'identifiers';
+    private activeSection: 'identifiers' | 'groups' | 'triggers' | 'actions' = 'identifiers';
 
     constructor(app: App, containerEl: HTMLElement, config: CuratorConfig, onUpdate: (config: CuratorConfig) => void) {
         this.app = app;
@@ -29,7 +29,6 @@ export class DefinitionsTab {
         this.createNavButton(navContainer, 'Groups', 'groups');
         this.createNavButton(navContainer, 'Triggers', 'triggers');
         this.createNavButton(navContainer, 'Actions', 'actions');
-        this.createNavButton(navContainer, 'Jobs', 'jobs');
 
         const contentContainer = this.containerEl.createDiv('definitions-content');
 
@@ -38,7 +37,6 @@ export class DefinitionsTab {
             case 'groups': this.renderGroups(contentContainer); break;
             case 'triggers': this.renderTriggers(contentContainer); break;
             case 'actions': this.renderActions(contentContainer); break;
-            case 'jobs': this.renderJobs(contentContainer); break;
         }
     }
 
@@ -487,84 +485,4 @@ export class DefinitionsTab {
         });
     }
 
-    private renderJobs(container: HTMLElement) {
-        new Setting(container)
-            .setName('Add Job')
-            .setDesc('Combine actions into a sequence.')
-            .addButton(btn => btn
-                .setButtonText('Add Job')
-                .setCta()
-                .onClick(() => {
-                    this.config.jobs.push({
-                        id: crypto.randomUUID(),
-                        name: 'New Job',
-                        actionIds: []
-                    });
-                    this.onUpdate(this.config);
-                    this.display();
-                }));
-
-        this.config.jobs.forEach((job, index) => {
-            const div = container.createDiv('definition-item');
-            div.style.border = '1px solid var(--background-modifier-border)';
-            div.style.padding = '10px';
-            div.style.marginBottom = '10px';
-            div.style.borderRadius = '4px';
-
-            new Setting(div)
-                .setName('Name')
-                .addText(text => text
-                    .setValue(job.name)
-                    .onChange(value => {
-                        job.name = value;
-                        this.onUpdate(this.config);
-                    }))
-                .addExtraButton(btn => btn
-                    .setIcon('trash')
-                    .onClick(() => {
-                        this.config.jobs.splice(index, 1);
-                        this.onUpdate(this.config);
-                        this.display();
-                    }));
-
-            // Actions Selection (Ordered)
-            // For simplicity, just a list of toggles for now, but ideally this should be reorderable.
-            // Let's just do a multi-select style for now.
-
-            const actionsContainer = div.createDiv('actions-selection');
-            actionsContainer.createEl('h4', { text: 'Actions Sequence' });
-
-            // Show current actions in order
-            job.actionIds.forEach((actionId, actionIndex) => {
-                const action = this.config.actions.find(a => a.id === actionId);
-                if (action) {
-                    new Setting(actionsContainer)
-                        .setName(`${actionIndex + 1}. ${action.name}`)
-                        .addExtraButton(btn => btn
-                            .setIcon('cross')
-                            .setTooltip('Remove from Job')
-                            .onClick(() => {
-                                job.actionIds.splice(actionIndex, 1);
-                                this.onUpdate(this.config);
-                                this.display();
-                            }));
-                }
-            });
-
-            // Add Action to Job
-            new Setting(actionsContainer)
-                .setName('Add Action to Sequence')
-                .addDropdown(dropdown => {
-                    dropdown.addOption('', 'Select Action');
-                    this.config.actions.forEach(a => dropdown.addOption(a.id, a.name));
-                    dropdown.onChange(value => {
-                        if (value) {
-                            job.actionIds.push(value);
-                            this.onUpdate(this.config);
-                            this.display();
-                        }
-                    });
-                });
-        });
-    }
 }

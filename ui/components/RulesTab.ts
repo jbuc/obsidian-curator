@@ -42,8 +42,7 @@ export class RulesTab {
             name: 'New Ruleset',
             enabled: true,
             triggerId: '',
-            groupId: '',
-            jobId: ''
+            rules: []
         };
         this.config.rulesets.push(newRuleset);
         this.onUpdate(this.config);
@@ -82,14 +81,8 @@ export class RulesTab {
                     this.display();
                 }));
 
-        // Configuration: Trigger, Group, Job
-        const configContainer = rulesetContainer.createDiv('ruleset-config');
-        configContainer.style.display = 'grid';
-        configContainer.style.gridTemplateColumns = '1fr 1fr 1fr';
-        configContainer.style.gap = '10px';
-
-        // Trigger Dropdown
-        new Setting(configContainer)
+        // Trigger Configuration
+        new Setting(rulesetContainer)
             .setName('Trigger')
             .setDesc('When to run')
             .addDropdown(dropdown => {
@@ -102,32 +95,102 @@ export class RulesTab {
                 });
             });
 
-        // Group Dropdown
-        new Setting(configContainer)
-            .setName('Group')
-            .setDesc('Which notes')
-            .addDropdown(dropdown => {
-                dropdown.addOption('', 'Select Group');
-                this.config.groups.forEach(g => dropdown.addOption(g.id, g.name));
-                dropdown.setValue(ruleset.groupId);
-                dropdown.onChange(value => {
-                    ruleset.groupId = value;
-                    this.onUpdate(this.config);
+        // Rules Configuration
+        const rulesContainer = rulesetContainer.createDiv('rules-container');
+        rulesContainer.style.marginTop = '10px';
+        rulesContainer.style.paddingLeft = '10px';
+        rulesContainer.style.borderLeft = '2px solid var(--background-modifier-border)';
+
+        rulesContainer.createEl('h4', { text: 'Rules (Processed in order)' });
+
+        ruleset.rules.forEach((rule, ruleIndex) => {
+            const ruleDiv = rulesContainer.createDiv('rule-item');
+            ruleDiv.style.marginBottom = '10px';
+            ruleDiv.style.padding = '5px';
+            ruleDiv.style.backgroundColor = 'var(--background-secondary)';
+            ruleDiv.style.borderRadius = '4px';
+
+            const ruleHeader = ruleDiv.createDiv('rule-header');
+            ruleHeader.style.display = 'flex';
+            ruleHeader.style.justifyContent = 'space-between';
+            ruleHeader.style.alignItems = 'center';
+
+            const title = rule.groupId
+                ? `If matches Group: ${this.config.groups.find(g => g.id === rule.groupId)?.name || 'Unknown'}`
+                : 'Always (No Group)';
+
+            ruleHeader.createEl('span', { text: title, cls: 'rule-title' });
+
+            new Setting(ruleHeader)
+                .addExtraButton(btn => btn
+                    .setIcon('trash')
+                    .setTooltip('Delete Rule')
+                    .onClick(() => {
+                        ruleset.rules.splice(ruleIndex, 1);
+                        this.onUpdate(this.config);
+                        this.display();
+                    }));
+
+            // Edit Group
+            new Setting(ruleDiv)
+                .setName('Condition (Group)')
+                .setDesc('Leave empty to run always')
+                .addDropdown(dropdown => {
+                    dropdown.addOption('', 'Always (No Group)');
+                    this.config.groups.forEach(g => dropdown.addOption(g.id, g.name));
+                    dropdown.setValue(rule.groupId || '');
+                    dropdown.onChange(value => {
+                        rule.groupId = value || undefined;
+                        this.onUpdate(this.config);
+                        this.display(); // Re-render to update title
+                    });
                 });
+
+            // Actions
+            const actionsDiv = ruleDiv.createDiv('rule-actions');
+            actionsDiv.createEl('h5', { text: 'Actions' });
+
+            rule.actionIds.forEach((actionId, actionIndex) => {
+                const action = this.config.actions.find(a => a.id === actionId);
+                if (action) {
+                    new Setting(actionsDiv)
+                        .setName(`${actionIndex + 1}. ${action.name}`)
+                        .addExtraButton(btn => btn
+                            .setIcon('cross')
+                            .setTooltip('Remove Action')
+                            .onClick(() => {
+                                rule.actionIds.splice(actionIndex, 1);
+                                this.onUpdate(this.config);
+                                this.display();
+                            }));
+                }
             });
 
-        // Job Dropdown
-        new Setting(configContainer)
-            .setName('Job')
-            .setDesc('What to do')
-            .addDropdown(dropdown => {
-                dropdown.addOption('', 'Select Job');
-                this.config.jobs.forEach(j => dropdown.addOption(j.id, j.name));
-                dropdown.setValue(ruleset.jobId);
-                dropdown.onChange(value => {
-                    ruleset.jobId = value;
-                    this.onUpdate(this.config);
+            new Setting(actionsDiv)
+                .setName('Add Action')
+                .addDropdown(dropdown => {
+                    dropdown.addOption('', 'Select Action');
+                    this.config.actions.forEach(a => dropdown.addOption(a.id, a.name));
+                    dropdown.onChange(value => {
+                        if (value) {
+                            rule.actionIds.push(value);
+                            this.onUpdate(this.config);
+                            this.display();
+                        }
+                    });
                 });
-            });
+        });
+
+        // Add Rule Button
+        new Setting(rulesContainer)
+            .addButton(btn => btn
+                .setButtonText('Add Rule')
+                .onClick(() => {
+                    ruleset.rules.push({
+                        actionIds: []
+                    });
+                    this.onUpdate(this.config);
+                    this.display();
+                }));
     }
 }

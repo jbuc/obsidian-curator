@@ -396,49 +396,15 @@ var ActionService = class {
   }
 };
 
-// core/JobService.ts
-var JobService = class {
-  constructor(app, actionService, binder) {
-    this.actions = new Map();
-    this.app = app;
-    this.actionService = actionService;
-    this.binder = binder;
-  }
-  updateActions(actions) {
-    this.actions.clear();
-    actions.forEach((a) => this.actions.set(a.id, a));
-  }
-  runJob(job, file) {
-    return __async(this, null, function* () {
-      this.binder.log("info", `Starting job ${job.name}`, file.path);
-      for (const actionId of job.actionIds) {
-        const action = this.actions.get(actionId);
-        if (!action) {
-          this.binder.log("error", `Job ${job.name} references missing action ${actionId}`, file.path);
-          continue;
-        }
-        try {
-          yield this.actionService.executeAction(file, action);
-        } catch (error) {
-          this.binder.log("error", `Job ${job.name} stopped due to error`);
-          return;
-        }
-      }
-      this.binder.log("info", `Completed job ${job.name}`, file.path);
-    });
-  }
-};
-
 // core/RulesetService.ts
 var RulesetService = class {
-  constructor(app, triggerService, groupService, jobService, binder, identifierService, actionService) {
+  constructor(app, triggerService, groupService, binder, identifierService, actionService) {
     this.rulesets = [];
     this.groups = new Map();
-    this.jobs = new Map();
+    this.actions = new Map();
     this.app = app;
     this.triggerService = triggerService;
     this.groupService = groupService;
-    this.jobService = jobService;
     this.binder = binder;
     this.identifierService = identifierService;
     this.actionService = actionService;
@@ -447,10 +413,9 @@ var RulesetService = class {
     this.rulesets = config.rulesets;
     this.groups.clear();
     config.groups.forEach((g) => this.groups.set(g.id, g));
-    this.jobs.clear();
-    config.jobs.forEach((j) => this.jobs.set(j.id, j));
+    this.actions.clear();
+    config.actions.forEach((a) => this.actions.set(a.id, a));
     this.groupService.updateIdentifiers(config.identifiers);
-    this.jobService.updateActions(config.actions);
     const activeTriggerIds = new Set(this.rulesets.filter((r) => r.enabled).map((r) => r.triggerId));
     config.triggers.forEach((t) => {
       if (activeTriggerIds.has(t.id)) {
@@ -464,20 +429,38 @@ var RulesetService = class {
     return __async(this, null, function* () {
       const matchingRulesets = this.rulesets.filter((r) => r.enabled && r.triggerId === triggerId);
       for (const ruleset of matchingRulesets) {
-        const group = this.groups.get(ruleset.groupId);
-        if (!group) {
-          this.binder.log("warning", `Ruleset ${ruleset.name} references missing group ${ruleset.groupId}`, file.path);
+        this.binder.log("info", `Processing Ruleset: ${ruleset.name}`, file.path);
+        for (const rule of ruleset.rules) {
+          let match = true;
+          if (rule.groupId) {
+            const group = this.groups.get(rule.groupId);
+            if (!group) {
+              this.binder.log("warning", `Rule in ${ruleset.name} references missing group ${rule.groupId}`, file.path);
+              match = false;
+            } else {
+              match = this.groupService.isInGroup(file, group);
+            }
+          }
+          if (match) {
+            this.binder.log("info", `Rule matched. Executing actions.`, file.path);
+            yield this.executeActions(rule.actionIds, file);
+          }
+        }
+      }
+    });
+  }
+  executeActions(actionIds, file) {
+    return __async(this, null, function* () {
+      for (const actionId of actionIds) {
+        const action = this.actions.get(actionId);
+        if (!action) {
+          this.binder.log("error", `Missing action ${actionId}`, file.path);
           continue;
         }
-        if (this.groupService.isInGroup(file, group)) {
-          const job = this.jobs.get(ruleset.jobId);
-          if (!job) {
-            this.binder.log("warning", `Ruleset ${ruleset.name} references missing job ${ruleset.jobId}`, file.path);
-            continue;
-          }
-          this.binder.log("info", `Ruleset ${ruleset.name} matched. Running job ${job.name}.`, file.path);
-          console.error("[DEBUG] Running job:", JSON.stringify(job));
-          yield this.jobService.runJob(job, file);
+        try {
+          yield this.actionService.executeAction(file, action);
+        } catch (error) {
+          this.binder.log("error", `Failed to execute action ${action.name}`, file.path, error);
         }
       }
     });
@@ -514,8 +497,7 @@ var RulesTab = class {
       name: "New Ruleset",
       enabled: true,
       triggerId: "",
-      groupId: "",
-      jobId: ""
+      rules: []
     };
     this.config.rulesets.push(newRuleset);
     this.onUpdate(this.config);
@@ -538,11 +520,7 @@ var RulesTab = class {
       this.onUpdate(this.config);
       this.display();
     }));
-    const configContainer = rulesetContainer.createDiv("ruleset-config");
-    configContainer.style.display = "grid";
-    configContainer.style.gridTemplateColumns = "1fr 1fr 1fr";
-    configContainer.style.gap = "10px";
-    new import_obsidian4.Setting(configContainer).setName("Trigger").setDesc("When to run").addDropdown((dropdown) => {
+    new import_obsidian4.Setting(rulesetContainer).setName("Trigger").setDesc("When to run").addDropdown((dropdown) => {
       dropdown.addOption("", "Select Trigger");
       this.config.triggers.forEach((t) => dropdown.addOption(t.id, t.name));
       dropdown.setValue(ruleset.triggerId);
@@ -551,24 +529,70 @@ var RulesTab = class {
         this.onUpdate(this.config);
       });
     });
-    new import_obsidian4.Setting(configContainer).setName("Group").setDesc("Which notes").addDropdown((dropdown) => {
-      dropdown.addOption("", "Select Group");
-      this.config.groups.forEach((g) => dropdown.addOption(g.id, g.name));
-      dropdown.setValue(ruleset.groupId);
-      dropdown.onChange((value) => {
-        ruleset.groupId = value;
+    const rulesContainer = rulesetContainer.createDiv("rules-container");
+    rulesContainer.style.marginTop = "10px";
+    rulesContainer.style.paddingLeft = "10px";
+    rulesContainer.style.borderLeft = "2px solid var(--background-modifier-border)";
+    rulesContainer.createEl("h4", { text: "Rules (Processed in order)" });
+    ruleset.rules.forEach((rule, ruleIndex) => {
+      var _a;
+      const ruleDiv = rulesContainer.createDiv("rule-item");
+      ruleDiv.style.marginBottom = "10px";
+      ruleDiv.style.padding = "5px";
+      ruleDiv.style.backgroundColor = "var(--background-secondary)";
+      ruleDiv.style.borderRadius = "4px";
+      const ruleHeader = ruleDiv.createDiv("rule-header");
+      ruleHeader.style.display = "flex";
+      ruleHeader.style.justifyContent = "space-between";
+      ruleHeader.style.alignItems = "center";
+      const title = rule.groupId ? `If matches Group: ${((_a = this.config.groups.find((g) => g.id === rule.groupId)) == null ? void 0 : _a.name) || "Unknown"}` : "Always (No Group)";
+      ruleHeader.createEl("span", { text: title, cls: "rule-title" });
+      new import_obsidian4.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+        ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
+        this.display();
+      }));
+      new import_obsidian4.Setting(ruleDiv).setName("Condition (Group)").setDesc("Leave empty to run always").addDropdown((dropdown) => {
+        dropdown.addOption("", "Always (No Group)");
+        this.config.groups.forEach((g) => dropdown.addOption(g.id, g.name));
+        dropdown.setValue(rule.groupId || "");
+        dropdown.onChange((value) => {
+          rule.groupId = value || void 0;
+          this.onUpdate(this.config);
+          this.display();
+        });
+      });
+      const actionsDiv = ruleDiv.createDiv("rule-actions");
+      actionsDiv.createEl("h5", { text: "Actions" });
+      rule.actionIds.forEach((actionId, actionIndex) => {
+        const action = this.config.actions.find((a) => a.id === actionId);
+        if (action) {
+          new import_obsidian4.Setting(actionsDiv).setName(`${actionIndex + 1}. ${action.name}`).addExtraButton((btn) => btn.setIcon("cross").setTooltip("Remove Action").onClick(() => {
+            rule.actionIds.splice(actionIndex, 1);
+            this.onUpdate(this.config);
+            this.display();
+          }));
+        }
+      });
+      new import_obsidian4.Setting(actionsDiv).setName("Add Action").addDropdown((dropdown) => {
+        dropdown.addOption("", "Select Action");
+        this.config.actions.forEach((a) => dropdown.addOption(a.id, a.name));
+        dropdown.onChange((value) => {
+          if (value) {
+            rule.actionIds.push(value);
+            this.onUpdate(this.config);
+            this.display();
+          }
+        });
       });
     });
-    new import_obsidian4.Setting(configContainer).setName("Job").setDesc("What to do").addDropdown((dropdown) => {
-      dropdown.addOption("", "Select Job");
-      this.config.jobs.forEach((j) => dropdown.addOption(j.id, j.name));
-      dropdown.setValue(ruleset.jobId);
-      dropdown.onChange((value) => {
-        ruleset.jobId = value;
-        this.onUpdate(this.config);
+    new import_obsidian4.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
+      ruleset.rules.push({
+        actionIds: []
       });
-    });
+      this.onUpdate(this.config);
+      this.display();
+    }));
   }
 };
 
@@ -593,7 +617,6 @@ var DefinitionsTab = class {
     this.createNavButton(navContainer, "Groups", "groups");
     this.createNavButton(navContainer, "Triggers", "triggers");
     this.createNavButton(navContainer, "Actions", "actions");
-    this.createNavButton(navContainer, "Jobs", "jobs");
     const contentContainer = this.containerEl.createDiv("definitions-content");
     switch (this.activeSection) {
       case "identifiers":
@@ -607,9 +630,6 @@ var DefinitionsTab = class {
         break;
       case "actions":
         this.renderActions(contentContainer);
-        break;
-      case "jobs":
-        this.renderJobs(contentContainer);
         break;
     }
   }
@@ -871,55 +891,6 @@ var DefinitionsTab = class {
       }
     });
   }
-  renderJobs(container) {
-    new import_obsidian5.Setting(container).setName("Add Job").setDesc("Combine actions into a sequence.").addButton((btn) => btn.setButtonText("Add Job").setCta().onClick(() => {
-      this.config.jobs.push({
-        id: crypto.randomUUID(),
-        name: "New Job",
-        actionIds: []
-      });
-      this.onUpdate(this.config);
-      this.display();
-    }));
-    this.config.jobs.forEach((job, index) => {
-      const div = container.createDiv("definition-item");
-      div.style.border = "1px solid var(--background-modifier-border)";
-      div.style.padding = "10px";
-      div.style.marginBottom = "10px";
-      div.style.borderRadius = "4px";
-      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(job.name).onChange((value) => {
-        job.name = value;
-        this.onUpdate(this.config);
-      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
-        this.config.jobs.splice(index, 1);
-        this.onUpdate(this.config);
-        this.display();
-      }));
-      const actionsContainer = div.createDiv("actions-selection");
-      actionsContainer.createEl("h4", { text: "Actions Sequence" });
-      job.actionIds.forEach((actionId, actionIndex) => {
-        const action = this.config.actions.find((a) => a.id === actionId);
-        if (action) {
-          new import_obsidian5.Setting(actionsContainer).setName(`${actionIndex + 1}. ${action.name}`).addExtraButton((btn) => btn.setIcon("cross").setTooltip("Remove from Job").onClick(() => {
-            job.actionIds.splice(actionIndex, 1);
-            this.onUpdate(this.config);
-            this.display();
-          }));
-        }
-      });
-      new import_obsidian5.Setting(actionsContainer).setName("Add Action to Sequence").addDropdown((dropdown) => {
-        dropdown.addOption("", "Select Action");
-        this.config.actions.forEach((a) => dropdown.addOption(a.id, a.name));
-        dropdown.onChange((value) => {
-          if (value) {
-            job.actionIds.push(value);
-            this.onUpdate(this.config);
-            this.display();
-          }
-        });
-      });
-    });
-  }
 };
 
 // ui/components/LogbookTab.ts
@@ -1041,8 +1012,7 @@ var AutoNoteMover = class extends import_obsidian8.Plugin {
       this.groupService = new GroupService(this.app, this.identifierService);
       this.triggerService = new TriggerService(this.app);
       this.actionService = new ActionService(this.app, this.binder);
-      this.jobService = new JobService(this.app, this.actionService, this.binder);
-      this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.jobService, this.binder, this.identifierService, this.actionService);
+      this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.binder, this.identifierService, this.actionService);
       this.triggerService.initializeListeners();
       this.addSettingTab(new CuratorSettingsTab(this.app, this));
       this.rulesetService.updateConfig(this.settings);

@@ -100,7 +100,6 @@ describe('UI Components', () => {
             groups: [],
             triggers: [],
             actions: [],
-            jobs: [],
             rulesets: []
         };
         onUpdate = jest.fn();
