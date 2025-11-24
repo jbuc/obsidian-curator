@@ -5,27 +5,10 @@ if you want to view the source, please visit the github repository of this plugi
 
 var __create = Object.create;
 var __defProp = Object.defineProperty;
-var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __spreadValues = (a, b) => {
-  for (var prop in b || (b = {}))
-    if (__hasOwnProp.call(b, prop))
-      __defNormalProp(a, prop, b[prop]);
-  if (__getOwnPropSymbols)
-    for (var prop of __getOwnPropSymbols(b)) {
-      if (__propIsEnum.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
-    }
-  return a;
-};
-var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
 var __export = (target, all) => {
   __markAsModule(target);
@@ -68,2878 +51,836 @@ var __async = (__this, __arguments, generator) => {
 __export(exports, {
   default: () => AutoNoteMover
 });
-var import_obsidian16 = __toModule(require("obsidian"));
-
-// settings/settings.ts
 var import_obsidian8 = __toModule(require("obsidian"));
 
-// settings/ui/FilterEngineSettings.ts
-var import_obsidian5 = __toModule(require("obsidian"));
-
-// settings/filterBuilder.ts
-var import_obsidian4 = __toModule(require("obsidian"));
-
-// suggests/file-suggest.ts
-var import_obsidian2 = __toModule(require("obsidian"));
-
-// suggests/suggest.ts
-var import_obsidian = __toModule(require("obsidian"));
-
-// node_modules/@popperjs/core/lib/enums.js
-var top = "top";
-var bottom = "bottom";
-var right = "right";
-var left = "left";
-var auto = "auto";
-var basePlacements = [top, bottom, right, left];
-var start = "start";
-var end = "end";
-var clippingParents = "clippingParents";
-var viewport = "viewport";
-var popper = "popper";
-var reference = "reference";
-var variationPlacements = /* @__PURE__ */ basePlacements.reduce(function(acc, placement) {
-  return acc.concat([placement + "-" + start, placement + "-" + end]);
-}, []);
-var placements = /* @__PURE__ */ [].concat(basePlacements, [auto]).reduce(function(acc, placement) {
-  return acc.concat([placement, placement + "-" + start, placement + "-" + end]);
-}, []);
-var beforeRead = "beforeRead";
-var read = "read";
-var afterRead = "afterRead";
-var beforeMain = "beforeMain";
-var main = "main";
-var afterMain = "afterMain";
-var beforeWrite = "beforeWrite";
-var write = "write";
-var afterWrite = "afterWrite";
-var modifierPhases = [beforeRead, read, afterRead, beforeMain, main, afterMain, beforeWrite, write, afterWrite];
-
-// node_modules/@popperjs/core/lib/dom-utils/getNodeName.js
-function getNodeName(element) {
-  return element ? (element.nodeName || "").toLowerCase() : null;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getWindow.js
-function getWindow(node) {
-  if (node == null) {
-    return window;
-  }
-  if (node.toString() !== "[object Window]") {
-    var ownerDocument = node.ownerDocument;
-    return ownerDocument ? ownerDocument.defaultView || window : window;
-  }
-  return node;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/instanceOf.js
-function isElement(node) {
-  var OwnElement = getWindow(node).Element;
-  return node instanceof OwnElement || node instanceof Element;
-}
-function isHTMLElement(node) {
-  var OwnElement = getWindow(node).HTMLElement;
-  return node instanceof OwnElement || node instanceof HTMLElement;
-}
-function isShadowRoot(node) {
-  if (typeof ShadowRoot === "undefined") {
-    return false;
-  }
-  var OwnElement = getWindow(node).ShadowRoot;
-  return node instanceof OwnElement || node instanceof ShadowRoot;
-}
-
-// node_modules/@popperjs/core/lib/modifiers/applyStyles.js
-function applyStyles(_ref) {
-  var state = _ref.state;
-  Object.keys(state.elements).forEach(function(name) {
-    var style = state.styles[name] || {};
-    var attributes = state.attributes[name] || {};
-    var element = state.elements[name];
-    if (!isHTMLElement(element) || !getNodeName(element)) {
-      return;
-    }
-    Object.assign(element.style, style);
-    Object.keys(attributes).forEach(function(name2) {
-      var value = attributes[name2];
-      if (value === false) {
-        element.removeAttribute(name2);
-      } else {
-        element.setAttribute(name2, value === true ? "" : value);
-      }
-    });
-  });
-}
-function effect(_ref2) {
-  var state = _ref2.state;
-  var initialStyles = {
-    popper: {
-      position: state.options.strategy,
-      left: "0",
-      top: "0",
-      margin: "0"
-    },
-    arrow: {
-      position: "absolute"
-    },
-    reference: {}
-  };
-  Object.assign(state.elements.popper.style, initialStyles.popper);
-  state.styles = initialStyles;
-  if (state.elements.arrow) {
-    Object.assign(state.elements.arrow.style, initialStyles.arrow);
-  }
-  return function() {
-    Object.keys(state.elements).forEach(function(name) {
-      var element = state.elements[name];
-      var attributes = state.attributes[name] || {};
-      var styleProperties = Object.keys(state.styles.hasOwnProperty(name) ? state.styles[name] : initialStyles[name]);
-      var style = styleProperties.reduce(function(style2, property) {
-        style2[property] = "";
-        return style2;
-      }, {});
-      if (!isHTMLElement(element) || !getNodeName(element)) {
-        return;
-      }
-      Object.assign(element.style, style);
-      Object.keys(attributes).forEach(function(attribute) {
-        element.removeAttribute(attribute);
-      });
-    });
-  };
-}
-var applyStyles_default = {
-  name: "applyStyles",
-  enabled: true,
-  phase: "write",
-  fn: applyStyles,
-  effect,
-  requires: ["computeStyles"]
-};
-
-// node_modules/@popperjs/core/lib/utils/getBasePlacement.js
-function getBasePlacement(placement) {
-  return placement.split("-")[0];
-}
-
-// node_modules/@popperjs/core/lib/utils/math.js
-var max = Math.max;
-var min = Math.min;
-var round = Math.round;
-
-// node_modules/@popperjs/core/lib/utils/userAgent.js
-function getUAString() {
-  var uaData = navigator.userAgentData;
-  if (uaData != null && uaData.brands && Array.isArray(uaData.brands)) {
-    return uaData.brands.map(function(item) {
-      return item.brand + "/" + item.version;
-    }).join(" ");
-  }
-  return navigator.userAgent;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/isLayoutViewport.js
-function isLayoutViewport() {
-  return !/^((?!chrome|android).)*safari/i.test(getUAString());
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getBoundingClientRect.js
-function getBoundingClientRect(element, includeScale, isFixedStrategy) {
-  if (includeScale === void 0) {
-    includeScale = false;
-  }
-  if (isFixedStrategy === void 0) {
-    isFixedStrategy = false;
-  }
-  var clientRect = element.getBoundingClientRect();
-  var scaleX = 1;
-  var scaleY = 1;
-  if (includeScale && isHTMLElement(element)) {
-    scaleX = element.offsetWidth > 0 ? round(clientRect.width) / element.offsetWidth || 1 : 1;
-    scaleY = element.offsetHeight > 0 ? round(clientRect.height) / element.offsetHeight || 1 : 1;
-  }
-  var _ref = isElement(element) ? getWindow(element) : window, visualViewport = _ref.visualViewport;
-  var addVisualOffsets = !isLayoutViewport() && isFixedStrategy;
-  var x = (clientRect.left + (addVisualOffsets && visualViewport ? visualViewport.offsetLeft : 0)) / scaleX;
-  var y = (clientRect.top + (addVisualOffsets && visualViewport ? visualViewport.offsetTop : 0)) / scaleY;
-  var width = clientRect.width / scaleX;
-  var height = clientRect.height / scaleY;
-  return {
-    width,
-    height,
-    top: y,
-    right: x + width,
-    bottom: y + height,
-    left: x,
-    x,
-    y
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getLayoutRect.js
-function getLayoutRect(element) {
-  var clientRect = getBoundingClientRect(element);
-  var width = element.offsetWidth;
-  var height = element.offsetHeight;
-  if (Math.abs(clientRect.width - width) <= 1) {
-    width = clientRect.width;
-  }
-  if (Math.abs(clientRect.height - height) <= 1) {
-    height = clientRect.height;
-  }
-  return {
-    x: element.offsetLeft,
-    y: element.offsetTop,
-    width,
-    height
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/contains.js
-function contains(parent, child) {
-  var rootNode = child.getRootNode && child.getRootNode();
-  if (parent.contains(child)) {
-    return true;
-  } else if (rootNode && isShadowRoot(rootNode)) {
-    var next = child;
-    do {
-      if (next && parent.isSameNode(next)) {
-        return true;
-      }
-      next = next.parentNode || next.host;
-    } while (next);
-  }
-  return false;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getComputedStyle.js
-function getComputedStyle(element) {
-  return getWindow(element).getComputedStyle(element);
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/isTableElement.js
-function isTableElement(element) {
-  return ["table", "td", "th"].indexOf(getNodeName(element)) >= 0;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getDocumentElement.js
-function getDocumentElement(element) {
-  return ((isElement(element) ? element.ownerDocument : element.document) || window.document).documentElement;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getParentNode.js
-function getParentNode(element) {
-  if (getNodeName(element) === "html") {
-    return element;
-  }
-  return element.assignedSlot || element.parentNode || (isShadowRoot(element) ? element.host : null) || getDocumentElement(element);
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getOffsetParent.js
-function getTrueOffsetParent(element) {
-  if (!isHTMLElement(element) || getComputedStyle(element).position === "fixed") {
-    return null;
-  }
-  return element.offsetParent;
-}
-function getContainingBlock(element) {
-  var isFirefox = /firefox/i.test(getUAString());
-  var isIE = /Trident/i.test(getUAString());
-  if (isIE && isHTMLElement(element)) {
-    var elementCss = getComputedStyle(element);
-    if (elementCss.position === "fixed") {
-      return null;
-    }
-  }
-  var currentNode = getParentNode(element);
-  if (isShadowRoot(currentNode)) {
-    currentNode = currentNode.host;
-  }
-  while (isHTMLElement(currentNode) && ["html", "body"].indexOf(getNodeName(currentNode)) < 0) {
-    var css = getComputedStyle(currentNode);
-    if (css.transform !== "none" || css.perspective !== "none" || css.contain === "paint" || ["transform", "perspective"].indexOf(css.willChange) !== -1 || isFirefox && css.willChange === "filter" || isFirefox && css.filter && css.filter !== "none") {
-      return currentNode;
-    } else {
-      currentNode = currentNode.parentNode;
-    }
-  }
-  return null;
-}
-function getOffsetParent(element) {
-  var window2 = getWindow(element);
-  var offsetParent = getTrueOffsetParent(element);
-  while (offsetParent && isTableElement(offsetParent) && getComputedStyle(offsetParent).position === "static") {
-    offsetParent = getTrueOffsetParent(offsetParent);
-  }
-  if (offsetParent && (getNodeName(offsetParent) === "html" || getNodeName(offsetParent) === "body" && getComputedStyle(offsetParent).position === "static")) {
-    return window2;
-  }
-  return offsetParent || getContainingBlock(element) || window2;
-}
-
-// node_modules/@popperjs/core/lib/utils/getMainAxisFromPlacement.js
-function getMainAxisFromPlacement(placement) {
-  return ["top", "bottom"].indexOf(placement) >= 0 ? "x" : "y";
-}
-
-// node_modules/@popperjs/core/lib/utils/within.js
-function within(min2, value, max2) {
-  return max(min2, min(value, max2));
-}
-function withinMaxClamp(min2, value, max2) {
-  var v = within(min2, value, max2);
-  return v > max2 ? max2 : v;
-}
-
-// node_modules/@popperjs/core/lib/utils/getFreshSideObject.js
-function getFreshSideObject() {
-  return {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0
-  };
-}
-
-// node_modules/@popperjs/core/lib/utils/mergePaddingObject.js
-function mergePaddingObject(paddingObject) {
-  return Object.assign({}, getFreshSideObject(), paddingObject);
-}
-
-// node_modules/@popperjs/core/lib/utils/expandToHashMap.js
-function expandToHashMap(value, keys) {
-  return keys.reduce(function(hashMap, key) {
-    hashMap[key] = value;
-    return hashMap;
-  }, {});
-}
-
-// node_modules/@popperjs/core/lib/modifiers/arrow.js
-var toPaddingObject = function toPaddingObject2(padding, state) {
-  padding = typeof padding === "function" ? padding(Object.assign({}, state.rects, {
-    placement: state.placement
-  })) : padding;
-  return mergePaddingObject(typeof padding !== "number" ? padding : expandToHashMap(padding, basePlacements));
-};
-function arrow(_ref) {
-  var _state$modifiersData$;
-  var state = _ref.state, name = _ref.name, options = _ref.options;
-  var arrowElement = state.elements.arrow;
-  var popperOffsets2 = state.modifiersData.popperOffsets;
-  var basePlacement = getBasePlacement(state.placement);
-  var axis = getMainAxisFromPlacement(basePlacement);
-  var isVertical = [left, right].indexOf(basePlacement) >= 0;
-  var len = isVertical ? "height" : "width";
-  if (!arrowElement || !popperOffsets2) {
-    return;
-  }
-  var paddingObject = toPaddingObject(options.padding, state);
-  var arrowRect = getLayoutRect(arrowElement);
-  var minProp = axis === "y" ? top : left;
-  var maxProp = axis === "y" ? bottom : right;
-  var endDiff = state.rects.reference[len] + state.rects.reference[axis] - popperOffsets2[axis] - state.rects.popper[len];
-  var startDiff = popperOffsets2[axis] - state.rects.reference[axis];
-  var arrowOffsetParent = getOffsetParent(arrowElement);
-  var clientSize = arrowOffsetParent ? axis === "y" ? arrowOffsetParent.clientHeight || 0 : arrowOffsetParent.clientWidth || 0 : 0;
-  var centerToReference = endDiff / 2 - startDiff / 2;
-  var min2 = paddingObject[minProp];
-  var max2 = clientSize - arrowRect[len] - paddingObject[maxProp];
-  var center = clientSize / 2 - arrowRect[len] / 2 + centerToReference;
-  var offset2 = within(min2, center, max2);
-  var axisProp = axis;
-  state.modifiersData[name] = (_state$modifiersData$ = {}, _state$modifiersData$[axisProp] = offset2, _state$modifiersData$.centerOffset = offset2 - center, _state$modifiersData$);
-}
-function effect2(_ref2) {
-  var state = _ref2.state, options = _ref2.options;
-  var _options$element = options.element, arrowElement = _options$element === void 0 ? "[data-popper-arrow]" : _options$element;
-  if (arrowElement == null) {
-    return;
-  }
-  if (typeof arrowElement === "string") {
-    arrowElement = state.elements.popper.querySelector(arrowElement);
-    if (!arrowElement) {
-      return;
-    }
-  }
-  if (!contains(state.elements.popper, arrowElement)) {
-    return;
-  }
-  state.elements.arrow = arrowElement;
-}
-var arrow_default = {
-  name: "arrow",
-  enabled: true,
-  phase: "main",
-  fn: arrow,
-  effect: effect2,
-  requires: ["popperOffsets"],
-  requiresIfExists: ["preventOverflow"]
-};
-
-// node_modules/@popperjs/core/lib/utils/getVariation.js
-function getVariation(placement) {
-  return placement.split("-")[1];
-}
-
-// node_modules/@popperjs/core/lib/modifiers/computeStyles.js
-var unsetSides = {
-  top: "auto",
-  right: "auto",
-  bottom: "auto",
-  left: "auto"
-};
-function roundOffsetsByDPR(_ref, win) {
-  var x = _ref.x, y = _ref.y;
-  var dpr = win.devicePixelRatio || 1;
-  return {
-    x: round(x * dpr) / dpr || 0,
-    y: round(y * dpr) / dpr || 0
-  };
-}
-function mapToStyles(_ref2) {
-  var _Object$assign2;
-  var popper2 = _ref2.popper, popperRect = _ref2.popperRect, placement = _ref2.placement, variation = _ref2.variation, offsets = _ref2.offsets, position = _ref2.position, gpuAcceleration = _ref2.gpuAcceleration, adaptive = _ref2.adaptive, roundOffsets = _ref2.roundOffsets, isFixed = _ref2.isFixed;
-  var _offsets$x = offsets.x, x = _offsets$x === void 0 ? 0 : _offsets$x, _offsets$y = offsets.y, y = _offsets$y === void 0 ? 0 : _offsets$y;
-  var _ref3 = typeof roundOffsets === "function" ? roundOffsets({
-    x,
-    y
-  }) : {
-    x,
-    y
-  };
-  x = _ref3.x;
-  y = _ref3.y;
-  var hasX = offsets.hasOwnProperty("x");
-  var hasY = offsets.hasOwnProperty("y");
-  var sideX = left;
-  var sideY = top;
-  var win = window;
-  if (adaptive) {
-    var offsetParent = getOffsetParent(popper2);
-    var heightProp = "clientHeight";
-    var widthProp = "clientWidth";
-    if (offsetParent === getWindow(popper2)) {
-      offsetParent = getDocumentElement(popper2);
-      if (getComputedStyle(offsetParent).position !== "static" && position === "absolute") {
-        heightProp = "scrollHeight";
-        widthProp = "scrollWidth";
-      }
-    }
-    offsetParent = offsetParent;
-    if (placement === top || (placement === left || placement === right) && variation === end) {
-      sideY = bottom;
-      var offsetY = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.height : offsetParent[heightProp];
-      y -= offsetY - popperRect.height;
-      y *= gpuAcceleration ? 1 : -1;
-    }
-    if (placement === left || (placement === top || placement === bottom) && variation === end) {
-      sideX = right;
-      var offsetX = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.width : offsetParent[widthProp];
-      x -= offsetX - popperRect.width;
-      x *= gpuAcceleration ? 1 : -1;
-    }
-  }
-  var commonStyles = Object.assign({
-    position
-  }, adaptive && unsetSides);
-  var _ref4 = roundOffsets === true ? roundOffsetsByDPR({
-    x,
-    y
-  }, getWindow(popper2)) : {
-    x,
-    y
-  };
-  x = _ref4.x;
-  y = _ref4.y;
-  if (gpuAcceleration) {
-    var _Object$assign;
-    return Object.assign({}, commonStyles, (_Object$assign = {}, _Object$assign[sideY] = hasY ? "0" : "", _Object$assign[sideX] = hasX ? "0" : "", _Object$assign.transform = (win.devicePixelRatio || 1) <= 1 ? "translate(" + x + "px, " + y + "px)" : "translate3d(" + x + "px, " + y + "px, 0)", _Object$assign));
-  }
-  return Object.assign({}, commonStyles, (_Object$assign2 = {}, _Object$assign2[sideY] = hasY ? y + "px" : "", _Object$assign2[sideX] = hasX ? x + "px" : "", _Object$assign2.transform = "", _Object$assign2));
-}
-function computeStyles(_ref5) {
-  var state = _ref5.state, options = _ref5.options;
-  var _options$gpuAccelerat = options.gpuAcceleration, gpuAcceleration = _options$gpuAccelerat === void 0 ? true : _options$gpuAccelerat, _options$adaptive = options.adaptive, adaptive = _options$adaptive === void 0 ? true : _options$adaptive, _options$roundOffsets = options.roundOffsets, roundOffsets = _options$roundOffsets === void 0 ? true : _options$roundOffsets;
-  var commonStyles = {
-    placement: getBasePlacement(state.placement),
-    variation: getVariation(state.placement),
-    popper: state.elements.popper,
-    popperRect: state.rects.popper,
-    gpuAcceleration,
-    isFixed: state.options.strategy === "fixed"
-  };
-  if (state.modifiersData.popperOffsets != null) {
-    state.styles.popper = Object.assign({}, state.styles.popper, mapToStyles(Object.assign({}, commonStyles, {
-      offsets: state.modifiersData.popperOffsets,
-      position: state.options.strategy,
-      adaptive,
-      roundOffsets
-    })));
-  }
-  if (state.modifiersData.arrow != null) {
-    state.styles.arrow = Object.assign({}, state.styles.arrow, mapToStyles(Object.assign({}, commonStyles, {
-      offsets: state.modifiersData.arrow,
-      position: "absolute",
-      adaptive: false,
-      roundOffsets
-    })));
-  }
-  state.attributes.popper = Object.assign({}, state.attributes.popper, {
-    "data-popper-placement": state.placement
-  });
-}
-var computeStyles_default = {
-  name: "computeStyles",
-  enabled: true,
-  phase: "beforeWrite",
-  fn: computeStyles,
-  data: {}
-};
-
-// node_modules/@popperjs/core/lib/modifiers/eventListeners.js
-var passive = {
-  passive: true
-};
-function effect3(_ref) {
-  var state = _ref.state, instance = _ref.instance, options = _ref.options;
-  var _options$scroll = options.scroll, scroll = _options$scroll === void 0 ? true : _options$scroll, _options$resize = options.resize, resize = _options$resize === void 0 ? true : _options$resize;
-  var window2 = getWindow(state.elements.popper);
-  var scrollParents = [].concat(state.scrollParents.reference, state.scrollParents.popper);
-  if (scroll) {
-    scrollParents.forEach(function(scrollParent) {
-      scrollParent.addEventListener("scroll", instance.update, passive);
-    });
-  }
-  if (resize) {
-    window2.addEventListener("resize", instance.update, passive);
-  }
-  return function() {
-    if (scroll) {
-      scrollParents.forEach(function(scrollParent) {
-        scrollParent.removeEventListener("scroll", instance.update, passive);
-      });
-    }
-    if (resize) {
-      window2.removeEventListener("resize", instance.update, passive);
-    }
-  };
-}
-var eventListeners_default = {
-  name: "eventListeners",
-  enabled: true,
-  phase: "write",
-  fn: function fn() {
-  },
-  effect: effect3,
-  data: {}
-};
-
-// node_modules/@popperjs/core/lib/utils/getOppositePlacement.js
-var hash = {
-  left: "right",
-  right: "left",
-  bottom: "top",
-  top: "bottom"
-};
-function getOppositePlacement(placement) {
-  return placement.replace(/left|right|bottom|top/g, function(matched) {
-    return hash[matched];
-  });
-}
-
-// node_modules/@popperjs/core/lib/utils/getOppositeVariationPlacement.js
-var hash2 = {
-  start: "end",
-  end: "start"
-};
-function getOppositeVariationPlacement(placement) {
-  return placement.replace(/start|end/g, function(matched) {
-    return hash2[matched];
-  });
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getWindowScroll.js
-function getWindowScroll(node) {
-  var win = getWindow(node);
-  var scrollLeft = win.pageXOffset;
-  var scrollTop = win.pageYOffset;
-  return {
-    scrollLeft,
-    scrollTop
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getWindowScrollBarX.js
-function getWindowScrollBarX(element) {
-  return getBoundingClientRect(getDocumentElement(element)).left + getWindowScroll(element).scrollLeft;
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getViewportRect.js
-function getViewportRect(element, strategy) {
-  var win = getWindow(element);
-  var html = getDocumentElement(element);
-  var visualViewport = win.visualViewport;
-  var width = html.clientWidth;
-  var height = html.clientHeight;
-  var x = 0;
-  var y = 0;
-  if (visualViewport) {
-    width = visualViewport.width;
-    height = visualViewport.height;
-    var layoutViewport = isLayoutViewport();
-    if (layoutViewport || !layoutViewport && strategy === "fixed") {
-      x = visualViewport.offsetLeft;
-      y = visualViewport.offsetTop;
-    }
-  }
-  return {
-    width,
-    height,
-    x: x + getWindowScrollBarX(element),
-    y
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getDocumentRect.js
-function getDocumentRect(element) {
-  var _element$ownerDocumen;
-  var html = getDocumentElement(element);
-  var winScroll = getWindowScroll(element);
-  var body = (_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body;
-  var width = max(html.scrollWidth, html.clientWidth, body ? body.scrollWidth : 0, body ? body.clientWidth : 0);
-  var height = max(html.scrollHeight, html.clientHeight, body ? body.scrollHeight : 0, body ? body.clientHeight : 0);
-  var x = -winScroll.scrollLeft + getWindowScrollBarX(element);
-  var y = -winScroll.scrollTop;
-  if (getComputedStyle(body || html).direction === "rtl") {
-    x += max(html.clientWidth, body ? body.clientWidth : 0) - width;
-  }
-  return {
-    width,
-    height,
-    x,
-    y
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/isScrollParent.js
-function isScrollParent(element) {
-  var _getComputedStyle = getComputedStyle(element), overflow = _getComputedStyle.overflow, overflowX = _getComputedStyle.overflowX, overflowY = _getComputedStyle.overflowY;
-  return /auto|scroll|overlay|hidden/.test(overflow + overflowY + overflowX);
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getScrollParent.js
-function getScrollParent(node) {
-  if (["html", "body", "#document"].indexOf(getNodeName(node)) >= 0) {
-    return node.ownerDocument.body;
-  }
-  if (isHTMLElement(node) && isScrollParent(node)) {
-    return node;
-  }
-  return getScrollParent(getParentNode(node));
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/listScrollParents.js
-function listScrollParents(element, list) {
-  var _element$ownerDocumen;
-  if (list === void 0) {
-    list = [];
-  }
-  var scrollParent = getScrollParent(element);
-  var isBody = scrollParent === ((_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body);
-  var win = getWindow(scrollParent);
-  var target = isBody ? [win].concat(win.visualViewport || [], isScrollParent(scrollParent) ? scrollParent : []) : scrollParent;
-  var updatedList = list.concat(target);
-  return isBody ? updatedList : updatedList.concat(listScrollParents(getParentNode(target)));
-}
-
-// node_modules/@popperjs/core/lib/utils/rectToClientRect.js
-function rectToClientRect(rect) {
-  return Object.assign({}, rect, {
-    left: rect.x,
-    top: rect.y,
-    right: rect.x + rect.width,
-    bottom: rect.y + rect.height
-  });
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getClippingRect.js
-function getInnerBoundingClientRect(element, strategy) {
-  var rect = getBoundingClientRect(element, false, strategy === "fixed");
-  rect.top = rect.top + element.clientTop;
-  rect.left = rect.left + element.clientLeft;
-  rect.bottom = rect.top + element.clientHeight;
-  rect.right = rect.left + element.clientWidth;
-  rect.width = element.clientWidth;
-  rect.height = element.clientHeight;
-  rect.x = rect.left;
-  rect.y = rect.top;
-  return rect;
-}
-function getClientRectFromMixedType(element, clippingParent, strategy) {
-  return clippingParent === viewport ? rectToClientRect(getViewportRect(element, strategy)) : isElement(clippingParent) ? getInnerBoundingClientRect(clippingParent, strategy) : rectToClientRect(getDocumentRect(getDocumentElement(element)));
-}
-function getClippingParents(element) {
-  var clippingParents2 = listScrollParents(getParentNode(element));
-  var canEscapeClipping = ["absolute", "fixed"].indexOf(getComputedStyle(element).position) >= 0;
-  var clipperElement = canEscapeClipping && isHTMLElement(element) ? getOffsetParent(element) : element;
-  if (!isElement(clipperElement)) {
-    return [];
-  }
-  return clippingParents2.filter(function(clippingParent) {
-    return isElement(clippingParent) && contains(clippingParent, clipperElement) && getNodeName(clippingParent) !== "body";
-  });
-}
-function getClippingRect(element, boundary, rootBoundary, strategy) {
-  var mainClippingParents = boundary === "clippingParents" ? getClippingParents(element) : [].concat(boundary);
-  var clippingParents2 = [].concat(mainClippingParents, [rootBoundary]);
-  var firstClippingParent = clippingParents2[0];
-  var clippingRect = clippingParents2.reduce(function(accRect, clippingParent) {
-    var rect = getClientRectFromMixedType(element, clippingParent, strategy);
-    accRect.top = max(rect.top, accRect.top);
-    accRect.right = min(rect.right, accRect.right);
-    accRect.bottom = min(rect.bottom, accRect.bottom);
-    accRect.left = max(rect.left, accRect.left);
-    return accRect;
-  }, getClientRectFromMixedType(element, firstClippingParent, strategy));
-  clippingRect.width = clippingRect.right - clippingRect.left;
-  clippingRect.height = clippingRect.bottom - clippingRect.top;
-  clippingRect.x = clippingRect.left;
-  clippingRect.y = clippingRect.top;
-  return clippingRect;
-}
-
-// node_modules/@popperjs/core/lib/utils/computeOffsets.js
-function computeOffsets(_ref) {
-  var reference2 = _ref.reference, element = _ref.element, placement = _ref.placement;
-  var basePlacement = placement ? getBasePlacement(placement) : null;
-  var variation = placement ? getVariation(placement) : null;
-  var commonX = reference2.x + reference2.width / 2 - element.width / 2;
-  var commonY = reference2.y + reference2.height / 2 - element.height / 2;
-  var offsets;
-  switch (basePlacement) {
-    case top:
-      offsets = {
-        x: commonX,
-        y: reference2.y - element.height
-      };
-      break;
-    case bottom:
-      offsets = {
-        x: commonX,
-        y: reference2.y + reference2.height
-      };
-      break;
-    case right:
-      offsets = {
-        x: reference2.x + reference2.width,
-        y: commonY
-      };
-      break;
-    case left:
-      offsets = {
-        x: reference2.x - element.width,
-        y: commonY
-      };
-      break;
-    default:
-      offsets = {
-        x: reference2.x,
-        y: reference2.y
-      };
-  }
-  var mainAxis = basePlacement ? getMainAxisFromPlacement(basePlacement) : null;
-  if (mainAxis != null) {
-    var len = mainAxis === "y" ? "height" : "width";
-    switch (variation) {
-      case start:
-        offsets[mainAxis] = offsets[mainAxis] - (reference2[len] / 2 - element[len] / 2);
-        break;
-      case end:
-        offsets[mainAxis] = offsets[mainAxis] + (reference2[len] / 2 - element[len] / 2);
-        break;
-      default:
-    }
-  }
-  return offsets;
-}
-
-// node_modules/@popperjs/core/lib/utils/detectOverflow.js
-function detectOverflow(state, options) {
-  if (options === void 0) {
-    options = {};
-  }
-  var _options = options, _options$placement = _options.placement, placement = _options$placement === void 0 ? state.placement : _options$placement, _options$strategy = _options.strategy, strategy = _options$strategy === void 0 ? state.strategy : _options$strategy, _options$boundary = _options.boundary, boundary = _options$boundary === void 0 ? clippingParents : _options$boundary, _options$rootBoundary = _options.rootBoundary, rootBoundary = _options$rootBoundary === void 0 ? viewport : _options$rootBoundary, _options$elementConte = _options.elementContext, elementContext = _options$elementConte === void 0 ? popper : _options$elementConte, _options$altBoundary = _options.altBoundary, altBoundary = _options$altBoundary === void 0 ? false : _options$altBoundary, _options$padding = _options.padding, padding = _options$padding === void 0 ? 0 : _options$padding;
-  var paddingObject = mergePaddingObject(typeof padding !== "number" ? padding : expandToHashMap(padding, basePlacements));
-  var altContext = elementContext === popper ? reference : popper;
-  var popperRect = state.rects.popper;
-  var element = state.elements[altBoundary ? altContext : elementContext];
-  var clippingClientRect = getClippingRect(isElement(element) ? element : element.contextElement || getDocumentElement(state.elements.popper), boundary, rootBoundary, strategy);
-  var referenceClientRect = getBoundingClientRect(state.elements.reference);
-  var popperOffsets2 = computeOffsets({
-    reference: referenceClientRect,
-    element: popperRect,
-    strategy: "absolute",
-    placement
-  });
-  var popperClientRect = rectToClientRect(Object.assign({}, popperRect, popperOffsets2));
-  var elementClientRect = elementContext === popper ? popperClientRect : referenceClientRect;
-  var overflowOffsets = {
-    top: clippingClientRect.top - elementClientRect.top + paddingObject.top,
-    bottom: elementClientRect.bottom - clippingClientRect.bottom + paddingObject.bottom,
-    left: clippingClientRect.left - elementClientRect.left + paddingObject.left,
-    right: elementClientRect.right - clippingClientRect.right + paddingObject.right
-  };
-  var offsetData = state.modifiersData.offset;
-  if (elementContext === popper && offsetData) {
-    var offset2 = offsetData[placement];
-    Object.keys(overflowOffsets).forEach(function(key) {
-      var multiply = [right, bottom].indexOf(key) >= 0 ? 1 : -1;
-      var axis = [top, bottom].indexOf(key) >= 0 ? "y" : "x";
-      overflowOffsets[key] += offset2[axis] * multiply;
-    });
-  }
-  return overflowOffsets;
-}
-
-// node_modules/@popperjs/core/lib/utils/computeAutoPlacement.js
-function computeAutoPlacement(state, options) {
-  if (options === void 0) {
-    options = {};
-  }
-  var _options = options, placement = _options.placement, boundary = _options.boundary, rootBoundary = _options.rootBoundary, padding = _options.padding, flipVariations = _options.flipVariations, _options$allowedAutoP = _options.allowedAutoPlacements, allowedAutoPlacements = _options$allowedAutoP === void 0 ? placements : _options$allowedAutoP;
-  var variation = getVariation(placement);
-  var placements2 = variation ? flipVariations ? variationPlacements : variationPlacements.filter(function(placement2) {
-    return getVariation(placement2) === variation;
-  }) : basePlacements;
-  var allowedPlacements = placements2.filter(function(placement2) {
-    return allowedAutoPlacements.indexOf(placement2) >= 0;
-  });
-  if (allowedPlacements.length === 0) {
-    allowedPlacements = placements2;
-  }
-  var overflows = allowedPlacements.reduce(function(acc, placement2) {
-    acc[placement2] = detectOverflow(state, {
-      placement: placement2,
-      boundary,
-      rootBoundary,
-      padding
-    })[getBasePlacement(placement2)];
-    return acc;
-  }, {});
-  return Object.keys(overflows).sort(function(a, b) {
-    return overflows[a] - overflows[b];
-  });
-}
-
-// node_modules/@popperjs/core/lib/modifiers/flip.js
-function getExpandedFallbackPlacements(placement) {
-  if (getBasePlacement(placement) === auto) {
-    return [];
-  }
-  var oppositePlacement = getOppositePlacement(placement);
-  return [getOppositeVariationPlacement(placement), oppositePlacement, getOppositeVariationPlacement(oppositePlacement)];
-}
-function flip(_ref) {
-  var state = _ref.state, options = _ref.options, name = _ref.name;
-  if (state.modifiersData[name]._skip) {
-    return;
-  }
-  var _options$mainAxis = options.mainAxis, checkMainAxis = _options$mainAxis === void 0 ? true : _options$mainAxis, _options$altAxis = options.altAxis, checkAltAxis = _options$altAxis === void 0 ? true : _options$altAxis, specifiedFallbackPlacements = options.fallbackPlacements, padding = options.padding, boundary = options.boundary, rootBoundary = options.rootBoundary, altBoundary = options.altBoundary, _options$flipVariatio = options.flipVariations, flipVariations = _options$flipVariatio === void 0 ? true : _options$flipVariatio, allowedAutoPlacements = options.allowedAutoPlacements;
-  var preferredPlacement = state.options.placement;
-  var basePlacement = getBasePlacement(preferredPlacement);
-  var isBasePlacement = basePlacement === preferredPlacement;
-  var fallbackPlacements = specifiedFallbackPlacements || (isBasePlacement || !flipVariations ? [getOppositePlacement(preferredPlacement)] : getExpandedFallbackPlacements(preferredPlacement));
-  var placements2 = [preferredPlacement].concat(fallbackPlacements).reduce(function(acc, placement2) {
-    return acc.concat(getBasePlacement(placement2) === auto ? computeAutoPlacement(state, {
-      placement: placement2,
-      boundary,
-      rootBoundary,
-      padding,
-      flipVariations,
-      allowedAutoPlacements
-    }) : placement2);
-  }, []);
-  var referenceRect = state.rects.reference;
-  var popperRect = state.rects.popper;
-  var checksMap = new Map();
-  var makeFallbackChecks = true;
-  var firstFittingPlacement = placements2[0];
-  for (var i = 0; i < placements2.length; i++) {
-    var placement = placements2[i];
-    var _basePlacement = getBasePlacement(placement);
-    var isStartVariation = getVariation(placement) === start;
-    var isVertical = [top, bottom].indexOf(_basePlacement) >= 0;
-    var len = isVertical ? "width" : "height";
-    var overflow = detectOverflow(state, {
-      placement,
-      boundary,
-      rootBoundary,
-      altBoundary,
-      padding
-    });
-    var mainVariationSide = isVertical ? isStartVariation ? right : left : isStartVariation ? bottom : top;
-    if (referenceRect[len] > popperRect[len]) {
-      mainVariationSide = getOppositePlacement(mainVariationSide);
-    }
-    var altVariationSide = getOppositePlacement(mainVariationSide);
-    var checks = [];
-    if (checkMainAxis) {
-      checks.push(overflow[_basePlacement] <= 0);
-    }
-    if (checkAltAxis) {
-      checks.push(overflow[mainVariationSide] <= 0, overflow[altVariationSide] <= 0);
-    }
-    if (checks.every(function(check) {
-      return check;
-    })) {
-      firstFittingPlacement = placement;
-      makeFallbackChecks = false;
-      break;
-    }
-    checksMap.set(placement, checks);
-  }
-  if (makeFallbackChecks) {
-    var numberOfChecks = flipVariations ? 3 : 1;
-    var _loop = function _loop2(_i2) {
-      var fittingPlacement = placements2.find(function(placement2) {
-        var checks2 = checksMap.get(placement2);
-        if (checks2) {
-          return checks2.slice(0, _i2).every(function(check) {
-            return check;
-          });
-        }
-      });
-      if (fittingPlacement) {
-        firstFittingPlacement = fittingPlacement;
-        return "break";
-      }
-    };
-    for (var _i = numberOfChecks; _i > 0; _i--) {
-      var _ret = _loop(_i);
-      if (_ret === "break")
-        break;
-    }
-  }
-  if (state.placement !== firstFittingPlacement) {
-    state.modifiersData[name]._skip = true;
-    state.placement = firstFittingPlacement;
-    state.reset = true;
-  }
-}
-var flip_default = {
-  name: "flip",
-  enabled: true,
-  phase: "main",
-  fn: flip,
-  requiresIfExists: ["offset"],
-  data: {
-    _skip: false
-  }
-};
-
-// node_modules/@popperjs/core/lib/modifiers/hide.js
-function getSideOffsets(overflow, rect, preventedOffsets) {
-  if (preventedOffsets === void 0) {
-    preventedOffsets = {
-      x: 0,
-      y: 0
-    };
-  }
-  return {
-    top: overflow.top - rect.height - preventedOffsets.y,
-    right: overflow.right - rect.width + preventedOffsets.x,
-    bottom: overflow.bottom - rect.height + preventedOffsets.y,
-    left: overflow.left - rect.width - preventedOffsets.x
-  };
-}
-function isAnySideFullyClipped(overflow) {
-  return [top, right, bottom, left].some(function(side) {
-    return overflow[side] >= 0;
-  });
-}
-function hide(_ref) {
-  var state = _ref.state, name = _ref.name;
-  var referenceRect = state.rects.reference;
-  var popperRect = state.rects.popper;
-  var preventedOffsets = state.modifiersData.preventOverflow;
-  var referenceOverflow = detectOverflow(state, {
-    elementContext: "reference"
-  });
-  var popperAltOverflow = detectOverflow(state, {
-    altBoundary: true
-  });
-  var referenceClippingOffsets = getSideOffsets(referenceOverflow, referenceRect);
-  var popperEscapeOffsets = getSideOffsets(popperAltOverflow, popperRect, preventedOffsets);
-  var isReferenceHidden = isAnySideFullyClipped(referenceClippingOffsets);
-  var hasPopperEscaped = isAnySideFullyClipped(popperEscapeOffsets);
-  state.modifiersData[name] = {
-    referenceClippingOffsets,
-    popperEscapeOffsets,
-    isReferenceHidden,
-    hasPopperEscaped
-  };
-  state.attributes.popper = Object.assign({}, state.attributes.popper, {
-    "data-popper-reference-hidden": isReferenceHidden,
-    "data-popper-escaped": hasPopperEscaped
-  });
-}
-var hide_default = {
-  name: "hide",
-  enabled: true,
-  phase: "main",
-  requiresIfExists: ["preventOverflow"],
-  fn: hide
-};
-
-// node_modules/@popperjs/core/lib/modifiers/offset.js
-function distanceAndSkiddingToXY(placement, rects, offset2) {
-  var basePlacement = getBasePlacement(placement);
-  var invertDistance = [left, top].indexOf(basePlacement) >= 0 ? -1 : 1;
-  var _ref = typeof offset2 === "function" ? offset2(Object.assign({}, rects, {
-    placement
-  })) : offset2, skidding = _ref[0], distance = _ref[1];
-  skidding = skidding || 0;
-  distance = (distance || 0) * invertDistance;
-  return [left, right].indexOf(basePlacement) >= 0 ? {
-    x: distance,
-    y: skidding
-  } : {
-    x: skidding,
-    y: distance
-  };
-}
-function offset(_ref2) {
-  var state = _ref2.state, options = _ref2.options, name = _ref2.name;
-  var _options$offset = options.offset, offset2 = _options$offset === void 0 ? [0, 0] : _options$offset;
-  var data = placements.reduce(function(acc, placement) {
-    acc[placement] = distanceAndSkiddingToXY(placement, state.rects, offset2);
-    return acc;
-  }, {});
-  var _data$state$placement = data[state.placement], x = _data$state$placement.x, y = _data$state$placement.y;
-  if (state.modifiersData.popperOffsets != null) {
-    state.modifiersData.popperOffsets.x += x;
-    state.modifiersData.popperOffsets.y += y;
-  }
-  state.modifiersData[name] = data;
-}
-var offset_default = {
-  name: "offset",
-  enabled: true,
-  phase: "main",
-  requires: ["popperOffsets"],
-  fn: offset
-};
-
-// node_modules/@popperjs/core/lib/modifiers/popperOffsets.js
-function popperOffsets(_ref) {
-  var state = _ref.state, name = _ref.name;
-  state.modifiersData[name] = computeOffsets({
-    reference: state.rects.reference,
-    element: state.rects.popper,
-    strategy: "absolute",
-    placement: state.placement
-  });
-}
-var popperOffsets_default = {
-  name: "popperOffsets",
-  enabled: true,
-  phase: "read",
-  fn: popperOffsets,
-  data: {}
-};
-
-// node_modules/@popperjs/core/lib/utils/getAltAxis.js
-function getAltAxis(axis) {
-  return axis === "x" ? "y" : "x";
-}
-
-// node_modules/@popperjs/core/lib/modifiers/preventOverflow.js
-function preventOverflow(_ref) {
-  var state = _ref.state, options = _ref.options, name = _ref.name;
-  var _options$mainAxis = options.mainAxis, checkMainAxis = _options$mainAxis === void 0 ? true : _options$mainAxis, _options$altAxis = options.altAxis, checkAltAxis = _options$altAxis === void 0 ? false : _options$altAxis, boundary = options.boundary, rootBoundary = options.rootBoundary, altBoundary = options.altBoundary, padding = options.padding, _options$tether = options.tether, tether = _options$tether === void 0 ? true : _options$tether, _options$tetherOffset = options.tetherOffset, tetherOffset = _options$tetherOffset === void 0 ? 0 : _options$tetherOffset;
-  var overflow = detectOverflow(state, {
-    boundary,
-    rootBoundary,
-    padding,
-    altBoundary
-  });
-  var basePlacement = getBasePlacement(state.placement);
-  var variation = getVariation(state.placement);
-  var isBasePlacement = !variation;
-  var mainAxis = getMainAxisFromPlacement(basePlacement);
-  var altAxis = getAltAxis(mainAxis);
-  var popperOffsets2 = state.modifiersData.popperOffsets;
-  var referenceRect = state.rects.reference;
-  var popperRect = state.rects.popper;
-  var tetherOffsetValue = typeof tetherOffset === "function" ? tetherOffset(Object.assign({}, state.rects, {
-    placement: state.placement
-  })) : tetherOffset;
-  var normalizedTetherOffsetValue = typeof tetherOffsetValue === "number" ? {
-    mainAxis: tetherOffsetValue,
-    altAxis: tetherOffsetValue
-  } : Object.assign({
-    mainAxis: 0,
-    altAxis: 0
-  }, tetherOffsetValue);
-  var offsetModifierState = state.modifiersData.offset ? state.modifiersData.offset[state.placement] : null;
-  var data = {
-    x: 0,
-    y: 0
-  };
-  if (!popperOffsets2) {
-    return;
-  }
-  if (checkMainAxis) {
-    var _offsetModifierState$;
-    var mainSide = mainAxis === "y" ? top : left;
-    var altSide = mainAxis === "y" ? bottom : right;
-    var len = mainAxis === "y" ? "height" : "width";
-    var offset2 = popperOffsets2[mainAxis];
-    var min2 = offset2 + overflow[mainSide];
-    var max2 = offset2 - overflow[altSide];
-    var additive = tether ? -popperRect[len] / 2 : 0;
-    var minLen = variation === start ? referenceRect[len] : popperRect[len];
-    var maxLen = variation === start ? -popperRect[len] : -referenceRect[len];
-    var arrowElement = state.elements.arrow;
-    var arrowRect = tether && arrowElement ? getLayoutRect(arrowElement) : {
-      width: 0,
-      height: 0
-    };
-    var arrowPaddingObject = state.modifiersData["arrow#persistent"] ? state.modifiersData["arrow#persistent"].padding : getFreshSideObject();
-    var arrowPaddingMin = arrowPaddingObject[mainSide];
-    var arrowPaddingMax = arrowPaddingObject[altSide];
-    var arrowLen = within(0, referenceRect[len], arrowRect[len]);
-    var minOffset = isBasePlacement ? referenceRect[len] / 2 - additive - arrowLen - arrowPaddingMin - normalizedTetherOffsetValue.mainAxis : minLen - arrowLen - arrowPaddingMin - normalizedTetherOffsetValue.mainAxis;
-    var maxOffset = isBasePlacement ? -referenceRect[len] / 2 + additive + arrowLen + arrowPaddingMax + normalizedTetherOffsetValue.mainAxis : maxLen + arrowLen + arrowPaddingMax + normalizedTetherOffsetValue.mainAxis;
-    var arrowOffsetParent = state.elements.arrow && getOffsetParent(state.elements.arrow);
-    var clientOffset = arrowOffsetParent ? mainAxis === "y" ? arrowOffsetParent.clientTop || 0 : arrowOffsetParent.clientLeft || 0 : 0;
-    var offsetModifierValue = (_offsetModifierState$ = offsetModifierState == null ? void 0 : offsetModifierState[mainAxis]) != null ? _offsetModifierState$ : 0;
-    var tetherMin = offset2 + minOffset - offsetModifierValue - clientOffset;
-    var tetherMax = offset2 + maxOffset - offsetModifierValue;
-    var preventedOffset = within(tether ? min(min2, tetherMin) : min2, offset2, tether ? max(max2, tetherMax) : max2);
-    popperOffsets2[mainAxis] = preventedOffset;
-    data[mainAxis] = preventedOffset - offset2;
-  }
-  if (checkAltAxis) {
-    var _offsetModifierState$2;
-    var _mainSide = mainAxis === "x" ? top : left;
-    var _altSide = mainAxis === "x" ? bottom : right;
-    var _offset = popperOffsets2[altAxis];
-    var _len = altAxis === "y" ? "height" : "width";
-    var _min = _offset + overflow[_mainSide];
-    var _max = _offset - overflow[_altSide];
-    var isOriginSide = [top, left].indexOf(basePlacement) !== -1;
-    var _offsetModifierValue = (_offsetModifierState$2 = offsetModifierState == null ? void 0 : offsetModifierState[altAxis]) != null ? _offsetModifierState$2 : 0;
-    var _tetherMin = isOriginSide ? _min : _offset - referenceRect[_len] - popperRect[_len] - _offsetModifierValue + normalizedTetherOffsetValue.altAxis;
-    var _tetherMax = isOriginSide ? _offset + referenceRect[_len] + popperRect[_len] - _offsetModifierValue - normalizedTetherOffsetValue.altAxis : _max;
-    var _preventedOffset = tether && isOriginSide ? withinMaxClamp(_tetherMin, _offset, _tetherMax) : within(tether ? _tetherMin : _min, _offset, tether ? _tetherMax : _max);
-    popperOffsets2[altAxis] = _preventedOffset;
-    data[altAxis] = _preventedOffset - _offset;
-  }
-  state.modifiersData[name] = data;
-}
-var preventOverflow_default = {
-  name: "preventOverflow",
-  enabled: true,
-  phase: "main",
-  fn: preventOverflow,
-  requiresIfExists: ["offset"]
-};
-
-// node_modules/@popperjs/core/lib/dom-utils/getHTMLElementScroll.js
-function getHTMLElementScroll(element) {
-  return {
-    scrollLeft: element.scrollLeft,
-    scrollTop: element.scrollTop
-  };
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getNodeScroll.js
-function getNodeScroll(node) {
-  if (node === getWindow(node) || !isHTMLElement(node)) {
-    return getWindowScroll(node);
-  } else {
-    return getHTMLElementScroll(node);
-  }
-}
-
-// node_modules/@popperjs/core/lib/dom-utils/getCompositeRect.js
-function isElementScaled(element) {
-  var rect = element.getBoundingClientRect();
-  var scaleX = round(rect.width) / element.offsetWidth || 1;
-  var scaleY = round(rect.height) / element.offsetHeight || 1;
-  return scaleX !== 1 || scaleY !== 1;
-}
-function getCompositeRect(elementOrVirtualElement, offsetParent, isFixed) {
-  if (isFixed === void 0) {
-    isFixed = false;
-  }
-  var isOffsetParentAnElement = isHTMLElement(offsetParent);
-  var offsetParentIsScaled = isHTMLElement(offsetParent) && isElementScaled(offsetParent);
-  var documentElement = getDocumentElement(offsetParent);
-  var rect = getBoundingClientRect(elementOrVirtualElement, offsetParentIsScaled, isFixed);
-  var scroll = {
-    scrollLeft: 0,
-    scrollTop: 0
-  };
-  var offsets = {
-    x: 0,
-    y: 0
-  };
-  if (isOffsetParentAnElement || !isOffsetParentAnElement && !isFixed) {
-    if (getNodeName(offsetParent) !== "body" || isScrollParent(documentElement)) {
-      scroll = getNodeScroll(offsetParent);
-    }
-    if (isHTMLElement(offsetParent)) {
-      offsets = getBoundingClientRect(offsetParent, true);
-      offsets.x += offsetParent.clientLeft;
-      offsets.y += offsetParent.clientTop;
-    } else if (documentElement) {
-      offsets.x = getWindowScrollBarX(documentElement);
-    }
-  }
-  return {
-    x: rect.left + scroll.scrollLeft - offsets.x,
-    y: rect.top + scroll.scrollTop - offsets.y,
-    width: rect.width,
-    height: rect.height
-  };
-}
-
-// node_modules/@popperjs/core/lib/utils/orderModifiers.js
-function order(modifiers) {
-  var map = new Map();
-  var visited = new Set();
-  var result = [];
-  modifiers.forEach(function(modifier) {
-    map.set(modifier.name, modifier);
-  });
-  function sort(modifier) {
-    visited.add(modifier.name);
-    var requires = [].concat(modifier.requires || [], modifier.requiresIfExists || []);
-    requires.forEach(function(dep) {
-      if (!visited.has(dep)) {
-        var depModifier = map.get(dep);
-        if (depModifier) {
-          sort(depModifier);
-        }
-      }
-    });
-    result.push(modifier);
-  }
-  modifiers.forEach(function(modifier) {
-    if (!visited.has(modifier.name)) {
-      sort(modifier);
-    }
-  });
-  return result;
-}
-function orderModifiers(modifiers) {
-  var orderedModifiers = order(modifiers);
-  return modifierPhases.reduce(function(acc, phase) {
-    return acc.concat(orderedModifiers.filter(function(modifier) {
-      return modifier.phase === phase;
-    }));
-  }, []);
-}
-
-// node_modules/@popperjs/core/lib/utils/debounce.js
-function debounce(fn2) {
-  var pending;
-  return function() {
-    if (!pending) {
-      pending = new Promise(function(resolve) {
-        Promise.resolve().then(function() {
-          pending = void 0;
-          resolve(fn2());
-        });
-      });
-    }
-    return pending;
-  };
-}
-
-// node_modules/@popperjs/core/lib/utils/mergeByName.js
-function mergeByName(modifiers) {
-  var merged = modifiers.reduce(function(merged2, current) {
-    var existing = merged2[current.name];
-    merged2[current.name] = existing ? Object.assign({}, existing, current, {
-      options: Object.assign({}, existing.options, current.options),
-      data: Object.assign({}, existing.data, current.data)
-    }) : current;
-    return merged2;
-  }, {});
-  return Object.keys(merged).map(function(key) {
-    return merged[key];
-  });
-}
-
-// node_modules/@popperjs/core/lib/createPopper.js
-var DEFAULT_OPTIONS = {
-  placement: "bottom",
-  modifiers: [],
-  strategy: "absolute"
-};
-function areValidElements() {
-  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-  return !args.some(function(element) {
-    return !(element && typeof element.getBoundingClientRect === "function");
-  });
-}
-function popperGenerator(generatorOptions) {
-  if (generatorOptions === void 0) {
-    generatorOptions = {};
-  }
-  var _generatorOptions = generatorOptions, _generatorOptions$def = _generatorOptions.defaultModifiers, defaultModifiers2 = _generatorOptions$def === void 0 ? [] : _generatorOptions$def, _generatorOptions$def2 = _generatorOptions.defaultOptions, defaultOptions = _generatorOptions$def2 === void 0 ? DEFAULT_OPTIONS : _generatorOptions$def2;
-  return function createPopper2(reference2, popper2, options) {
-    if (options === void 0) {
-      options = defaultOptions;
-    }
-    var state = {
-      placement: "bottom",
-      orderedModifiers: [],
-      options: Object.assign({}, DEFAULT_OPTIONS, defaultOptions),
-      modifiersData: {},
-      elements: {
-        reference: reference2,
-        popper: popper2
-      },
-      attributes: {},
-      styles: {}
-    };
-    var effectCleanupFns = [];
-    var isDestroyed = false;
-    var instance = {
-      state,
-      setOptions: function setOptions(setOptionsAction) {
-        var options2 = typeof setOptionsAction === "function" ? setOptionsAction(state.options) : setOptionsAction;
-        cleanupModifierEffects();
-        state.options = Object.assign({}, defaultOptions, state.options, options2);
-        state.scrollParents = {
-          reference: isElement(reference2) ? listScrollParents(reference2) : reference2.contextElement ? listScrollParents(reference2.contextElement) : [],
-          popper: listScrollParents(popper2)
-        };
-        var orderedModifiers = orderModifiers(mergeByName([].concat(defaultModifiers2, state.options.modifiers)));
-        state.orderedModifiers = orderedModifiers.filter(function(m) {
-          return m.enabled;
-        });
-        runModifierEffects();
-        return instance.update();
-      },
-      forceUpdate: function forceUpdate() {
-        if (isDestroyed) {
-          return;
-        }
-        var _state$elements = state.elements, reference3 = _state$elements.reference, popper3 = _state$elements.popper;
-        if (!areValidElements(reference3, popper3)) {
-          return;
-        }
-        state.rects = {
-          reference: getCompositeRect(reference3, getOffsetParent(popper3), state.options.strategy === "fixed"),
-          popper: getLayoutRect(popper3)
-        };
-        state.reset = false;
-        state.placement = state.options.placement;
-        state.orderedModifiers.forEach(function(modifier) {
-          return state.modifiersData[modifier.name] = Object.assign({}, modifier.data);
-        });
-        for (var index = 0; index < state.orderedModifiers.length; index++) {
-          if (state.reset === true) {
-            state.reset = false;
-            index = -1;
-            continue;
-          }
-          var _state$orderedModifie = state.orderedModifiers[index], fn2 = _state$orderedModifie.fn, _state$orderedModifie2 = _state$orderedModifie.options, _options = _state$orderedModifie2 === void 0 ? {} : _state$orderedModifie2, name = _state$orderedModifie.name;
-          if (typeof fn2 === "function") {
-            state = fn2({
-              state,
-              options: _options,
-              name,
-              instance
-            }) || state;
-          }
-        }
-      },
-      update: debounce(function() {
-        return new Promise(function(resolve) {
-          instance.forceUpdate();
-          resolve(state);
-        });
-      }),
-      destroy: function destroy() {
-        cleanupModifierEffects();
-        isDestroyed = true;
-      }
-    };
-    if (!areValidElements(reference2, popper2)) {
-      return instance;
-    }
-    instance.setOptions(options).then(function(state2) {
-      if (!isDestroyed && options.onFirstUpdate) {
-        options.onFirstUpdate(state2);
-      }
-    });
-    function runModifierEffects() {
-      state.orderedModifiers.forEach(function(_ref) {
-        var name = _ref.name, _ref$options = _ref.options, options2 = _ref$options === void 0 ? {} : _ref$options, effect4 = _ref.effect;
-        if (typeof effect4 === "function") {
-          var cleanupFn = effect4({
-            state,
-            name,
-            instance,
-            options: options2
-          });
-          var noopFn = function noopFn2() {
-          };
-          effectCleanupFns.push(cleanupFn || noopFn);
-        }
-      });
-    }
-    function cleanupModifierEffects() {
-      effectCleanupFns.forEach(function(fn2) {
-        return fn2();
-      });
-      effectCleanupFns = [];
-    }
-    return instance;
-  };
-}
-
-// node_modules/@popperjs/core/lib/popper.js
-var defaultModifiers = [eventListeners_default, popperOffsets_default, computeStyles_default, applyStyles_default, offset_default, flip_default, preventOverflow_default, arrow_default, hide_default];
-var createPopper = /* @__PURE__ */ popperGenerator({
-  defaultModifiers
-});
-
-// suggests/suggest.ts
-var wrapAround = (value, size) => {
-  return (value % size + size) % size;
-};
-var Suggest = class {
-  constructor(owner, containerEl, scope) {
-    this.owner = owner;
-    this.containerEl = containerEl;
-    containerEl.on("click", ".suggestion-item", this.onSuggestionClick.bind(this));
-    containerEl.on("mousemove", ".suggestion-item", this.onSuggestionMouseover.bind(this));
-    scope.register([], "ArrowUp", (event) => {
-      if (!event.isComposing) {
-        this.setSelectedItem(this.selectedItem - 1, true);
-        return false;
-      }
-    });
-    scope.register([], "ArrowDown", (event) => {
-      if (!event.isComposing) {
-        this.setSelectedItem(this.selectedItem + 1, true);
-        return false;
-      }
-    });
-    scope.register([], "Enter", (event) => {
-      if (!event.isComposing) {
-        this.useSelectedItem(event);
-        return false;
-      }
-    });
-  }
-  onSuggestionClick(event, el) {
-    event.preventDefault();
-    const item = this.suggestions.indexOf(el);
-    this.setSelectedItem(item, false);
-    this.useSelectedItem(event);
-  }
-  onSuggestionMouseover(_event, el) {
-    const item = this.suggestions.indexOf(el);
-    this.setSelectedItem(item, false);
-  }
-  setSuggestions(values) {
-    this.containerEl.empty();
-    const suggestionEls = [];
-    values.forEach((value) => {
-      const suggestionEl = this.containerEl.createDiv("suggestion-item");
-      this.owner.renderSuggestion(value, suggestionEl);
-      suggestionEls.push(suggestionEl);
-    });
-    this.values = values;
-    this.suggestions = suggestionEls;
-    this.setSelectedItem(0, false);
-  }
-  useSelectedItem(event) {
-    const currentValue = this.values[this.selectedItem];
-    if (currentValue) {
-      this.owner.selectSuggestion(currentValue, event);
-    }
-  }
-  setSelectedItem(selectedIndex, scrollIntoView) {
-    const normalizedIndex = wrapAround(selectedIndex, this.suggestions.length);
-    const prevSelectedSuggestion = this.suggestions[this.selectedItem];
-    const selectedSuggestion = this.suggestions[normalizedIndex];
-    prevSelectedSuggestion == null ? void 0 : prevSelectedSuggestion.removeClass("is-selected");
-    selectedSuggestion == null ? void 0 : selectedSuggestion.addClass("is-selected");
-    this.selectedItem = normalizedIndex;
-    if (scrollIntoView) {
-      selectedSuggestion.scrollIntoView(false);
-    }
-  }
-};
-var TextInputSuggest = class {
-  constructor(app, inputEl) {
+// core/BinderService.ts
+var BinderService = class {
+  constructor(app) {
     this.app = app;
-    this.inputEl = inputEl;
-    this.scope = new import_obsidian.Scope();
-    this.suggestEl = createDiv("suggestion-container");
-    const suggestion = this.suggestEl.createDiv("suggestion");
-    this.suggest = new Suggest(this, suggestion, this.scope);
-    this.scope.register([], "Escape", this.close.bind(this));
-    this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("blur", this.close.bind(this));
-    this.suggestEl.on("mousedown", ".suggestion-container", (event) => {
-      event.preventDefault();
-    });
-  }
-  onInputChanged() {
-    const inputStr = this.inputEl.value;
-    const suggestions = this.getSuggestions(inputStr);
-    if (suggestions.length > 0) {
-      this.suggest.setSuggestions(suggestions);
-      this.open(this.app.dom.appContainerEl, this.inputEl);
-    }
-  }
-  open(container, inputEl) {
-    this.app.keymap.pushScope(this.scope);
-    container.appendChild(this.suggestEl);
-    this.popper = createPopper(inputEl, this.suggestEl, {
-      placement: "bottom-start",
-      modifiers: [
-        {
-          name: "sameWidth",
-          enabled: true,
-          fn: ({ state, instance }) => {
-            const targetWidth = `${state.rects.reference.width}px`;
-            if (state.styles.popper.width === targetWidth) {
-              return;
-            }
-            state.styles.popper.width = targetWidth;
-            instance.update();
-          },
-          phase: "beforeWrite",
-          requires: ["computeStyles"]
-        }
-      ]
-    });
-  }
-  close() {
-    this.app.keymap.popScope(this.scope);
-    this.suggest.setSuggestions([]);
-    this.popper.destroy();
-    this.suggestEl.detach();
-  }
-};
-
-// suggests/file-suggest.ts
-var FolderSuggest = class extends TextInputSuggest {
-  getSuggestions(inputStr) {
-    const abstractFiles = this.app.vault.getAllLoadedFiles();
-    const folders = [];
-    const lowerCaseInputStr = inputStr.toLowerCase();
-    abstractFiles.forEach((folder) => {
-      if (folder instanceof import_obsidian2.TFolder && folder.path.toLowerCase().contains(lowerCaseInputStr)) {
-        folders.push(folder);
-      }
-    });
-    return folders;
-  }
-  renderSuggestion(file, el) {
-    el.setText(file.path);
-  }
-  selectSuggestion(file) {
-    this.inputEl.value = file.path;
-    this.inputEl.trigger("input");
-    this.close();
-  }
-};
-var TemplateFileSuggest = class extends TextInputSuggest {
-  getSuggestions(inputStr) {
-    const abstractFiles = this.app.vault.getAllLoadedFiles();
-    const files = [];
-    const lower = inputStr.toLowerCase();
-    abstractFiles.forEach((file) => {
-      if (file instanceof import_obsidian2.TFile && file.path.toLowerCase().contains(lower)) {
-        files.push(file);
-      }
-    });
-    return files;
-  }
-  renderSuggestion(file, el) {
-    el.setText(file.path);
-  }
-  selectSuggestion(file) {
-    this.inputEl.value = file.path;
-    this.inputEl.trigger("input");
-    this.close();
-  }
-};
-
-// utils/Utils.ts
-var import_obsidian3 = __toModule(require("obsidian"));
-var isFmDisable = (fileCache) => {
-  if (!(fileCache == null ? void 0 : fileCache.frontmatter))
-    return false;
-  const fm = (0, import_obsidian3.parseFrontMatterEntry)(fileCache.frontmatter, "AutoNoteMover");
-  return fm === "disable";
-};
-var folderOrFile = (app, path) => {
-  const F = app.vault.getAbstractFileByPath(path);
-  if (F instanceof import_obsidian3.TFile) {
-    return import_obsidian3.TFile;
-  } else if (F instanceof import_obsidian3.TFolder) {
-    return import_obsidian3.TFolder;
-  }
-};
-var isTFExists = (app, path, F) => {
-  if (folderOrFile(app, (0, import_obsidian3.normalizePath)(path)) === F) {
-    return true;
-  } else {
-    return false;
-  }
-};
-var fileMove = (app, settingFolder, fileFullName, file) => __async(void 0, null, function* () {
-  if (!isTFExists(app, settingFolder, import_obsidian3.TFolder)) {
-    console.error(`[Auto Note Mover] The destination folder "${settingFolder}" does not exist.`);
-    new import_obsidian3.Notice(`[Auto Note Mover]
-"Error: The destination folder
-"${settingFolder}"
-does not exist.`);
-    return;
-  }
-  const newPath = (0, import_obsidian3.normalizePath)(settingFolder + "/" + fileFullName);
-  if (isTFExists(app, newPath, import_obsidian3.TFile) && newPath !== file.path) {
-    console.error(`[Auto Note Mover] Error: A file with the same name "${fileFullName}" exists at the destination folder.`);
-    new import_obsidian3.Notice(`[Auto Note Mover]
-Error: A file with the same name
-"${fileFullName}"
-exists at the destination folder.`);
-    return;
-  }
-  if (newPath === file.path) {
-    return;
-  }
-  yield app.fileManager.renameFile(file, newPath);
-  console.log(`[Auto Note Mover] Moved the note "${fileFullName}" to the "${settingFolder}".`);
-  new import_obsidian3.Notice(`[Auto Note Mover]
-Moved the note "${fileFullName}"
-to the "${settingFolder}".`);
-});
-var arrayMove = (array, fromIndex, toIndex) => {
-  if (toIndex < 0 || toIndex === array.length) {
-    return;
-  }
-  const temp = array[fromIndex];
-  array[fromIndex] = array[toIndex];
-  array[toIndex] = temp;
-};
-var getTriggerIndicator = (trigger) => {
-  if (trigger === "Automatic") {
-    return `[A]`;
-  } else {
-    return `[M]`;
-  }
-};
-
-// settings/filterBuilder.ts
-var COMPARATORS = [
-  "equals",
-  "contains",
-  "startsWith",
-  "endsWith",
-  "matchesRegex",
-  "exists"
-];
-var ACTION_TYPES = ["move", "applyTemplate", "rename", "setProperty"];
-var GROUP_MODES = [
-  { value: "all:true", label: "All of the following are true", quantifier: "all", truthiness: "true" },
-  { value: "any:true", label: "Any of the following are true", quantifier: "any", truthiness: "true" },
-  { value: "all:false", label: "All of the following are false", quantifier: "all", truthiness: "false" },
-  { value: "any:false", label: "Any of the following are false", quantifier: "any", truthiness: "false" }
-];
-var getGroupQuantifier = (group) => group.operator === "any" ? "any" : "all";
-var getGroupTruthiness = (group) => {
-  if (group.truthiness) {
-    return group.truthiness;
-  }
-  return group.operator === "none" ? "false" : "true";
-};
-var updateGroupOperator = (group, quantifier, truthiness) => {
-  group.operator = quantifier;
-  group.truthiness = truthiness;
-};
-var getGroupModeValue = (group) => `${getGroupQuantifier(group)}:${getGroupTruthiness(group)}`;
-var renderFilterRulesEditor = (app, containerEl, rules, trackedProperties, onChange) => {
-  injectFilterBuilderStyles();
-  const collapseButtons = new Map();
-  const toolbarSetting = new import_obsidian4.Setting(containerEl);
-  toolbarSetting.settingEl.addClass("anm-filter-toolbar");
-  toolbarSetting.setName("");
-  toolbarSetting.setDesc("");
-  toolbarSetting.addButton((button) => {
-    button.setButtonText("Collapse all");
-    button.onClick(() => applyCollapseState(true));
-  });
-  toolbarSetting.addButton((button) => {
-    button.setButtonText("Expand all");
-    button.onClick(() => applyCollapseState(false));
-  });
-  const wrapper = containerEl.createDiv("anm-filter-rules");
-  const refresh = () => {
-    wrapper.empty();
-    build();
-  };
-  const notify = () => __async(void 0, null, function* () {
-    yield onChange();
-  });
-  const notifyAndRefresh = () => __async(void 0, null, function* () {
-    yield onChange();
-    refresh();
-  });
-  const applyCollapseState = (collapsed) => {
-    rules.forEach((rule) => {
-      toggleCollapsedRule(rule.id, collapsed);
-      const btn = collapseButtons.get(rule.id);
-      if (btn) {
-        updateCollapseControl(btn, collapsed);
-      }
-    });
-    wrapper.findAll(".anm-rule-card").forEach((card) => {
-      card.toggleClass("anm-collapsed", collapsed);
-    });
-  };
-  const build = () => {
-    collapseButtons.clear();
-    if (!rules.length) {
-      wrapper.createEl("p", { text: "No rules yet. Add one below." });
-    }
-    rules.forEach((rule, index) => {
-      renderRuleCard(wrapper, rule, index, trackedProperties);
-    });
-    const addRuleSetting = new import_obsidian4.Setting(wrapper);
-    addRuleSetting.settingEl.addClass("anm-add-rule");
-    addRuleSetting.setName("");
-    addRuleSetting.setDesc("");
-    addRuleSetting.addButton((button) => {
-      button.setButtonText("Add rule").setCta();
-      button.onClick(() => __async(void 0, null, function* () {
-        rules.push(createDefaultRule());
-        yield notifyAndRefresh();
-      }));
-    });
-  };
-  const renderRuleCard = (parent, rule, index, trackedProps) => {
-    const card = parent.createDiv("anm-rule-card");
-    const initiallyCollapsed = isRuleCollapsed(rule.id);
-    card.toggleClass("anm-collapsed", initiallyCollapsed);
-    const headerSetting = new import_obsidian4.Setting(card);
-    headerSetting.settingEl.addClass("anm-rule-header-setting");
-    headerSetting.setName("");
-    headerSetting.setDesc("");
-    headerSetting.infoEl.empty();
-    const nameWrapper = headerSetting.infoEl.createDiv("anm-rule-name-field");
-    nameWrapper.createSpan({ text: "Rule:", cls: "anm-field-label-inline" });
-    const nameInput = nameWrapper.createEl("input", {
-      value: rule.name,
-      attr: { placeholder: "Rule name" },
-      cls: "anm-rule-name"
-    });
-    nameInput.oninput = () => __async(void 0, null, function* () {
-      rule.name = nameInput.value;
-      yield notify();
-    });
-    headerSetting.addToggle((toggle) => {
-      toggle.setValue(rule.enabled);
-      toggle.onChange((value) => __async(void 0, null, function* () {
-        rule.enabled = value;
-        yield notify();
-      }));
-    });
-    createFlagButton(headerSetting.controlEl, "hand", "Stop processing later groups when matched", !!rule.stopOnMatch, (value) => __async(void 0, null, function* () {
-      rule.stopOnMatch = value;
-      yield notify();
-    }));
-    if (index > 0) {
-      headerSetting.addExtraButton((button) => {
-        button.setIcon("up-chevron-glyph");
-        button.setTooltip("Move rule up");
-        button.onClick(() => __async(void 0, null, function* () {
-          arrayMove(rules, index, index - 1);
-          yield notifyAndRefresh();
-        }));
-      });
-    }
-    if (index < rules.length - 1) {
-      headerSetting.addExtraButton((button) => {
-        button.setIcon("down-chevron-glyph");
-        button.setTooltip("Move rule down");
-        button.onClick(() => __async(void 0, null, function* () {
-          arrayMove(rules, index, index + 1);
-          yield notifyAndRefresh();
-        }));
-      });
-    }
-    let collapseButton = null;
-    headerSetting.addExtraButton((button) => {
-      collapseButton = button;
-      button.setIcon("chevrons-down-up");
-      button.setTooltip("Collapse rule");
-      button.onClick(() => {
-        const collapsed = !card.hasClass("anm-collapsed");
-        card.toggleClass("anm-collapsed", collapsed);
-        updateCollapseControl(button, collapsed);
-        toggleCollapsedRule(rule.id, collapsed);
-      });
-    });
-    if (collapseButton) {
-      collapseButtons.set(rule.id, collapseButton);
-      updateCollapseControl(collapseButton, initiallyCollapsed);
-    }
-    headerSetting.addExtraButton((button) => {
-      button.setIcon("copy");
-      button.setTooltip("Duplicate rule");
-      button.onClick(() => __async(void 0, null, function* () {
-        const clone = cloneRule(rule);
-        rules.splice(index + 1, 0, clone);
-        yield notifyAndRefresh();
-      }));
-    });
-    headerSetting.addExtraButton((button) => {
-      button.setIcon("trash");
-      button.setTooltip("Delete rule");
-      button.onClick(() => __async(void 0, null, function* () {
-        rules.splice(index, 1);
-        yield notifyAndRefresh();
-      }));
-    });
-    const body = card.createDiv("anm-rule-body");
-    renderFilterNodeEditor(body, rule.filter, null, null, notify, notifyAndRefresh, true);
-    body.createEl("p", { text: "Make the following changes:", cls: "anm-actions-heading" });
-    renderActionsEditor(app, body, rule.actions, trackedProps, notify, notifyAndRefresh);
-  };
-  const renderFilterNodeEditor = (container, node, parentChildren, index, notifyChange, notifyAndRefresh2, isRoot = false, parentOperator = "all") => {
-    var _a, _b;
-    if (node.type === "group") {
-      const intro = isRoot ? "when" : parentOperator === "any" ? "or" : "and";
-      const groupSetting = new import_obsidian4.Setting(container);
-      groupSetting.settingEl.addClass("anm-group");
-      if (isRoot) {
-        groupSetting.settingEl.addClass("anm-group--root");
-      } else {
-        groupSetting.settingEl.addClass("anm-group--nested");
-      }
-      groupSetting.setName("");
-      groupSetting.setDesc("");
-      groupSetting.infoEl.empty();
-      const headerRow = groupSetting.infoEl.createDiv("anm-group-header");
-      headerRow.createSpan({ text: intro, cls: "anm-logic-label" });
-      const modeSelect = new import_obsidian4.DropdownComponent(headerRow);
-      modeSelect.selectEl.addClass("anm-group-mode");
-      GROUP_MODES.forEach((option) => {
-        modeSelect.addOption(option.value, option.label);
-      });
-      modeSelect.setValue(getGroupModeValue(node));
-      modeSelect.onChange((value) => __async(void 0, null, function* () {
-        var _a2;
-        const nextMode = (_a2 = GROUP_MODES.find((entry) => entry.value === value)) != null ? _a2 : GROUP_MODES[0];
-        updateGroupOperator(node, nextMode.quantifier, nextMode.truthiness);
-        yield notifyAndRefresh2();
-      }));
-      if (parentChildren && index !== null) {
-        const actions = headerRow.createDiv("anm-group-actions");
-        const removeButton = new import_obsidian4.ExtraButtonComponent(actions);
-        removeButton.setIcon("trash");
-        removeButton.setTooltip("Remove group");
-        removeButton.onClick(() => __async(void 0, null, function* () {
-          parentChildren.splice(index, 1);
-          yield notifyAndRefresh2();
-        }));
-      }
-      const childrenContainer = groupSetting.infoEl.createDiv("anm-group-children");
-      node.children.forEach((child, childIndex) => {
-        renderFilterNodeEditor(childrenContainer, child, node.children, childIndex, notifyChange, notifyAndRefresh2, false, getGroupQuantifier(node));
-      });
-      const footer = groupSetting.infoEl.createDiv("anm-group-footer");
-      const addCriteriaBtn = new import_obsidian4.ButtonComponent(footer);
-      addCriteriaBtn.setButtonText("+ add criteria");
-      addCriteriaBtn.onClick(() => __async(void 0, null, function* () {
-        node.children.push(createDefaultCondition());
-        yield notifyAndRefresh2();
-      }));
-      const addGroupBtn = new import_obsidian4.ButtonComponent(footer);
-      addGroupBtn.setButtonText("+ add group");
-      addGroupBtn.onClick(() => __async(void 0, null, function* () {
-        node.children.push(createDefaultGroup());
-        yield notifyAndRefresh2();
-      }));
-    } else {
-      const connectorText = connectorLabel(parentChildren, index, parentOperator);
-      const conditionSetting = new import_obsidian4.Setting(container);
-      conditionSetting.settingEl.addClass("anm-condition-row");
-      conditionSetting.setName("");
-      conditionSetting.setDesc("");
-      conditionSetting.infoEl.empty();
-      const line = conditionSetting.infoEl.createDiv("anm-condition-line");
-      line.createSpan({ text: connectorText, cls: "anm-logic-label" });
-      const propertyField = line.createDiv("anm-condition-field");
-      propertyField.addClass("anm-condition-field--property");
-      const propertySelect = new import_obsidian4.DropdownComponent(propertyField);
-      propertySelect.addOption("", "select property");
-      const definedProps = trackedProperties.map((entry) => {
-        var _a2, _b2;
-        return {
-          key: (_a2 = entry.key) == null ? void 0 : _a2.trim(),
-          label: (_b2 = entry.label) == null ? void 0 : _b2.trim()
-        };
-      }).filter((entry) => !!entry.key);
-      definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
-      const initial = (_a = node.property) != null ? _a : "";
-      if (initial && !definedProps.find((entry) => entry.key === initial)) {
-        propertySelect.addOption(initial, initial);
-      }
-      if (initial) {
-        propertySelect.setValue(initial);
-      }
-      propertySelect.onChange((value) => __async(void 0, null, function* () {
-        node.property = value;
-        yield notifyChange();
-      }));
-      const comparatorField = line.createDiv("anm-condition-field");
-      comparatorField.addClass("anm-condition-field--comparator");
-      const comparatorSelect = new import_obsidian4.DropdownComponent(comparatorField);
-      COMPARATORS.forEach((comp) => comparatorSelect.addOption(comp, comp));
-      comparatorSelect.setValue(node.comparator);
-      comparatorSelect.onChange((value) => __async(void 0, null, function* () {
-        node.comparator = value;
-        yield notifyChange();
-      }));
-      const valueField = line.createDiv("anm-condition-field");
-      valueField.addClass("anm-condition-field--value");
-      const valueInput = new import_obsidian4.TextComponent(valueField);
-      valueInput.inputEl.placeholder = "value";
-      valueInput.setValue(Array.isArray(node.value) ? node.value.join(",") : (_b = node.value) != null ? _b : "");
-      valueInput.onChange((value) => __async(void 0, null, function* () {
-        node.value = value;
-        yield notifyChange();
-      }));
-      const toolsBar = line.createDiv("anm-condition-tools");
-      const flagBar = toolsBar.createDiv("anm-condition-flags");
-      createFlagButton(flagBar, "circle-slash", "Negate comparison", !!node.negate, (value) => __async(void 0, null, function* () {
-        node.negate = value;
-        yield notifyChange();
-      }));
-      createFlagButton(flagBar, "case-sensitive", "Match case", !!node.caseSensitive, (value) => __async(void 0, null, function* () {
-        node.caseSensitive = value;
-        yield notifyChange();
-      }));
-      if (parentChildren && index !== null) {
-        if (index > 0) {
-          const upBtn = new import_obsidian4.ExtraButtonComponent(toolsBar);
-          upBtn.setIcon("up-chevron-glyph");
-          upBtn.setTooltip("Move up");
-          upBtn.onClick(() => __async(void 0, null, function* () {
-            arrayMove(parentChildren, index, index - 1);
-            yield notifyAndRefresh2();
-          }));
-        }
-        if (index < parentChildren.length - 1) {
-          const downBtn = new import_obsidian4.ExtraButtonComponent(toolsBar);
-          downBtn.setIcon("down-chevron-glyph");
-          downBtn.setTooltip("Move down");
-          downBtn.onClick(() => __async(void 0, null, function* () {
-            arrayMove(parentChildren, index, index + 1);
-            yield notifyAndRefresh2();
-          }));
-        }
-        const removeButton = new import_obsidian4.ExtraButtonComponent(toolsBar);
-        removeButton.setIcon("trash");
-        removeButton.setTooltip("Remove criteria");
-        removeButton.onClick(() => __async(void 0, null, function* () {
-          parentChildren.splice(index, 1);
-          yield notifyAndRefresh2();
-        }));
-      }
-    }
-  };
-  const renderActionsEditor = (app2, container, actions, trackedProperties2, notifyChange, notifyAndRefresh2) => {
-    actions.forEach((action, index) => {
-      const actionSetting = new import_obsidian4.Setting(container);
-      actionSetting.settingEl.addClass("anm-action-row");
-      actionSetting.setName("");
-      actionSetting.setDesc("");
-      actionSetting.infoEl.empty();
-      const line = actionSetting.infoEl.createDiv("anm-action-line");
-      const typeWrapper = line.createDiv("anm-action-type");
-      const typeSelect = new import_obsidian4.DropdownComponent(typeWrapper);
-      ACTION_TYPES.forEach((type) => typeSelect.addOption(type, type));
-      typeSelect.setValue(action.type);
-      typeSelect.onChange((value) => __async(void 0, null, function* () {
-        actions[index] = createDefaultAction(value);
-        yield notifyAndRefresh2();
-      }));
-      const fieldsWrapper = line.createDiv("anm-action-fields");
-      renderActionFields(app2, fieldsWrapper, action, trackedProperties2, notifyChange);
-      if (index > 0) {
-        actionSetting.addExtraButton((button) => {
-          button.setIcon("up-chevron-glyph");
-          button.setTooltip("Move action up");
-          button.onClick(() => __async(void 0, null, function* () {
-            arrayMove(actions, index, index - 1);
-            yield notifyAndRefresh2();
-          }));
-        });
-      }
-      if (index < actions.length - 1) {
-        actionSetting.addExtraButton((button) => {
-          button.setIcon("down-chevron-glyph");
-          button.setTooltip("Move action down");
-          button.onClick(() => __async(void 0, null, function* () {
-            arrayMove(actions, index, index + 1);
-            yield notifyAndRefresh2();
-          }));
-        });
-      }
-      actionSetting.addExtraButton((button) => {
-        button.setIcon("trash");
-        button.setTooltip("Remove action");
-        button.onClick(() => __async(void 0, null, function* () {
-          actions.splice(index, 1);
-          yield notifyAndRefresh2();
-        }));
-      });
-    });
-    const addActionSetting = new import_obsidian4.Setting(container);
-    addActionSetting.settingEl.addClass("anm-add-action");
-    addActionSetting.setName("");
-    addActionSetting.setDesc("");
-    addActionSetting.addButton((button) => {
-      button.setButtonText("+ add action");
-      button.onClick(() => __async(void 0, null, function* () {
-        actions.push(createDefaultAction("move"));
-        yield notifyAndRefresh2();
-      }));
-    });
-  };
-  const renderActionFields = (app2, container, action, trackedProperties2, notifyChange) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
-    switch (action.type) {
-      case "move": {
-        const targetInput = new import_obsidian4.TextComponent(container);
-        targetInput.inputEl.placeholder = "Destination folder";
-        targetInput.setValue((_a = action.targetFolder) != null ? _a : "");
-        new FolderSuggest(app2, targetInput.inputEl);
-        targetInput.onChange((value) => __async(void 0, null, function* () {
-          action.targetFolder = value;
-          yield notifyChange();
-        }));
-        const createFolderSetting = new import_obsidian4.Setting(container);
-        createFolderSetting.setName("Create folder if it doesn't exist");
-        createFolderSetting.addToggle((toggle) => {
-          var _a2;
-          toggle.setValue((_a2 = action.createFolderIfMissing) != null ? _a2 : false);
-          toggle.onChange((value) => __async(void 0, null, function* () {
-            action.createFolderIfMissing = value;
-            yield notifyChange();
-          }));
-        });
-        break;
-      }
-      case "applyTemplate": {
-        const templateInput = new import_obsidian4.TextComponent(container);
-        templateInput.inputEl.placeholder = "Template path (relative to vault)";
-        templateInput.setValue((_b = action.templatePath) != null ? _b : "");
-        new TemplateFileSuggest(app2, templateInput.inputEl);
-        templateInput.onChange((value) => __async(void 0, null, function* () {
-          action.templatePath = value;
-          yield notifyChange();
-        }));
-        const modeSelect = new import_obsidian4.DropdownComponent(container);
-        modeSelect.addOption("prepend", "prepend");
-        modeSelect.addOption("append", "append");
-        modeSelect.addOption("replace", "replace");
-        modeSelect.setValue((_c = action.mode) != null ? _c : "prepend");
-        modeSelect.onChange((value) => __async(void 0, null, function* () {
-          action.mode = value;
-          yield notifyChange();
-        }));
-        break;
-      }
-      case "rename": {
-        const prefix = new import_obsidian4.TextComponent(container);
-        prefix.inputEl.placeholder = "Prefix";
-        prefix.setValue((_d = action.prefix) != null ? _d : "");
-        prefix.onChange((value) => __async(void 0, null, function* () {
-          action.prefix = value || void 0;
-          yield notifyChange();
-        }));
-        const suffix = new import_obsidian4.TextComponent(container);
-        suffix.inputEl.placeholder = "Suffix";
-        suffix.setValue((_e = action.suffix) != null ? _e : "");
-        suffix.onChange((value) => __async(void 0, null, function* () {
-          action.suffix = value || void 0;
-          yield notifyChange();
-        }));
-        const replace = new import_obsidian4.TextComponent(container);
-        replace.inputEl.placeholder = "Replace basename";
-        replace.setValue((_f = action.replace) != null ? _f : "");
-        replace.onChange((value) => __async(void 0, null, function* () {
-          action.replace = value || void 0;
-          yield notifyChange();
-        }));
-        break;
-      }
-      case "setProperty": {
-        const propertySelect = new import_obsidian4.DropdownComponent(container);
-        propertySelect.addOption("", "Property");
-        const definedProps = trackedProperties2.map((entry) => {
-          var _a2, _b2;
-          return {
-            key: (_a2 = entry.key) == null ? void 0 : _a2.trim(),
-            label: (_b2 = entry.label) == null ? void 0 : _b2.trim()
-          };
-        }).filter((entry) => !!entry.key);
-        definedProps.forEach(({ key, label }) => propertySelect.addOption(key, label || key));
-        const initial = (_g = action.property) != null ? _g : "";
-        if (initial && !definedProps.find((entry) => entry.key === initial)) {
-          propertySelect.addOption(initial, initial);
-        }
-        propertySelect.setValue(initial);
-        propertySelect.onChange((value) => __async(void 0, null, function* () {
-          action.property = value;
-          yield notifyChange();
-        }));
-        const valueInput = new import_obsidian4.TextComponent(container);
-        valueInput.inputEl.placeholder = "Value";
-        valueInput.setValue((_h = action.value) != null ? _h : "");
-        valueInput.onChange((value) => __async(void 0, null, function* () {
-          action.value = value;
-          yield notifyChange();
-        }));
-        break;
-      }
-      default:
-        container.createSpan({ text: "Unsupported action type." });
-    }
-  };
-  const createFlagButton = (container, icon, tooltip, value, onChange2) => {
-    const button = new import_obsidian4.ExtraButtonComponent(container);
-    button.setIcon(icon);
-    button.setTooltip(tooltip);
-    const el = button.extraSettingsEl;
-    el.addClass("anm-flag-button");
-    const sync = (next) => {
-      el.toggleClass("is-active", next);
+    this.state = {
+      entries: []
     };
-    sync(value);
-    button.onClick(() => __async(void 0, null, function* () {
-      const next = !el.hasClass("is-active");
-      sync(next);
-      yield onChange2(next);
+  }
+  log(type, message, relatedFile, details) {
+    const entry = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      type,
+      message,
+      relatedFile,
+      details
+    };
+    this.state.entries.unshift(entry);
+    if (this.state.entries.length > 1e3) {
+      this.state.entries = this.state.entries.slice(0, 1e3);
+    }
+  }
+  getEntries() {
+    return this.state.entries;
+  }
+  clear() {
+    this.state.entries = [];
+  }
+};
+
+// core/IdentifierService.ts
+var import_obsidian = __toModule(require("obsidian"));
+var IdentifierService = class {
+  constructor(app) {
+    this.app = app;
+  }
+  matches(file, identifier) {
+    switch (identifier.type) {
+      case "tag":
+        return this.checkTag(file, identifier.config);
+      case "folder":
+        return this.checkFolder(file, identifier.config);
+      case "frontmatter":
+        return this.checkFrontmatter(file, identifier.config);
+      default:
+        console.warn(`[Curator] Unknown identifier type: ${identifier.type}`);
+        return false;
+    }
+  }
+  checkTag(file, config) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache)
+      return false;
+    const tags = (0, import_obsidian.getAllTags)(cache);
+    if (!tags)
+      return false;
+    const target = config.tag.startsWith("#") ? config.tag : "#" + config.tag;
+    return tags.some((t) => t === target || t.startsWith(target + "/"));
+  }
+  checkFolder(file, config) {
+    if (!file.parent)
+      return false;
+    const parentPath = file.parent.path;
+    if (config.includeSubfolders) {
+      return parentPath === config.folder || parentPath.startsWith(config.folder + "/");
+    } else {
+      return parentPath === config.folder;
+    }
+  }
+  checkFrontmatter(file, config) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache || !cache.frontmatter)
+      return false;
+    const val = cache.frontmatter[config.key];
+    if (config.exists) {
+      return val !== void 0;
+    }
+    return val === config.value;
+  }
+};
+
+// core/GroupService.ts
+var GroupService = class {
+  constructor(app, identifierService) {
+    this.app = app;
+    this.identifierService = identifierService;
+    this.identifiers = new Map();
+  }
+  updateIdentifiers(identifiers) {
+    this.identifiers.clear();
+    identifiers.forEach((id) => this.identifiers.set(id.id, id));
+  }
+  isInGroup(file, group) {
+    if (!group.identifiers || group.identifiers.length === 0) {
+      return false;
+    }
+    const results = group.identifiers.map((idStr) => {
+      const identifier = this.identifiers.get(idStr);
+      if (!identifier) {
+        console.warn(`[Curator] Group ${group.name} references missing identifier ${idStr}`);
+        return false;
+      }
+      return this.identifierService.matches(file, identifier);
+    });
+    if (group.operator === "AND") {
+      return results.every((r) => r === true);
+    } else if (group.operator === "OR") {
+      return results.some((r) => r === true);
+    } else {
+      return false;
+    }
+  }
+};
+
+// core/TriggerService.ts
+var import_obsidian2 = __toModule(require("obsidian"));
+var TriggerService = class {
+  constructor(app) {
+    this.listeners = new Map();
+    this.eventRefs = [];
+    this.activeTriggers = new Map();
+    this.app = app;
+  }
+  registerTrigger(trigger, callback) {
+    var _a;
+    console.log(`[DEBUG] Registering trigger ${trigger.id}`);
+    if (!this.listeners.has(trigger.id)) {
+      this.listeners.set(trigger.id, []);
+    }
+    (_a = this.listeners.get(trigger.id)) == null ? void 0 : _a.push(callback);
+    this.activeTriggers.set(trigger.id, trigger);
+  }
+  initializeListeners() {
+    this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
+    this.eventRefs = [];
+    this.eventRefs.push(this.app.vault.on("create", (file) => {
+      if (file instanceof import_obsidian2.TFile)
+        this.handleEvent("create", file);
     }));
-    return button;
-  };
-  refresh();
-};
-var connectorLabel = (parentChildren, index, parentOperator) => {
-  if (!parentChildren || index === null) {
-    return "";
-  }
-  if (index === 0) {
-    return "where";
-  }
-  if (parentOperator === "any") {
-    return "or";
-  }
-  return "and";
-};
-var createDefaultCondition = () => ({
-  type: "condition",
-  property: "",
-  comparator: "equals",
-  value: "",
-  caseSensitive: false,
-  negate: false
-});
-var createDefaultGroup = () => ({
-  type: "group",
-  operator: "all",
-  children: [createDefaultCondition()]
-});
-var createDefaultAction = (type) => {
-  switch (type) {
-    case "move":
-      return { type, targetFolder: "", createFolderIfMissing: false };
-    case "applyTemplate":
-      return { type, templatePath: "", mode: "prepend" };
-    case "rename":
-      return { type };
-    case "setProperty":
-      return { type, property: "", value: "" };
-    default:
-      return { type: "move", targetFolder: "" };
-  }
-};
-var collapsedRuleState = new Set();
-var toggleCollapsedRule = (id, collapsed) => {
-  if (collapsed) {
-    collapsedRuleState.add(id);
-  } else {
-    collapsedRuleState.delete(id);
-  }
-};
-var isRuleCollapsed = (id) => collapsedRuleState.has(id);
-var updateCollapseControl = (button, collapsed) => {
-  button.setIcon(collapsed ? "chevrons-up-down" : "chevrons-down-up");
-  button.setTooltip(collapsed ? "Expand rule" : "Collapse rule");
-};
-var createDefaultRule = () => ({
-  id: `rule-${Date.now()}-${Math.floor(Math.random() * 1e3)}`,
-  name: "New rule",
-  enabled: true,
-  filter: createDefaultGroup(),
-  actions: [createDefaultAction("move")],
-  stopOnMatch: true
-});
-var cloneRule = (rule) => __spreadProps(__spreadValues({}, structuredClone(rule)), {
-  id: `rule-${Date.now()}-${Math.floor(Math.random() * 1e3)}`,
-  name: `${rule.name} (copy)`
-});
-var stylesInjected = false;
-var injectFilterBuilderStyles = () => {
-  if (stylesInjected)
-    return;
-  stylesInjected = true;
-  const style = document.createElement("style");
-  style.textContent = `
-.anm-filter-toolbar .setting-item-control {
-	justify-content: flex-end;
-	gap: 0.5rem;
-}
-.anm-filter-toolbar .setting-item-info {
-	display: none;
-}
-.anm-filter-rules {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-.anm-rule-card {
-	padding: 1rem;
-    border-radius: 6px;
-    border: 1px solid var(--color-base-30);
-    background: var(--color-base-10);
-}
-.anm-rule-group {
-	border: 1px solid var(--color-base-30);
-	border-radius: 6px;
-	padding: 1rem;
-	background: var(--color-base-05);
-	margin-bottom: 1rem;
-}
-.anm-rule-group-body.is-collapsed {
-	display: none;
-}
-
-.anm-field-label-inline, .anm-logic-label {
-	color: var(--text-muted);
-    text-transform: uppercase;
-    font-size: 0.75em;
-    width: 3.5em;
-}
-
-.anm-rule-header-setting {
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-.anm-rule-name-field {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-}
-.anm-rule-name {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 8px;
-	padding: 0.35rem 0.6rem;
-	background: var(--background-secondary);
-}
-.anm-rule-body {
-	padding: 0.75rem 1rem 1rem;
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-.anm-rule-card.anm-collapsed .anm-rule-body {
-	display: none;
-}
-.anm-group.setting-item {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 10px;
-	padding: 0.75rem;
-	margin-top: 0.75rem;
-	background: var(--background-secondary);
-	display: flex;
-	flex-direction: column;
-	align-items: stretch;
-	gap: 0.75rem;
-}
-.anm-group--nested {
-	margin-left: 0.75rem;
-	width: calc(100% - 0.75rem);
-}
-.anm-group .setting-item-info {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	width: 100%;
-	margin:0;
-}
-.anm-group .setting-item-control {
-	display: none;
-}
-.anm-group-header {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-	font-weight: 600;
-	align-items: center;
-}
-.anm-group-actions {
-	margin-left: auto;
-	display: flex;
-	gap: 0.25rem;
-}
-.anm-group-mode {
-	min-width: 220px;
-}
-
-.anm-group-children {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-.anm-group-footer {
-	display: flex;
-	gap: 0.5rem;
-	flex-wrap: wrap;
-	padding-top: 0.5rem;
-	border-top: 1px solid var(--background-modifier-border);
-}
-.anm-condition-row.setting-item {
-	padding: 0.25rem 0 0 1rem;
-	border: none;
-	display: flex;
-	flex-direction: column;
-}
-.anm-condition-row .setting-item-control {
-	display: none;
-}
-.anm-condition-line {
-	display: flex;
-	flex-wrap: nowrap;
-	gap: 0.5rem;
-	align-items: center;
-}
-.anm-condition-line > .anm-logic-label {
-	flex: 0 0 auto;
-}
-.anm-condition-field--property {
-    width: 26%;
-}
-.anm-condition-field--value {
-    width:25%
-}
-.anm-condition-field {
-	flex: 0 0 auto;
-}
-.anm-condition-field--property input {
-	max-width: 100%;
-}
-.anm-condition-field--property select {
-	min-width: 10rem;
-	width: 100%;
-}
-.anm-condition-field--comparator select {
-}
-.anm-condition-field--value {
-	flex: 1 1 auto;
-}
-.anm-condition-field--value input {
-	max-width: 100%;
-}
-.anm-condition-tools {
-	display: flex;
-	gap: 0.25rem;
-	flex: 0 0 auto;
-	margin-left: auto;
-	align-items: center;
-}
-.anm-condition-flags {
-	display: flex;
-	gap: 0.25rem;
-}
-.anm-flag-button {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 6px;
-	padding: 0.2rem;
-	width: 26px;
-	height: 26px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-}
-.anm-flag-button.is-active {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-color: var(--interactive-accent);
-}
-.anm-actions-heading {
-	margin: 0;
-	font-weight: 600;
-}
-.anm-action-row.setting-item {
-	border-top: 1px solid var(--background-modifier-border);
-}
-.anm-action-line {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-	align-items: center;
-}
-.anm-action-fields {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-}
-.anm-add-rule .setting-item-info,
-.anm-add-action .setting-item-info {
-	display: none;
-}
-.anm-add-rule .setting-item-control,
-.anm-add-action .setting-item-control {
-	justify-content: flex-start;
-}
-.anm-json-editor summary {
-	cursor: pointer;
-	font-weight: 600;
-}
-.anm-json-editor textarea {
-	margin-top: 0.5rem;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 6px;
-	padding: 0.5rem;
-}
-.anm-json-editor-actions {
-	display: flex;
-	gap: 0.5rem;
-	margin-top: 0.5rem;
-}
-`;
-  document.head.append(style);
-};
-
-// settings/ui/FilterEngineSettings.ts
-var collapsedGroupState = new Set();
-var createGroupId = () => `group-${Date.now()}-${Math.floor(Math.random() * 1e3)}`;
-function renderApplyRulesButton(plugin, container) {
-  const applySetting = new import_obsidian5.Setting(container);
-  applySetting.setName("Apply rules to vault");
-  applySetting.setDesc("Run the current criteria against every markdown file in your vault. This will move/rename notes and may take a while.");
-  applySetting.addButton((button) => {
-    button.setButtonText("Apply now").setCta();
-    button.onClick(() => __async(this, null, function* () {
-      yield plugin.applyRulesToAllFiles();
+    this.eventRefs.push(this.app.vault.on("modify", (file) => {
+      if (file instanceof import_obsidian2.TFile)
+        this.handleEvent("modify", file);
     }));
-  });
-}
-function renderDryRunButton(plugin, container) {
-  const dryRunSetting = new import_obsidian5.Setting(container);
-  dryRunSetting.setName("Dry Run");
-  dryRunSetting.setDesc("Simulate running rules against your vault. Generates a report of what would happen without making changes.");
-  const reportContainer = container.createDiv({ cls: "anm-dry-run-report" });
-  reportContainer.style.whiteSpace = "pre-wrap";
-  reportContainer.style.fontFamily = "var(--font-monospace)";
-  reportContainer.style.marginTop = "10px";
-  reportContainer.style.padding = "10px";
-  reportContainer.style.background = "var(--background-secondary)";
-  reportContainer.style.borderRadius = "4px";
-  reportContainer.style.maxHeight = "300px";
-  reportContainer.style.overflowY = "auto";
-  reportContainer.style.display = "none";
-  dryRunSetting.addButton((button) => {
-    button.setButtonText("Run Simulation").setCta();
-    button.onClick(() => __async(this, null, function* () {
-      button.setButtonText("Running...");
-      button.setDisabled(true);
-      reportContainer.style.display = "block";
-      reportContainer.setText("Simulating...");
+    this.eventRefs.push(this.app.vault.on("rename", (file, oldPath) => {
+      if (file instanceof import_obsidian2.TFile)
+        this.handleEvent("rename", file);
+    }));
+    this.eventRefs.push(this.app.vault.on("delete", (file) => {
+      if (file instanceof import_obsidian2.TFile)
+        this.handleEvent("delete", file);
+    }));
+  }
+  handleEvent(eventType, file) {
+    console.log(`[DEBUG] Handling event ${eventType} for ${file.path}`);
+    for (const trigger of this.activeTriggers.values()) {
+      if (trigger.type === "obsidian_event" && trigger.event === eventType) {
+        console.log(`[DEBUG] Firing trigger ${trigger.id}`);
+        this.fireTrigger(trigger.id, file);
+      }
+    }
+  }
+  fireTrigger(triggerId, file) {
+    const callbacks = this.listeners.get(triggerId);
+    if (callbacks) {
+      callbacks.forEach((cb) => cb(triggerId, file));
+    }
+  }
+  unload() {
+    this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
+    this.eventRefs = [];
+    this.listeners.clear();
+    this.activeTriggers.clear();
+  }
+};
+
+// core/ActionService.ts
+var import_obsidian3 = __toModule(require("obsidian"));
+var ActionService = class {
+  constructor(app, binder) {
+    this.app = app;
+    this.binder = binder;
+  }
+  executeAction(file, action) {
+    return __async(this, null, function* () {
       try {
-        const report = yield plugin.coreService.runDryRun();
-        if (report.length === 0) {
-          reportContainer.setText("No changes would be made.");
-        } else {
-          reportContainer.setText(report.join("\n"));
+        switch (action.type) {
+          case "move":
+            yield this.moveFile(file, action.config);
+            break;
+          case "rename":
+            yield this.renameFile(file, action.config);
+            break;
+          case "tag":
+            yield this.tagFile(file, action.config);
+            break;
+          default:
+            this.binder.log("warning", `Unknown action type: ${action.type}`, file.path);
         }
       } catch (error) {
-        console.error(error);
-        reportContainer.setText("Error running simulation. Check console.");
-      } finally {
-        button.setButtonText("Run Simulation");
-        button.setDisabled(false);
+        this.binder.log("error", `Failed to execute action ${action.name}`, file.path, error);
+        throw error;
       }
-    }));
-  });
-}
-function renderTrackedProperties(plugin, container, refreshCallback) {
-  const card = container.createDiv({ cls: "anm-tracked-properties" });
-  new import_obsidian5.Setting(card).setName("Reusable properties").setDesc("Add common properties to reuse across rule criteria (e.g., file.path, tags, frontmatter.status).");
-  const list = card.createDiv({ cls: "anm-tracked-properties-list" });
-  const refresh = () => {
-    list.empty();
-    plugin.settings.tracked_properties.forEach((prop, index) => {
-      var _a, _b, _c;
-      const setting = new import_obsidian5.Setting(list);
-      let pendingKey = (_a = prop.key) != null ? _a : "";
-      let pendingLabel = (_b = prop.label) != null ? _b : "";
-      let pendingWeight = (_c = prop.weight) != null ? _c : 0;
-      const syncLabel = () => {
-        setting.setName(pendingLabel || pendingKey || "Property");
-      };
-      syncLabel();
-      setting.setDesc("");
-      let keyComponent = null;
-      setting.addText((text) => {
-        keyComponent = text;
-        text.setPlaceholder("file.path");
-        text.setValue(pendingKey);
-        text.onChange((value) => {
-          pendingKey = value;
-          syncLabel();
-        });
-        text.inputEl.onblur = () => __async(this, null, function* () {
-          plugin.settings.tracked_properties[index].key = pendingKey.trim();
-          yield plugin.saveSettings();
-          syncLabel();
-        });
-      });
-      keyComponent == null ? void 0 : keyComponent.inputEl.classList.add("anm-property-key");
-      let labelComponent = null;
-      setting.addText((text) => {
-        labelComponent = text;
-        text.setPlaceholder("Display name (optional)");
-        text.setValue(pendingLabel);
-        text.onChange((value) => {
-          pendingLabel = value;
-          syncLabel();
-        });
-        text.inputEl.onblur = () => __async(this, null, function* () {
-          plugin.settings.tracked_properties[index].label = pendingLabel.trim() || void 0;
-          yield plugin.saveSettings();
-          syncLabel();
-        });
-      });
-      labelComponent == null ? void 0 : labelComponent.inputEl.classList.add("anm-property-label");
-      let weightComponent = null;
-      setting.addText((text) => {
-        weightComponent = text;
-        text.setPlaceholder("1");
-        text.setValue(String(pendingWeight));
-        text.inputEl.type = "number";
-        text.inputEl.style.width = "60px";
-        text.onChange((value) => {
-          pendingWeight = Number(value);
-        });
-        text.inputEl.onblur = () => __async(this, null, function* () {
-          plugin.settings.tracked_properties[index].weight = pendingWeight;
-          yield plugin.saveSettings();
-        });
-      });
-      weightComponent == null ? void 0 : weightComponent.inputEl.classList.add("anm-property-weight");
-      setting.addExtraButton((btn) => {
-        btn.setIcon("trash");
-        btn.setTooltip("Remove");
-        btn.onClick(() => __async(this, null, function* () {
-          plugin.settings.tracked_properties.splice(index, 1);
-          yield plugin.saveSettings();
-          refresh();
-        }));
-      });
     });
-  };
-  const addRow = new import_obsidian5.Setting(card);
-  addRow.setName("");
-  addRow.addButton((btn) => {
-    btn.setButtonText("+ add property");
-    btn.onClick(() => __async(this, null, function* () {
-      plugin.settings.tracked_properties.push({ key: "", label: "" });
-      yield plugin.saveSettings();
-      refresh();
-    }));
-  });
-  refresh();
-}
-function renderRuleGroupsSection(app, plugin, container, refreshCallback) {
-  const wrapper = container.createDiv({ cls: "anm-rule-groups-section" });
-  const render = () => {
-    var _a;
-    wrapper.empty();
-    const groups = (_a = plugin.settings.rule_groups) != null ? _a : [];
-    groups.forEach((group, index) => {
-      var _a2, _b;
-      const card = wrapper.createDiv("anm-rule-group");
-      const header = new import_obsidian5.Setting(card);
-      header.settingEl.addClass("anm-rule-group-header");
-      header.setName("");
-      header.setDesc("");
-      header.infoEl.empty();
-      const nameInput = header.infoEl.createEl("input", {
-        value: group.name,
-        attr: { placeholder: "Group name" },
-        cls: "anm-group-name-input"
-      });
-      nameInput.onblur = () => __async(this, null, function* () {
-        group.name = nameInput.value;
-        yield plugin.saveSettings();
-      });
-      const enabledToggle = header.addToggle((toggle) => {
-        toggle.setValue(group.enabled);
-        toggle.onChange((value) => __async(this, null, function* () {
-          group.enabled = value;
-          yield plugin.saveSettings();
-        }));
-      });
-      enabledToggle.setTooltip("Enable group");
-      if (index > 0) {
-        header.addExtraButton((button) => {
-          button.setIcon("up-chevron-glyph");
-          button.setTooltip("Move group up");
-          button.onClick(() => __async(this, null, function* () {
-            arrayMove(groups, index, index - 1);
-            yield plugin.saveSettings();
-            render();
-          }));
-        });
+  }
+  moveFile(file, config) {
+    return __async(this, null, function* () {
+      let targetFolder = (0, import_obsidian3.normalizePath)(config.folder);
+      if (!(yield this.app.vault.adapter.exists(targetFolder))) {
+        if (config.createIfMissing) {
+          yield this.app.vault.createFolder(targetFolder);
+          this.binder.log("info", `Created folder ${targetFolder}`);
+        } else {
+          this.binder.log("error", `Target folder ${targetFolder} does not exist`, file.path);
+          return;
+        }
       }
-      if (index < groups.length - 1) {
-        header.addExtraButton((button) => {
-          button.setIcon("down-chevron-glyph");
-          button.setTooltip("Move group down");
-          button.onClick(() => __async(this, null, function* () {
-            arrayMove(groups, index, index + 1);
-            yield plugin.saveSettings();
-            render();
-          }));
-        });
+      const targetPath = (0, import_obsidian3.normalizePath)(`${targetFolder}/${file.name}`);
+      if (targetPath === file.path)
+        return;
+      if (yield this.app.vault.adapter.exists(targetPath)) {
+        this.binder.log("warning", `File ${targetPath} already exists. Skipping move.`, file.path);
+        return;
       }
-      header.addExtraButton((button) => {
-        const isCollapsed = collapsedGroupState.has(group.id);
-        button.setIcon(isCollapsed ? "chevrons-up-down" : "chevrons-down-up");
-        button.setTooltip(isCollapsed ? "Expand group" : "Collapse group");
-        button.onClick(() => {
-          if (isCollapsed) {
-            collapsedGroupState.delete(group.id);
-          } else {
-            collapsedGroupState.add(group.id);
+      yield this.app.fileManager.renameFile(file, targetPath);
+      this.binder.log("success", `Moved file to ${targetFolder}`, targetPath);
+    });
+  }
+  renameFile(file, config) {
+    return __async(this, null, function* () {
+      var _a;
+      let newName = file.basename;
+      if (config.replace) {
+        newName = config.replace;
+      }
+      if (config.prefix) {
+        newName = `${config.prefix}${newName}`;
+      }
+      if (config.suffix) {
+        newName = `${newName}${config.suffix}`;
+      }
+      if (newName === file.basename)
+        return;
+      const targetPath = (0, import_obsidian3.normalizePath)(`${(_a = file.parent) == null ? void 0 : _a.path}/${newName}.${file.extension}`);
+      if (yield this.app.vault.adapter.exists(targetPath)) {
+        this.binder.log("warning", `File ${targetPath} already exists. Skipping rename.`, file.path);
+        return;
+      }
+      yield this.app.fileManager.renameFile(file, targetPath);
+      this.binder.log("success", `Renamed file to ${newName}`, targetPath);
+    });
+  }
+  tagFile(file, config) {
+    return __async(this, null, function* () {
+      yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
+        let tags = frontmatter["tags"];
+        if (!tags)
+          tags = [];
+        if (!Array.isArray(tags))
+          tags = [tags];
+        const targetTag = config.tag.startsWith("#") ? config.tag.substring(1) : config.tag;
+        if (config.operation === "add") {
+          if (!tags.includes(targetTag)) {
+            tags.push(targetTag);
+            this.binder.log("success", `Added tag #${targetTag}`, file.path);
           }
-          render();
-        });
+        } else if (config.operation === "remove") {
+          const index = tags.indexOf(targetTag);
+          if (index > -1) {
+            tags.splice(index, 1);
+            this.binder.log("success", `Removed tag #${targetTag}`, file.path);
+          }
+        }
+        frontmatter["tags"] = tags;
       });
-      header.addExtraButton((button) => {
-        button.setIcon("trash");
-        button.setTooltip("Delete group");
-        button.onClick(() => __async(this, null, function* () {
-          plugin.settings.rule_groups.splice(index, 1);
-          yield plugin.saveSettings();
-          render();
+    });
+  }
+};
+
+// core/JobService.ts
+var JobService = class {
+  constructor(app, actionService, binder) {
+    this.actions = new Map();
+    this.app = app;
+    this.actionService = actionService;
+    this.binder = binder;
+  }
+  updateActions(actions) {
+    this.actions.clear();
+    actions.forEach((a) => this.actions.set(a.id, a));
+  }
+  runJob(job, file) {
+    return __async(this, null, function* () {
+      this.binder.log("info", `Starting job ${job.name}`, file.path);
+      for (const actionId of job.actionIds) {
+        this.binder.log("info", `Processing actionId: ${actionId}`);
+        const action = this.actions.get(actionId);
+        if (!action) {
+          this.binder.log("error", `Job ${job.name} references missing action ${actionId}`, file.path);
+          continue;
+        }
+        this.binder.log("info", `Found action: ${action.name} (type: ${action.type})`);
+        try {
+          yield this.actionService.executeAction(file, action);
+        } catch (error) {
+          this.binder.log("error", `Job ${job.name} stopped due to error`);
+          return;
+        }
+      }
+      this.binder.log("info", `Completed job ${job.name}`, file.path);
+    });
+  }
+};
+
+// core/RulesetService.ts
+var RulesetService = class {
+  constructor(app, triggerService, groupService, jobService, binder, identifierService, actionService) {
+    this.rulesets = [];
+    this.groups = new Map();
+    this.jobs = new Map();
+    this.app = app;
+    this.triggerService = triggerService;
+    this.groupService = groupService;
+    this.jobService = jobService;
+    this.binder = binder;
+    this.identifierService = identifierService;
+    this.actionService = actionService;
+  }
+  updateConfig(config) {
+    this.rulesets = config.rulesets;
+    this.groups.clear();
+    config.groups.forEach((g) => this.groups.set(g.id, g));
+    this.jobs.clear();
+    config.jobs.forEach((j) => this.jobs.set(j.id, j));
+    this.groupService.updateIdentifiers(config.identifiers);
+    this.jobService.updateActions(config.actions);
+    const activeTriggerIds = new Set(this.rulesets.filter((r) => r.enabled).map((r) => r.triggerId));
+    config.triggers.forEach((t) => {
+      if (activeTriggerIds.has(t.id)) {
+        this.triggerService.registerTrigger(t, (triggerId, file) => this.handleTrigger(triggerId, file));
+      }
+    });
+  }
+  handleTrigger(triggerId, file) {
+    return __async(this, null, function* () {
+      console.log(`[DEBUG] RulesetService handling trigger ${triggerId}`);
+      const matchingRulesets = this.rulesets.filter((r) => r.enabled && r.triggerId === triggerId);
+      for (const ruleset of matchingRulesets) {
+        const group = this.groups.get(ruleset.groupId);
+        if (!group) {
+          this.binder.log("warning", `Ruleset ${ruleset.name} references missing group ${ruleset.groupId}`, file.path);
+          continue;
+        }
+        if (this.groupService.isInGroup(file, group)) {
+          const job = this.jobs.get(ruleset.jobId);
+          if (!job) {
+            this.binder.log("warning", `Ruleset ${ruleset.name} references missing job ${ruleset.jobId}`, file.path);
+            continue;
+          }
+          this.binder.log("info", `Ruleset ${ruleset.name} matched. Running job ${job.name}.`, file.path);
+          console.error("[DEBUG] Running job:", JSON.stringify(job));
+          yield this.jobService.runJob(job, file);
+        }
+      }
+    });
+  }
+};
+
+// ui/CuratorSettingsTab.ts
+var import_obsidian7 = __toModule(require("obsidian"));
+
+// ui/components/RulesTab.ts
+var import_obsidian4 = __toModule(require("obsidian"));
+var RulesTab = class {
+  constructor(app, containerEl, config, onUpdate) {
+    this.app = app;
+    this.containerEl = containerEl;
+    this.config = config;
+    this.onUpdate = onUpdate;
+  }
+  display() {
+    this.containerEl.empty();
+    this.containerEl.createEl("h3", { text: "Rules Configuration" });
+    this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
+    new import_obsidian4.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
+      this.addRuleset();
+    }));
+    const rulesetsList = this.containerEl.createDiv("rulesets-list");
+    this.config.rulesets.forEach((ruleset, index) => {
+      this.renderRuleset(rulesetsList, ruleset, index);
+    });
+  }
+  addRuleset() {
+    const newRuleset = {
+      id: crypto.randomUUID(),
+      name: "New Ruleset",
+      enabled: true,
+      triggerId: "",
+      groupId: "",
+      jobId: ""
+    };
+    this.config.rulesets.push(newRuleset);
+    this.onUpdate(this.config);
+    this.display();
+  }
+  renderRuleset(container, ruleset, index) {
+    const rulesetContainer = container.createDiv("ruleset-container");
+    rulesetContainer.style.border = "1px solid var(--background-modifier-border)";
+    rulesetContainer.style.padding = "10px";
+    rulesetContainer.style.marginBottom = "10px";
+    rulesetContainer.style.borderRadius = "4px";
+    new import_obsidian4.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
+      ruleset.name = value;
+      this.onUpdate(this.config);
+    })).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
+      ruleset.enabled = value;
+      this.onUpdate(this.config);
+    })).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Ruleset").onClick(() => {
+      this.config.rulesets.splice(index, 1);
+      this.onUpdate(this.config);
+      this.display();
+    }));
+    const configContainer = rulesetContainer.createDiv("ruleset-config");
+    configContainer.style.display = "grid";
+    configContainer.style.gridTemplateColumns = "1fr 1fr 1fr";
+    configContainer.style.gap = "10px";
+    new import_obsidian4.Setting(configContainer).setName("Trigger").setDesc("When to run").addDropdown((dropdown) => {
+      dropdown.addOption("", "Select Trigger");
+      this.config.triggers.forEach((t) => dropdown.addOption(t.id, t.name));
+      dropdown.setValue(ruleset.triggerId);
+      dropdown.onChange((value) => {
+        ruleset.triggerId = value;
+        this.onUpdate(this.config);
+      });
+    });
+    new import_obsidian4.Setting(configContainer).setName("Group").setDesc("Which notes").addDropdown((dropdown) => {
+      dropdown.addOption("", "Select Group");
+      this.config.groups.forEach((g) => dropdown.addOption(g.id, g.name));
+      dropdown.setValue(ruleset.groupId);
+      dropdown.onChange((value) => {
+        ruleset.groupId = value;
+        this.onUpdate(this.config);
+      });
+    });
+    new import_obsidian4.Setting(configContainer).setName("Job").setDesc("What to do").addDropdown((dropdown) => {
+      dropdown.addOption("", "Select Job");
+      this.config.jobs.forEach((j) => dropdown.addOption(j.id, j.name));
+      dropdown.setValue(ruleset.jobId);
+      dropdown.onChange((value) => {
+        ruleset.jobId = value;
+        this.onUpdate(this.config);
+      });
+    });
+  }
+};
+
+// ui/components/DefinitionsTab.ts
+var import_obsidian5 = __toModule(require("obsidian"));
+var DefinitionsTab = class {
+  constructor(app, containerEl, config, onUpdate) {
+    this.activeSection = "identifiers";
+    this.app = app;
+    this.containerEl = containerEl;
+    this.config = config;
+    this.onUpdate = onUpdate;
+  }
+  display() {
+    this.containerEl.empty();
+    this.containerEl.createEl("h3", { text: "Definitions" });
+    const navContainer = this.containerEl.createDiv("definitions-nav");
+    navContainer.style.display = "flex";
+    navContainer.style.gap = "10px";
+    navContainer.style.marginBottom = "20px";
+    this.createNavButton(navContainer, "Identifiers", "identifiers");
+    this.createNavButton(navContainer, "Groups", "groups");
+    this.createNavButton(navContainer, "Triggers", "triggers");
+    this.createNavButton(navContainer, "Actions", "actions");
+    this.createNavButton(navContainer, "Jobs", "jobs");
+    const contentContainer = this.containerEl.createDiv("definitions-content");
+    switch (this.activeSection) {
+      case "identifiers":
+        this.renderIdentifiers(contentContainer);
+        break;
+      case "groups":
+        this.renderGroups(contentContainer);
+        break;
+      case "triggers":
+        this.renderTriggers(contentContainer);
+        break;
+      case "actions":
+        this.renderActions(contentContainer);
+        break;
+      case "jobs":
+        this.renderJobs(contentContainer);
+        break;
+    }
+  }
+  createNavButton(container, text, section) {
+    const btn = container.createEl("button", { text });
+    if (this.activeSection === section) {
+      btn.addClass("mod-cta");
+    }
+    btn.onclick = () => {
+      this.activeSection = section;
+      this.display();
+    };
+  }
+  renderIdentifiers(container) {
+    new import_obsidian5.Setting(container).setName("Add Identifier").setDesc("Create a new test for your notes.").addButton((btn) => btn.setButtonText("Add Identifier").setCta().onClick(() => {
+      this.config.identifiers.push({
+        id: crypto.randomUUID(),
+        name: "New Identifier",
+        type: "tag",
+        config: { tag: "" }
+      });
+      this.onUpdate(this.config);
+      this.display();
+    }));
+    this.config.identifiers.forEach((identifier, index) => {
+      const div = container.createDiv("definition-item");
+      div.style.border = "1px solid var(--background-modifier-border)";
+      div.style.padding = "10px";
+      div.style.marginBottom = "10px";
+      div.style.borderRadius = "4px";
+      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(identifier.name).onChange((value) => {
+        identifier.name = value;
+        this.onUpdate(this.config);
+      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
+        this.config.identifiers.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("tag", "Tag").addOption("folder", "Folder").addOption("frontmatter", "Frontmatter").setValue(identifier.type).onChange((value) => {
+        identifier.type = value;
+        if (value === "tag")
+          identifier.config = { tag: "" };
+        else if (value === "folder")
+          identifier.config = { folder: "" };
+        else if (value === "frontmatter")
+          identifier.config = { key: "", value: "" };
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      if (identifier.type === "tag") {
+        new import_obsidian5.Setting(div).setName("Tag").addText((text) => text.setPlaceholder("#tag").setValue(identifier.config.tag).onChange((value) => {
+          identifier.config.tag = value;
+          this.onUpdate(this.config);
         }));
-      });
-      const body = card.createDiv("anm-rule-group-body");
-      if (collapsedGroupState.has(group.id)) {
-        body.addClass("is-collapsed");
-      } else {
-        renderFilterRulesEditor(app, body, (_a2 = group.rules) != null ? _a2 : [], (_b = plugin.settings.tracked_properties) != null ? _b : [], () => __async(this, null, function* () {
-          yield plugin.saveSettings();
-          plugin.refreshMetadataFingerprints();
+      } else if (identifier.type === "folder") {
+        new import_obsidian5.Setting(div).setName("Folder").addText((text) => text.setPlaceholder("folder/path").setValue(identifier.config.folder).onChange((value) => {
+          identifier.config.folder = value;
+          this.onUpdate(this.config);
+        }));
+      } else if (identifier.type === "frontmatter") {
+        new import_obsidian5.Setting(div).setName("Key").addText((text) => text.setPlaceholder("key").setValue(identifier.config.key).onChange((value) => {
+          identifier.config.key = value;
+          this.onUpdate(this.config);
+        }));
+        new import_obsidian5.Setting(div).setName("Value (Optional)").addText((text) => text.setPlaceholder("value").setValue(identifier.config.value).onChange((value) => {
+          identifier.config.value = value;
+          this.onUpdate(this.config);
         }));
       }
     });
-    const addGroupSetting = new import_obsidian5.Setting(wrapper);
-    addGroupSetting.setName("");
-    addGroupSetting.setDesc("");
-    addGroupSetting.addButton((button) => {
-      button.setButtonText("+ add group");
-      button.onClick(() => __async(this, null, function* () {
-        plugin.settings.rule_groups.push({
-          id: createGroupId(),
-          name: `Group ${plugin.settings.rule_groups.length + 1}`,
-          enabled: true,
-          rules: []
-        });
-        yield plugin.saveSettings();
-        render();
-      }));
-    });
-  };
-  render();
-}
-function renderFilterRulesJsonEditor(plugin, container, refreshCallback) {
-  var _a;
-  const details = container.createEl("details", { cls: "anm-json-editor" });
-  details.createEl("summary", { text: "Advanced: edit criteria rules as JSON" });
-  const wrapper = details.createDiv();
-  let draftGroupRules = JSON.stringify((_a = plugin.settings.rule_groups) != null ? _a : [], null, 2);
-  const textArea = wrapper.createEl("textarea", { text: draftGroupRules });
-  textArea.rows = 12;
-  textArea.style.width = "100%";
-  textArea.style.fontFamily = "var(--font-monospace)";
-  textArea.oninput = () => {
-    draftGroupRules = textArea.value;
-  };
-  const buttons = wrapper.createDiv({ cls: "anm-json-editor-actions" });
-  const resetBtn = buttons.createEl("button", { text: "Reset" });
-  resetBtn.onclick = () => {
-    var _a2;
-    draftGroupRules = JSON.stringify((_a2 = plugin.settings.rule_groups) != null ? _a2 : [], null, 2);
-    textArea.value = draftGroupRules;
-  };
-  const saveBtn = buttons.createEl("button", { text: "Save" });
-  saveBtn.onclick = () => __async(this, null, function* () {
-    try {
-      const parsed = JSON.parse(draftGroupRules);
-      plugin.settings.rule_groups = parsed;
-      yield plugin.saveSettings();
-      plugin.refreshMetadataFingerprints();
-      new import_obsidian5.Notice("Criteria rule groups saved.");
-      refreshCallback();
-    } catch (error) {
-      console.error("[Auto Note Mover] Invalid criteria rule groups JSON", error);
-      new import_obsidian5.Notice("Invalid JSON. Changes not saved.");
-    }
-  });
-}
-
-// settings/ui/ExcludedFolderSettings.ts
-var import_obsidian6 = __toModule(require("obsidian"));
-function renderExcludedFolderSettings(app, plugin, containerEl, refreshCallback) {
-  const useRegexToCheckForExcludedFolder = document.createDocumentFragment();
-  useRegexToCheckForExcludedFolder.append("If enabled, excluded folder will be checked with regular expressions.");
-  new import_obsidian6.Setting(containerEl).setName("Use regular expressions to check for excluded folder").setDesc(useRegexToCheckForExcludedFolder).addToggle((toggle) => {
-    toggle.setValue(plugin.settings.use_regex_to_check_for_excluded_folder).onChange((value) => __async(this, null, function* () {
-      plugin.settings.use_regex_to_check_for_excluded_folder = value;
-      yield plugin.saveSettings();
-      refreshCallback();
-    }));
-  });
-  const excludedFolderDesc = document.createDocumentFragment();
-  excludedFolderDesc.append("Notes in the excluded folder will not be moved.", document.createElement("br"), "This takes precedence over the notes movement rules.");
-  new import_obsidian6.Setting(containerEl).setName("Add Excluded Folder").setDesc(excludedFolderDesc).addButton((button) => {
-    button.setTooltip("Add Excluded Folders").setButtonText("+").setCta().onClick(() => __async(this, null, function* () {
-      plugin.settings.excluded_folder.push({
-        folder: ""
+  }
+  renderGroups(container) {
+    new import_obsidian5.Setting(container).setName("Add Group").setDesc("Combine identifiers to select notes.").addButton((btn) => btn.setButtonText("Add Group").setCta().onClick(() => {
+      this.config.groups.push({
+        id: crypto.randomUUID(),
+        name: "New Group",
+        identifiers: [],
+        operator: "AND"
       });
-      yield plugin.saveSettings();
-      refreshCallback();
+      this.onUpdate(this.config);
+      this.display();
     }));
-  });
-  plugin.settings.excluded_folder.forEach((excluded_folder, index) => {
-    const s = new import_obsidian6.Setting(containerEl).addSearch((cb) => {
-      new FolderSuggest(app, cb.inputEl);
-      cb.setPlaceholder("Folder").setValue(excluded_folder.folder).onChange((newFolder) => __async(this, null, function* () {
-        plugin.settings.excluded_folder[index].folder = newFolder;
-        yield plugin.saveSettings();
+    this.config.groups.forEach((group, index) => {
+      const div = container.createDiv("definition-item");
+      div.style.border = "1px solid var(--background-modifier-border)";
+      div.style.padding = "10px";
+      div.style.marginBottom = "10px";
+      div.style.borderRadius = "4px";
+      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(group.name).onChange((value) => {
+        group.name = value;
+        this.onUpdate(this.config);
+      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
+        this.config.groups.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
       }));
-    }).addExtraButton((cb) => {
-      cb.setIcon("up-chevron-glyph").setTooltip("Move up").onClick(() => __async(this, null, function* () {
-        arrayMove(plugin.settings.excluded_folder, index, index - 1);
-        yield plugin.saveSettings();
-        refreshCallback();
+      new import_obsidian5.Setting(div).setName("Operator").addDropdown((dropdown) => dropdown.addOption("AND", "AND (All match)").addOption("OR", "OR (Any match)").setValue(group.operator).onChange((value) => {
+        group.operator = value;
+        this.onUpdate(this.config);
       }));
-    }).addExtraButton((cb) => {
-      cb.setIcon("down-chevron-glyph").setTooltip("Move down").onClick(() => __async(this, null, function* () {
-        arrayMove(plugin.settings.excluded_folder, index, index + 1);
-        yield plugin.saveSettings();
-        refreshCallback();
-      }));
-    }).addExtraButton((cb) => {
-      cb.setIcon("cross").setTooltip("Delete").onClick(() => __async(this, null, function* () {
-        plugin.settings.excluded_folder.splice(index, 1);
-        yield plugin.saveSettings();
-        refreshCallback();
-      }));
+      const idContainer = div.createDiv("identifiers-selection");
+      idContainer.createEl("h4", { text: "Identifiers" });
+      this.config.identifiers.forEach((identifier) => {
+        new import_obsidian5.Setting(idContainer).setName(identifier.name).addToggle((toggle) => toggle.setValue(group.identifiers.includes(identifier.id)).onChange((value) => {
+          if (value) {
+            group.identifiers.push(identifier.id);
+          } else {
+            group.identifiers = group.identifiers.filter((id) => id !== identifier.id);
+          }
+          this.onUpdate(this.config);
+        }));
+      });
     });
-    s.infoEl.remove();
-  });
-}
-
-// settings/ui/GeneralSettings.ts
-var import_obsidian7 = __toModule(require("obsidian"));
-function renderGeneralSettings(app, plugin, containerEl, refreshCallback) {
-  containerEl.createEl("h2", { text: "Auto Note Mover" });
-  const descEl = document.createDocumentFragment();
-  new import_obsidian7.Setting(containerEl).setDesc("Auto Note Mover will automatically move the active notes to their respective folders according to the rules.");
-  const variableDesc = document.createDocumentFragment();
-  variableDesc.append("You can use the following variables in your destination paths and file names:", document.createElement("br"), descEl.createEl("code", { text: "{{title}}" }), " or ", descEl.createEl("code", { text: "{{name}}" }), ": The file name.", document.createElement("br"), descEl.createEl("code", { text: "{{parent}}" }), ": The immediate parent folder name.", document.createElement("br"), descEl.createEl("code", { text: "{{date:YYYY-MM-DD}}" }), ": The current date (format customizable).", document.createElement("br"), descEl.createEl("code", { text: "{{frontmatter.key}}" }), " or ", descEl.createEl("code", { text: "{{prop.key}}" }), ": Value of a frontmatter property.");
-  new import_obsidian7.Setting(containerEl).setName("Variable Reference").setDesc(variableDesc);
-  const triggerDesc = document.createDocumentFragment();
-  triggerDesc.append("Choose how the trigger will be activated.", document.createElement("br"), descEl.createEl("strong", { text: "Automatic " }), "is triggered when you create, edit, or rename a note, and moves the note if it matches the rules.", document.createElement("br"), "You can also activate the trigger with a command.", document.createElement("br"), descEl.createEl("strong", { text: "Manual " }), "will not automatically move notes.", document.createElement("br"), "You can trigger by command.");
-  new import_obsidian7.Setting(containerEl).setName("Trigger").setDesc(triggerDesc).addDropdown((dropDown) => dropDown.addOption("Automatic", "Automatic").addOption("Manual", "Manual").setValue(plugin.settings.trigger_auto_manual).onChange((value) => {
-    plugin.settings.trigger_auto_manual = value;
-    plugin.saveData(plugin.settings);
-    refreshCallback();
-  }));
-  const statusBarTriggerIndicatorDesc = document.createDocumentFragment();
-  statusBarTriggerIndicatorDesc.append("The status bar will display [A] if the trigger is Automatic, and [M] for Manual.", document.createElement("br"), "To change the setting, you need to restart Obsidian.", document.createElement("br"), "Desktop only.");
-  new import_obsidian7.Setting(containerEl).setName("Status Bar Trigger Indicator").setDesc(statusBarTriggerIndicatorDesc).addToggle((toggle) => {
-    toggle.setValue(plugin.settings.statusBar_trigger_indicator).onChange((value) => __async(this, null, function* () {
-      plugin.settings.statusBar_trigger_indicator = value;
-      yield plugin.saveSettings();
-      refreshCallback();
+  }
+  renderTriggers(container) {
+    new import_obsidian5.Setting(container).setName("Add Trigger").setDesc("Define when rules should run.").addButton((btn) => btn.setButtonText("Add Trigger").setCta().onClick(() => {
+      this.config.triggers.push({
+        id: crypto.randomUUID(),
+        name: "New Trigger",
+        type: "obsidian_event",
+        event: "modify"
+      });
+      this.onUpdate(this.config);
+      this.display();
     }));
-  });
-  new import_obsidian7.Setting(containerEl).setName("Conflict Resolution").setDesc("What to do if a file with the same name already exists in the destination folder.").addDropdown((dropDown) => dropDown.addOption("rename", "Rename (e.g. Note (1))").addOption("overwrite", "Overwrite").addOption("skip", "Skip (do nothing)").setValue(plugin.settings.conflict_resolution).onChange((value) => __async(this, null, function* () {
-    plugin.settings.conflict_resolution = value;
-    yield plugin.saveSettings();
-    refreshCallback();
-  })));
-}
-function renderDebugSettings(plugin, containerEl, refreshCallback) {
-  new import_obsidian7.Setting(containerEl).setName("Debug Mode").setDesc("Enable verbose logging to the developer console for debugging rules.").addToggle((toggle) => {
-    toggle.setValue(plugin.settings.debug_mode).onChange((value) => __async(this, null, function* () {
-      plugin.settings.debug_mode = value;
-      yield plugin.saveSettings();
-      refreshCallback();
+    this.config.triggers.forEach((trigger, index) => {
+      const div = container.createDiv("definition-item");
+      div.style.border = "1px solid var(--background-modifier-border)";
+      div.style.padding = "10px";
+      div.style.marginBottom = "10px";
+      div.style.borderRadius = "4px";
+      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(trigger.name).onChange((value) => {
+        trigger.name = value;
+        this.onUpdate(this.config);
+      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
+        this.config.triggers.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("manual", "Manual").setValue(trigger.type).onChange((value) => {
+        trigger.type = value;
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      if (trigger.type === "obsidian_event") {
+        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(trigger.event || "modify").onChange((value) => {
+          trigger.event = value;
+          this.onUpdate(this.config);
+        }));
+      }
+    });
+  }
+  renderActions(container) {
+    new import_obsidian5.Setting(container).setName("Add Action").setDesc("Define what to do with notes.").addButton((btn) => btn.setButtonText("Add Action").setCta().onClick(() => {
+      this.config.actions.push({
+        id: crypto.randomUUID(),
+        name: "New Action",
+        type: "move",
+        config: { folder: "" }
+      });
+      this.onUpdate(this.config);
+      this.display();
     }));
-  });
-}
-
-// settings/settings.ts
-var DEFAULT_SETTINGS = {
-  trigger_auto_manual: "Automatic",
-  statusBar_trigger_indicator: true,
-  property_rules: [{ property: "", value: "", title: "", folder: "" }],
-  use_regex_to_check_for_excluded_folder: false,
-  excluded_folder: [{ folder: "" }],
-  filter_engine_enabled: false,
-  filter_rules: [],
-  rule_groups: [],
-  filter_rules_migrated: false,
-  tracked_properties: [
-    { key: "file.path", label: "path", weight: 1 },
-    { key: "file.folder", label: "folder", weight: 1 },
-    { key: "file.name", label: "name", weight: 1 },
-    { key: "file.extension", label: "extension", weight: 1 },
-    { key: "file.tags", label: "tags", weight: 10 },
-    { key: "prop.type", label: "type", weight: 5 }
-  ],
-  conflict_resolution: "rename",
-  debug_mode: false
+    this.config.actions.forEach((action, index) => {
+      const div = container.createDiv("definition-item");
+      div.style.border = "1px solid var(--background-modifier-border)";
+      div.style.padding = "10px";
+      div.style.marginBottom = "10px";
+      div.style.borderRadius = "4px";
+      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(action.name).onChange((value) => {
+        action.name = value;
+        this.onUpdate(this.config);
+      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
+        this.config.actions.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("move", "Move").addOption("rename", "Rename").addOption("tag", "Tag").setValue(action.type).onChange((value) => {
+        action.type = value;
+        if (value === "move")
+          action.config = { folder: "" };
+        else if (value === "rename")
+          action.config = { prefix: "", suffix: "", replace: "" };
+        else if (value === "tag")
+          action.config = { tag: "", operation: "add" };
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      if (action.type === "move") {
+        new import_obsidian5.Setting(div).setName("Folder").addText((text) => text.setPlaceholder("folder/path").setValue(action.config.folder).onChange((value) => {
+          action.config.folder = value;
+          this.onUpdate(this.config);
+        }));
+        new import_obsidian5.Setting(div).setName("Create if missing").addToggle((toggle) => toggle.setValue(action.config.createIfMissing || false).onChange((value) => {
+          action.config.createIfMissing = value;
+          this.onUpdate(this.config);
+        }));
+      } else if (action.type === "rename") {
+        new import_obsidian5.Setting(div).setName("Prefix").addText((text) => text.setValue(action.config.prefix || "").onChange((value) => {
+          action.config.prefix = value;
+          this.onUpdate(this.config);
+        }));
+        new import_obsidian5.Setting(div).setName("Suffix").addText((text) => text.setValue(action.config.suffix || "").onChange((value) => {
+          action.config.suffix = value;
+          this.onUpdate(this.config);
+        }));
+      } else if (action.type === "tag") {
+        new import_obsidian5.Setting(div).setName("Tag").addText((text) => text.setValue(action.config.tag).onChange((value) => {
+          action.config.tag = value;
+          this.onUpdate(this.config);
+        }));
+        new import_obsidian5.Setting(div).setName("Operation").addDropdown((dropdown) => dropdown.addOption("add", "Add").addOption("remove", "Remove").setValue(action.config.operation).onChange((value) => {
+          action.config.operation = value;
+          this.onUpdate(this.config);
+        }));
+      }
+    });
+  }
+  renderJobs(container) {
+    new import_obsidian5.Setting(container).setName("Add Job").setDesc("Combine actions into a sequence.").addButton((btn) => btn.setButtonText("Add Job").setCta().onClick(() => {
+      this.config.jobs.push({
+        id: crypto.randomUUID(),
+        name: "New Job",
+        actionIds: []
+      });
+      this.onUpdate(this.config);
+      this.display();
+    }));
+    this.config.jobs.forEach((job, index) => {
+      const div = container.createDiv("definition-item");
+      div.style.border = "1px solid var(--background-modifier-border)";
+      div.style.padding = "10px";
+      div.style.marginBottom = "10px";
+      div.style.borderRadius = "4px";
+      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(job.name).onChange((value) => {
+        job.name = value;
+        this.onUpdate(this.config);
+      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
+        this.config.jobs.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      const actionsContainer = div.createDiv("actions-selection");
+      actionsContainer.createEl("h4", { text: "Actions Sequence" });
+      job.actionIds.forEach((actionId, actionIndex) => {
+        const action = this.config.actions.find((a) => a.id === actionId);
+        if (action) {
+          new import_obsidian5.Setting(actionsContainer).setName(`${actionIndex + 1}. ${action.name}`).addExtraButton((btn) => btn.setIcon("cross").setTooltip("Remove from Job").onClick(() => {
+            job.actionIds.splice(actionIndex, 1);
+            this.onUpdate(this.config);
+            this.display();
+          }));
+        }
+      });
+      new import_obsidian5.Setting(actionsContainer).setName("Add Action to Sequence").addDropdown((dropdown) => {
+        dropdown.addOption("", "Select Action");
+        this.config.actions.forEach((a) => dropdown.addOption(a.id, a.name));
+        dropdown.onChange((value) => {
+          if (value) {
+            job.actionIds.push(value);
+            this.onUpdate(this.config);
+            this.display();
+          }
+        });
+      });
+    });
+  }
 };
-var AutoNoteMoverSettingTab = class extends import_obsidian8.PluginSettingTab {
+
+// ui/components/LogbookTab.ts
+var import_obsidian6 = __toModule(require("obsidian"));
+var LogbookTab = class {
+  constructor(app, containerEl, binder) {
+    this.app = app;
+    this.containerEl = containerEl;
+    this.binder = binder;
+  }
+  display() {
+    this.containerEl.empty();
+    const header = this.containerEl.createDiv("logbook-header");
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "center";
+    header.style.marginBottom = "10px";
+    const headerH3 = header.createEl("h3", { text: "Logbook" });
+    headerH3.style.margin = "0";
+    new import_obsidian6.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
+      this.binder.clear();
+      this.display();
+    });
+    const entries = this.binder.getEntries();
+    const logContainer = this.containerEl.createDiv("curator-logbook");
+    logContainer.style.height = "400px";
+    logContainer.style.overflowY = "auto";
+    logContainer.style.border = "1px solid var(--background-modifier-border)";
+    logContainer.style.padding = "10px";
+    logContainer.style.borderRadius = "4px";
+    logContainer.style.backgroundColor = "var(--background-primary)";
+    logContainer.style.fontFamily = "monospace";
+    if (entries.length === 0) {
+      const emptyMsg = logContainer.createDiv({ text: "No entries found." });
+      emptyMsg.style.color = "var(--text-muted)";
+      emptyMsg.style.textAlign = "center";
+      emptyMsg.style.padding = "20px";
+      return;
+    }
+    entries.forEach((entry) => {
+      const entryEl = logContainer.createDiv("curator-log-entry");
+      entryEl.style.marginBottom = "4px";
+      entryEl.style.borderBottom = "1px solid var(--background-modifier-border)";
+      entryEl.style.paddingBottom = "4px";
+      const timeSpan = entryEl.createSpan({ text: `[${new Date(entry.timestamp).toLocaleTimeString()}] `, cls: "curator-log-time" });
+      timeSpan.style.color = "var(--text-muted)";
+      const typeSpan = entryEl.createSpan({ text: entry.type.toUpperCase(), cls: `curator-log-type-${entry.type}` });
+      typeSpan.style.fontWeight = "bold";
+      typeSpan.style.marginRight = "5px";
+      if (entry.type === "error")
+        typeSpan.style.color = "var(--text-error)";
+      else if (entry.type === "warning")
+        typeSpan.style.color = "var(--text-warning)";
+      else if (entry.type === "success")
+        typeSpan.style.color = "var(--text-success)";
+      else
+        typeSpan.style.color = "var(--text-normal)";
+      entryEl.createSpan({ text: `: ${entry.message}`, cls: "curator-log-message" });
+      if (entry.relatedFile) {
+        const fileSpan = entryEl.createSpan({ text: ` (${entry.relatedFile})`, cls: "curator-log-file" });
+        fileSpan.style.color = "var(--text-accent)";
+      }
+    });
+  }
+};
+
+// ui/CuratorSettingsTab.ts
+var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.activeTab = "rules";
@@ -2948,1391 +889,78 @@ var AutoNoteMoverSettingTab = class extends import_obsidian8.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    this.containerEl.empty();
-    const refresh = () => this.display();
-    const tabHeader = containerEl.createDiv("anm-settings-tabs");
-    tabHeader.style.display = "flex";
-    tabHeader.style.marginBottom = "20px";
-    tabHeader.style.borderBottom = "1px solid var(--background-modifier-border)";
-    const createTab = (id, label) => {
-      const tab = tabHeader.createDiv("anm-settings-tab");
-      tab.innerText = label;
-      tab.style.padding = "10px 20px";
-      tab.style.cursor = "pointer";
-      tab.style.fontWeight = this.activeTab === id ? "bold" : "normal";
-      tab.style.borderBottom = this.activeTab === id ? "2px solid var(--interactive-accent)" : "none";
-      tab.style.color = this.activeTab === id ? "var(--text-normal)" : "var(--text-muted)";
-      tab.onclick = () => {
-        this.activeTab = id;
-        refresh();
-      };
-    };
-    createTab("rules", "Rules");
-    createTab("universal", "Universal Settings");
-    createTab("diagnosis", "Diagnosis");
+    containerEl.createEl("h2", { text: "Curator Settings" });
+    const navContainer = containerEl.createDiv("curator-nav");
+    navContainer.style.display = "flex";
+    navContainer.style.gap = "10px";
+    navContainer.style.marginBottom = "20px";
+    this.createNavButton(navContainer, "Rules", "rules");
+    this.createNavButton(navContainer, "Definitions", "definitions");
+    this.createNavButton(navContainer, "Logbook", "logbook");
+    const contentContainer = containerEl.createDiv("curator-content");
     if (this.activeTab === "rules") {
-      renderRuleGroupsSection(this.app, this.plugin, containerEl, refresh);
-    } else if (this.activeTab === "universal") {
-      renderGeneralSettings(this.app, this.plugin, containerEl, refresh);
-      renderTrackedProperties(this.plugin, containerEl, refresh);
-      renderExcludedFolderSettings(this.app, this.plugin, containerEl, refresh);
-    } else if (this.activeTab === "diagnosis") {
-      renderDebugSettings(this.plugin, containerEl, refresh);
-      renderDryRunButton(this.plugin, containerEl);
-      renderApplyRulesButton(this.plugin, containerEl);
-      renderFilterRulesJsonEditor(this.plugin, containerEl, refresh);
+      new RulesTab(this.app, contentContainer, this.plugin.settings, (newConfig) => {
+        this.plugin.settings = newConfig;
+        this.plugin.saveSettings();
+      }).display();
+    } else if (this.activeTab === "definitions") {
+      new DefinitionsTab(this.app, contentContainer, this.plugin.settings, (newConfig) => {
+        this.plugin.settings = newConfig;
+        this.plugin.saveSettings();
+      }).display();
+    } else if (this.activeTab === "logbook") {
+      new LogbookTab(this.app, contentContainer, this.plugin.binder).display();
     }
   }
-};
-
-// services/CoreService.ts
-var import_obsidian11 = __toModule(require("obsidian"));
-
-// filter/filterEvaluator.ts
-var import_obsidian9 = __toModule(require("obsidian"));
-function evaluateRules(rules, context, trackedProperties = [], debugMode = false) {
-  const matches = [];
-  for (const rule of rules) {
-    if (!rule.enabled)
-      continue;
-    if (debugMode) {
-      console.log(`[Auto Note Mover] Evaluating rule: ${rule.name}`);
+  createNavButton(container, text, tab) {
+    const btn = container.createEl("button", { text });
+    if (this.activeTab === tab) {
+      btn.addClass("mod-cta");
     }
-    const result = evaluateFilterNode(rule.filter, context, trackedProperties, debugMode);
-    if (result.matched) {
-      if (debugMode) {
-        console.log(`[Auto Note Mover] Rule '${rule.name}' matched with score ${result.score}.`);
-      }
-      matches.push({ rule, actions: rule.actions, score: result.score });
-    }
-  }
-  matches.sort((a, b) => b.score - a.score);
-  const finalMatches = [];
-  for (const match of matches) {
-    finalMatches.push(match);
-    if (match.rule.stopOnMatch) {
-      if (debugMode) {
-        console.log(`[Auto Note Mover] Rule '${match.rule.name}' has stopOnMatch enabled. Stopping evaluation.`);
-      }
-      break;
-    }
-  }
-  return finalMatches;
-}
-function evaluateFilterNode(node, context, trackedProperties, debugMode = false) {
-  if (node.type === "condition") {
-    return evaluateCondition(node, context, trackedProperties, debugMode);
-  }
-  return evaluateGroup(node, context, trackedProperties, debugMode);
-}
-function resolveGroupConfig(group) {
-  var _a;
-  const quantifier = group.operator === "any" ? "any" : "all";
-  const truthiness = (_a = group.truthiness) != null ? _a : group.operator === "none" ? "false" : "true";
-  return { quantifier, truthiness };
-}
-function evaluateGroup(group, context, trackedProperties, debugMode = false) {
-  if (!group.children.length) {
-    return { matched: true, score: 0 };
-  }
-  const { quantifier, truthiness } = resolveGroupConfig(group);
-  const results = group.children.map((child) => evaluateFilterNode(child, context, trackedProperties, debugMode));
-  if (truthiness === "true") {
-    if (quantifier === "all") {
-      const allMatched = results.every((r) => r.matched);
-      const totalScore = results.reduce((sum, r) => sum + r.score, 0);
-      return { matched: allMatched, score: allMatched ? totalScore : 0 };
-    } else {
-      const anyMatched = results.some((r) => r.matched);
-      const maxScore = results.filter((r) => r.matched).reduce((max2, r) => Math.max(max2, r.score), 0);
-      return { matched: anyMatched, score: maxScore };
-    }
-  }
-  if (quantifier === "all") {
-    const allFalse = results.every((r) => !r.matched);
-    return { matched: allFalse, score: 0 };
-  } else {
-    const anyFalse = results.some((r) => !r.matched);
-    return { matched: anyFalse, score: 0 };
-  }
-}
-function evaluateCondition(condition, context, trackedProperties, debugMode = false) {
-  var _a;
-  const propertyValue = resolvePropertyValue(condition.property, context);
-  let result = compareValues(propertyValue, condition.comparator, condition.value, condition.caseSensitive);
-  if (condition.negate) {
-    result = !result;
-  }
-  if (debugMode) {
-    console.log(`[Auto Note Mover] Condition: ${condition.property} (${String(propertyValue)}) ${condition.comparator} ${condition.value} => ${result}`);
-  }
-  if (result) {
-    const prop = trackedProperties.find((p) => p.key === condition.property);
-    const weight = (_a = prop == null ? void 0 : prop.weight) != null ? _a : 0;
-    return { matched: true, score: weight };
-  }
-  return { matched: false, score: 0 };
-}
-function resolvePropertyValue(property, context) {
-  var _a, _b;
-  const key = property.trim();
-  const lower = key.toLowerCase();
-  switch (lower) {
-    case "file.name":
-    case "file.basename":
-    case "file.title":
-      return context.name;
-    case "file.extension":
-      return context.extension;
-    case "file.path":
-      return (0, import_obsidian9.normalizePath)(context.path);
-    case "file.folder":
-    case "file.directory":
-      return context.folder;
-    case "file.content":
-      return (_a = context.content) != null ? _a : null;
-    case "frontmatter":
-    case "prop":
-      return JSON.stringify((_b = context.frontmatter) != null ? _b : {});
-    case "tags":
-    case "file.tags":
-      return context.tags;
-    default:
-      break;
-  }
-  if (lower.startsWith("prop.")) {
-    const fmKey = key.slice("prop.".length);
-    return getFrontmatterValue(context, fmKey);
-  }
-  if (lower.startsWith("file.")) {
-    const attribute = key.slice("file.".length);
-    const fileRecord = context.file;
-    if (attribute in fileRecord) {
-      const value = fileRecord[attribute];
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-  }
-  return void 0;
-}
-function getFrontmatterValue(context, property) {
-  var _a;
-  const fm = (_a = context.frontmatter) != null ? _a : {};
-  const direct = fm[property];
-  if (direct !== void 0)
-    return normalizeFrontmatterValue(direct);
-  const lowerKey = property.toLowerCase();
-  for (const key of Object.keys(fm)) {
-    if (key.toLowerCase() === lowerKey) {
-      return normalizeFrontmatterValue(fm[key]);
-    }
-  }
-  return void 0;
-}
-function normalizeFrontmatterValue(value) {
-  if (value === null || value === void 0)
-    return void 0;
-  if (Array.isArray(value)) {
-    return value.map((entry) => String(entry));
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
-}
-function compareValues(propertyValue, comparator, comparisonValue, caseSensitive = false) {
-  if (comparator === "exists") {
-    return propertyValue !== void 0 && propertyValue !== null && valueLength(propertyValue) > 0;
-  }
-  if (comparator === "notExists") {
-    return propertyValue === void 0 || propertyValue === null || valueLength(propertyValue) === 0;
-  }
-  if (propertyValue === void 0 || propertyValue === null) {
-    return false;
-  }
-  const candidates = Array.isArray(propertyValue) ? propertyValue : [propertyValue];
-  const targets = comparisonValue === void 0 ? [""] : Array.isArray(comparisonValue) ? comparisonValue : [comparisonValue];
-  return candidates.some((candidate) => targets.some((target) => evaluateComparator(String(candidate), comparator, target, caseSensitive)));
-}
-function valueLength(value) {
-  if (value === void 0 || value === null)
-    return 0;
-  if (Array.isArray(value))
-    return value.length;
-  return String(value).length;
-}
-function evaluateComparator(candidate, comparator, target, caseSensitive) {
-  const source = caseSensitive ? candidate : candidate.toLowerCase();
-  const against = caseSensitive ? target : target.toLowerCase();
-  switch (comparator) {
-    case "equals":
-      return source === against;
-    case "contains":
-      return source.includes(against);
-    case "startsWith":
-      return source.startsWith(against);
-    case "endsWith":
-      return source.endsWith(against);
-    case "matchesRegex": {
-      const regex = compileRegex(target, caseSensitive);
-      return regex ? regex.test(candidate) : false;
-    }
-    default:
-      return false;
-  }
-}
-function compileRegex(pattern, caseSensitive) {
-  if (!pattern)
-    return null;
-  let body = pattern;
-  let flags = caseSensitive ? "" : "i";
-  const regexLiteral = pattern.match(/^\/(.+)\/([gimsuy]*)$/);
-  if (regexLiteral) {
-    body = regexLiteral[1];
-    flags = regexLiteral[2] || flags;
-    if (!caseSensitive && !flags.includes("i")) {
-      flags += "i";
-    }
-  }
-  try {
-    return new RegExp(body, flags);
-  } catch (error) {
-    console.error("[Auto Note Mover] Invalid regex pattern:", pattern, error);
-    return null;
-  }
-}
-
-// filter/actionExecutor.ts
-var import_obsidian10 = __toModule(require("obsidian"));
-var TEMPLATER_PLUGIN_ID = "templater-obsidian";
-function executeActions(actions, context) {
-  return __async(this, null, function* () {
-    const logs = [];
-    for (const action of actions) {
-      switch (action.type) {
-        case "move":
-          const moveLog = yield executeMoveAction(action, context);
-          if (moveLog)
-            logs.push(moveLog);
-          break;
-        case "applyTemplate":
-          const templateLog = yield executeTemplateAction(action, context);
-          if (templateLog)
-            logs.push(templateLog);
-          break;
-        case "rename":
-          const renameLog = yield executeRenameAction(action, context);
-          if (renameLog)
-            logs.push(renameLog);
-          break;
-        case "setProperty":
-          const propLog = yield executePropertyAction(action, context);
-          if (propLog)
-            logs.push(propLog);
-          break;
-        default:
-          console.warn("[Auto Note Mover] Unsupported action type", action);
-      }
-    }
-    return logs;
-  });
-}
-function executeMoveAction(action, context) {
-  return __async(this, null, function* () {
-    var _a;
-    const targetFolder = resolvePathVariables(action.targetFolder, context);
-    const newPath = (0, import_obsidian10.normalizePath)(`${targetFolder}/${context.file.name}`);
-    if (context.dryRun) {
-      return `[Move] Would move "${context.file.path}" to "${newPath}"`;
-    }
-    yield ensureFolderExists(context.app, targetFolder, action.createFolderIfMissing);
-    if (context.file.path === newPath)
-      return;
-    const existingFile = context.app.vault.getAbstractFileByPath(newPath);
-    if (existingFile instanceof import_obsidian10.TFile) {
-      const resolution = (_a = context.conflictResolution) != null ? _a : "rename";
-      if (resolution === "skip") {
-        new import_obsidian10.Notice(`[Auto Note Mover] Skipped move: "${newPath}" already exists.`);
-        return;
-      }
-      if (resolution === "overwrite") {
-        yield context.app.vault.trash(existingFile, true);
-      }
-      if (resolution === "rename") {
-        let counter = 1;
-        let dedupedPath = newPath;
-        while (context.app.vault.getAbstractFileByPath(dedupedPath)) {
-          dedupedPath = (0, import_obsidian10.normalizePath)(`${targetFolder}/${context.file.basename} (${counter}).${context.file.extension}`);
-          counter++;
-        }
-        yield context.app.fileManager.renameFile(context.file, dedupedPath);
-        new import_obsidian10.Notice(`[Auto Note Mover]
-Moved note to "${targetFolder}" (renamed).`);
-        if (context.historyService) {
-          yield context.historyService.logAction(context.file, "MOVE", `Moved to ${targetFolder} as ${dedupedPath}`);
-        }
-        const refreshed2 = context.app.vault.getAbstractFileByPath(dedupedPath);
-        if (refreshed2 instanceof import_obsidian10.TFile)
-          context.file = refreshed2;
-        return;
-      }
-    }
-    yield context.app.fileManager.renameFile(context.file, newPath);
-    new import_obsidian10.Notice(`[Auto Note Mover]
-Moved note to "${targetFolder}".`);
-    if (context.historyService) {
-      yield context.historyService.logAction(context.file, "MOVE", `Moved to ${targetFolder}`);
-    }
-    const refreshed = context.app.vault.getAbstractFileByPath(newPath);
-    if (refreshed instanceof import_obsidian10.TFile) {
-      context.file = refreshed;
-    }
-  });
-}
-function executeTemplateAction(action, context) {
-  return __async(this, null, function* () {
-    const templatePath = (0, import_obsidian10.normalizePath)(resolvePathVariables(action.templatePath, context));
-    if (context.dryRun) {
-      return `[Template] Would apply template "${templatePath}" (${action.mode}) to "${context.file.path}"`;
-    }
-    const templateFile = context.app.vault.getAbstractFileByPath(templatePath);
-    if (!(templateFile instanceof import_obsidian10.TFile)) {
-      console.warn("[Auto Note Mover] Template not found:", templatePath);
-      return;
-    }
-    const templater = getTemplaterApi(context.app);
-    if (templater) {
-      const writeTemplate = templater["write_template_to_file"];
-      if (isFunction(writeTemplate)) {
-        try {
-          yield writeTemplate.call(templater, templateFile, context.file);
-          return;
-        } catch (error) {
-          console.warn("[Auto Note Mover] Templater write_template_to_file failed; falling back to raw content.", error);
-        }
-      }
-    }
-    const templateContent = yield context.app.vault.read(templateFile);
-    const currentContent = yield context.app.vault.read(context.file);
-    let nextContent = currentContent;
-    switch (action.mode) {
-      case "prepend":
-        nextContent = templateContent + "\n" + currentContent;
-        break;
-      case "append":
-        nextContent = currentContent + "\n" + templateContent;
-        break;
-      case "replace":
-        nextContent = templateContent;
-        break;
-      default:
-        break;
-    }
-    if (nextContent !== currentContent) {
-      yield context.app.vault.modify(context.file, nextContent);
-    }
-  });
-}
-function executeRenameAction(action, context) {
-  return __async(this, null, function* () {
-    var _a, _b;
-    let newBaseName = action.replace ? resolvePathVariables(action.replace, context) : context.file.basename;
-    if (action.prefix) {
-      newBaseName = `${resolvePathVariables(action.prefix, context)}${newBaseName}`;
-    }
-    if (action.suffix) {
-      newBaseName = `${newBaseName}${resolvePathVariables(action.suffix, context)}`;
-    }
-    if (context.dryRun) {
-      return `[Rename] Would rename "${context.file.path}" to "${newBaseName}.${context.file.extension}"`;
-    }
-    if (newBaseName === context.file.basename) {
-      return;
-    }
-    const folder = (_b = (_a = context.file.parent) == null ? void 0 : _a.path) != null ? _b : "";
-    const newPath = (0, import_obsidian10.normalizePath)(`${folder}/${newBaseName}.${context.file.extension}`);
-    yield context.app.fileManager.renameFile(context.file, newPath);
-    const refreshed = context.app.vault.getAbstractFileByPath(newPath);
-    if (refreshed instanceof import_obsidian10.TFile) {
-      context.file = refreshed;
-    }
-  });
-}
-function resolvePathVariables(path, context) {
-  if (!path)
-    return "";
-  const cache = context.app.metadataCache.getFileCache(context.file);
-  const frontmatter = cache == null ? void 0 : cache.frontmatter;
-  return path.replace(/\{\{(.*?)\}\}/g, (match, variable) => {
-    var _a, _b, _c, _d;
-    const key = variable.trim();
-    if (key.startsWith("date:")) {
-      const format = key.substring(5);
-      if (typeof window !== "undefined" && window.moment) {
-        return window.moment().format(format);
-      }
-      return new Date().toISOString().split("T")[0];
-    }
-    if (key === "title" || key === "name") {
-      return context.file.basename;
-    }
-    if (key === "parent" || key === "file.parent") {
-      return (_b = (_a = context.file.parent) == null ? void 0 : _a.name) != null ? _b : "";
-    }
-    if (key.startsWith("frontmatter.") || key.startsWith("prop.")) {
-      const propName = key.split(".")[1];
-      if (frontmatter && frontmatter[propName] !== void 0) {
-        return String(frontmatter[propName]);
-      }
-      return "";
-    }
-    if (context.trackedProperties) {
-      const tracked = context.trackedProperties.find((p) => p.label === key);
-      if (tracked && tracked.key) {
-        const propKey = tracked.key.toLowerCase();
-        if (propKey === "file.folder" || propKey === "file.directory") {
-          return (_d = (_c = context.file.parent) == null ? void 0 : _c.path) != null ? _d : "";
-        }
-        if (propKey === "file.name" || propKey === "file.basename" || propKey === "file.title") {
-          return context.file.basename;
-        }
-        if (propKey === "file.extension") {
-          return context.file.extension;
-        }
-        if (propKey === "file.path") {
-          return context.file.path;
-        }
-        if (frontmatter && frontmatter[tracked.key] !== void 0) {
-          return String(frontmatter[tracked.key]);
-        }
-      }
-    }
-    return match;
-  });
-}
-function executePropertyAction(action, context) {
-  return __async(this, null, function* () {
-    var _a, _b;
-    const key = (_a = action.property) == null ? void 0 : _a.trim();
-    if (!key) {
-      console.warn("[Auto Note Mover] Property action missing property key.");
-      return;
-    }
-    const rawValue = (_b = action.value) != null ? _b : "";
-    const value = resolvePathVariables(rawValue, context);
-    if (context.dryRun) {
-      return `[Property] Would set property "${key}" to "${value}" for "${context.file.path}"`;
-    }
-    const updateFrontmatter = getFrontmatterUpdater(context.app);
-    if (key === "tags" || key === "file.tags") {
-      yield setTagsValue(updateFrontmatter, value, context);
-      return;
-    }
-    if (key.startsWith("prop.")) {
-      const field = key.replace(/^prop\./i, "").trim();
-      if (!field) {
-        console.warn("[Auto Note Mover] Invalid frontmatter property key for action.");
-        return;
-      }
-      if (!updateFrontmatter) {
-        console.warn("[Auto Note Mover] Frontmatter API unavailable; property action skipped.");
-        return;
-      }
-      yield updateFrontmatter(context.file, (frontmatter) => {
-        if (value === "") {
-          delete frontmatter[field];
-        } else {
-          frontmatter[field] = value;
-        }
-      });
-      return;
-    }
-    console.warn("[Auto Note Mover] Unsupported property action key:", key);
-  });
-}
-function setTagsValue(updateFrontmatter, value, context) {
-  return __async(this, null, function* () {
-    if (!updateFrontmatter) {
-      console.warn("[Auto Note Mover] Frontmatter API unavailable; property action skipped.");
-      return;
-    }
-    const tags = value.split(",").map((tag) => tag.trim()).filter(Boolean);
-    yield updateFrontmatter(context.file, (frontmatter) => {
-      if (!tags.length) {
-        delete frontmatter.tags;
-      } else if (tags.length === 1) {
-        frontmatter.tags = tags[0];
-      } else {
-        frontmatter.tags = tags;
-      }
-    });
-  });
-}
-function getFrontmatterUpdater(app) {
-  const vaultWithModify = app.vault;
-  if (typeof vaultWithModify.modifyFrontMatter === "function") {
-    return vaultWithModify.modifyFrontMatter.bind(app.vault);
-  }
-  const fm = app.fileManager.processFrontMatter;
-  if (typeof fm === "function") {
-    return fm.bind(app.fileManager);
-  }
-  return null;
-}
-function ensureFolderExists(app, folderPath, allowCreate = false) {
-  return __async(this, null, function* () {
-    const normalized = (0, import_obsidian10.normalizePath)(folderPath);
-    const existing = app.vault.getAbstractFileByPath(normalized);
-    if (existing instanceof import_obsidian10.TFolder) {
-      return;
-    }
-    if (!allowCreate) {
-      throw new Error(`Destination folder "${folderPath}" does not exist.`);
-    }
-    yield app.vault.createFolder(normalized);
-  });
-}
-function getTemplaterApi(app) {
-  var _a;
-  const pluginManager = app.plugins;
-  if (!pluginManager)
-    return null;
-  if (pluginManager.enabledPlugins && !pluginManager.enabledPlugins.has(TEMPLATER_PLUGIN_ID)) {
-    return null;
-  }
-  const plugin = typeof pluginManager.getPlugin === "function" ? pluginManager.getPlugin(TEMPLATER_PLUGIN_ID) : (_a = pluginManager.plugins) == null ? void 0 : _a[TEMPLATER_PLUGIN_ID];
-  const templater = plugin == null ? void 0 : plugin.templater;
-  if (templater && typeof templater === "object") {
-    return templater;
-  }
-  return null;
-}
-function isFunction(value) {
-  return typeof value === "function";
-}
-
-// services/CoreService.ts
-var CoreService = class {
-  constructor(app, settings, metadataService, historyService) {
-    this.app = app;
-    this.settings = settings;
-    this.metadataService = metadataService;
-    this.historyService = historyService;
-    this.processingFiles = new Set();
-    this.runningApplyPromise = null;
-  }
-  updateSettings(settings) {
-    this.settings = settings;
-  }
-  fileCheck(file, oldPath, caller) {
-    return __async(this, null, function* () {
-      if (this.settings.trigger_auto_manual !== "Automatic" && caller !== "cmd") {
-        return;
-      }
-      if (file.extension.toLowerCase() !== "md")
-        return;
-      if (this.settings.debug_mode) {
-        console.log(`[Auto Note Mover] Checking file: ${file.path}`);
-      }
-      if (this.processingFiles.has(file.path))
-        return;
-      if (this.metadataService.shouldIgnore(file))
-        return;
-      if (oldPath) {
-        const normalizedOld = (0, import_obsidian11.normalizePath)(oldPath);
-        const normalizedNew = (0, import_obsidian11.normalizePath)(file.path);
-        if (normalizedOld === normalizedNew) {
-          return;
-        }
-      }
-      if (this.isInExcludedFolder(file)) {
-        return;
-      }
-      const fileCache = this.app.metadataCache.getFileCache(file);
-      if (isFmDisable(fileCache)) {
-        return;
-      }
-      if (!this.metadataService.hasMetadataChanged(file, fileCache, caller)) {
-        if (this.settings.debug_mode) {
-          console.log(`[Auto Note Mover] Metadata not changed for ${file.path}, skipping.`);
-        }
-        return;
-      }
-      const { handled } = yield this.tryFilterEngine(file, fileCache);
-      if (handled) {
-        return;
-      }
-      this.applyLegacyRules(file, fileCache);
-    });
-  }
-  applyLegacyRules(file, fileCache) {
-    var _a, _b, _c, _d;
-    const fileName = file.basename;
-    const fileFullName = file.basename + "." + file.extension;
-    const propertyRules = this.settings.property_rules;
-    const settingsLength = propertyRules.length;
-    const cacheTag = (_a = (0, import_obsidian11.getAllTags)(fileCache)) != null ? _a : [];
-    const getFrontmatterValue2 = (key) => {
-      var _a2;
-      const frontmatter = fileCache == null ? void 0 : fileCache.frontmatter;
-      if (!frontmatter)
-        return void 0;
-      const normalized = key.replace(/^frontmatter\./i, "");
-      return (_a2 = frontmatter[normalized]) != null ? _a2 : frontmatter[normalized.toLowerCase()];
+    btn.onclick = () => {
+      this.activeTab = tab;
+      this.display();
     };
-    const getPropertyValues = (property) => {
-      var _a2, _b2;
-      const normalizedProperty = property.trim();
-      if (!normalizedProperty)
-        return [];
-      const lowerProperty = normalizedProperty.toLowerCase();
-      if (lowerProperty === "tags" || lowerProperty === "tag") {
-        const expandedTags = new Set();
-        cacheTag.forEach((tag) => {
-          if (!tag)
-            return;
-          expandedTags.add(tag);
-          if (tag.startsWith("#")) {
-            expandedTags.add(tag.substring(1));
-          }
-        });
-        return Array.from(expandedTags);
-      }
-      if (lowerProperty === "title" || lowerProperty === "basename" || lowerProperty === "name") {
-        return [fileName];
-      }
-      if (lowerProperty === "path") {
-        return [file.path];
-      }
-      if (lowerProperty === "folder" || lowerProperty === "directory") {
-        return [(_b2 = (_a2 = file.parent) == null ? void 0 : _a2.path) != null ? _b2 : ""];
-      }
-      const value = getFrontmatterValue2(normalizedProperty);
-      if (value === void 0 || value === null) {
-        return [];
-      }
-      if (Array.isArray(value)) {
-        return value.map((entry) => String(entry));
-      }
-      if (["string", "number", "boolean"].includes(typeof value)) {
-        return [String(value)];
-      }
-      return [];
-    };
-    for (let i = 0; i < settingsLength; i++) {
-      const rule = propertyRules[i];
-      const folder = (_b = rule.folder) == null ? void 0 : _b.trim();
-      const property = (_c = rule.property) == null ? void 0 : _c.trim();
-      const value = (_d = rule.value) == null ? void 0 : _d.trim();
-      const titlePattern = rule.title;
-      if (!folder) {
-        continue;
-      }
-      let propertyMatched = false;
-      if (property && value) {
-        const propertyValues = getPropertyValues(property);
-        propertyMatched = propertyValues.some((candidate) => candidate === value);
-      }
-      let titleMatched = false;
-      if (titlePattern) {
-        try {
-          const regex = new RegExp(titlePattern);
-          titleMatched = regex.test(fileName);
-        } catch (error) {
-          console.error("[Auto Note Mover] Invalid title regular expression:", titlePattern, error);
-          continue;
-        }
-      }
-      if (!propertyMatched && !titleMatched) {
-        continue;
-      }
-      fileMove(this.app, folder, fileFullName, file);
-      break;
-    }
-  }
-  getMatchingRules(file, fileCache) {
-    return __async(this, null, function* () {
-      var _a, _b, _c, _d, _e, _f;
-      if (!this.settings.filter_engine_enabled) {
-        return [];
-      }
-      if (this.isInExcludedFolder(file)) {
-        return [];
-      }
-      if (file.extension.toLowerCase() !== "md") {
-        return [];
-      }
-      const rules = this.collectEnabledRules((_a = this.settings.rule_groups) != null ? _a : [], (_b = this.settings.filter_rules) != null ? _b : []);
-      if (!rules.length) {
-        return [];
-      }
-      const requiresContent = this.rulesRequireProperty(rules, "file.content");
-      let content;
-      if (requiresContent) {
-        try {
-          content = yield this.app.vault.read(file);
-        } catch (error) {
-          console.error("[Auto Note Mover] Failed to read file content for filter evaluation", error);
-        }
-      }
-      const tags = (_c = (0, import_obsidian11.getAllTags)(fileCache)) != null ? _c : [];
-      const frontmatter = (_d = fileCache == null ? void 0 : fileCache.frontmatter) != null ? _d : {};
-      const context = {
-        file,
-        path: file.path,
-        folder: (_f = (_e = file.parent) == null ? void 0 : _e.path) != null ? _f : "",
-        name: file.basename,
-        extension: file.extension,
-        tags,
-        frontmatter,
-        cache: fileCache,
-        content
-      };
-      return evaluateRules(rules, context, this.settings.tracked_properties, this.settings.debug_mode);
-    });
-  }
-  tryFilterEngine(file, fileCache, dryRun = false) {
-    return __async(this, null, function* () {
-      var _a;
-      const matches = yield this.getMatchingRules(file, fileCache);
-      if (!matches.length) {
-        if (this.settings.debug_mode && !dryRun) {
-          console.log(`[Auto Note Mover] No matching rules for ${file.path}`);
-        }
-        return { handled: false, logs: [] };
-      }
-      if (this.settings.debug_mode && !dryRun) {
-        console.log(`[Auto Note Mover] Found ${matches.length} matching rules for ${file.path}`);
-      }
-      const actionContext = {
-        app: this.app,
-        file,
-        historyService: this.historyService,
-        conflictResolution: this.settings.conflict_resolution,
-        dryRun,
-        trackedProperties: this.settings.tracked_properties
-      };
-      if (!dryRun) {
-        this.processingFiles.add(file.path);
-      }
-      const allLogs = [];
-      for (const match of matches) {
-        try {
-          if (this.settings.debug_mode && !dryRun) {
-            console.log(`[Auto Note Mover] Executing actions for rule: ${match.rule.name}`);
-          }
-          const logs = yield executeActions(match.actions, actionContext);
-          if (dryRun && logs.length > 0) {
-            allLogs.push(`Rule "${match.rule.name}": ${logs.join(", ")}`);
-          }
-        } catch (error) {
-          console.error("[Auto Note Mover] Failed to execute actions for rule", (_a = match.rule) == null ? void 0 : _a.name, error);
-        }
-      }
-      if (!dryRun) {
-        this.metadataService.setIgnoreCooldown(file);
-        this.processingFiles.delete(file.path);
-      }
-      return { handled: true, logs: allLogs };
-    });
-  }
-  applyRulesToAllFiles() {
-    return __async(this, null, function* () {
-      if (this.runningApplyPromise) {
-        return this.runningApplyPromise;
-      }
-      this.runningApplyPromise = (() => __async(this, null, function* () {
-        try {
-          const files = this.app.vault.getMarkdownFiles();
-          let processed = 0;
-          let changed = 0;
-          for (const file of files) {
-            const cache = this.app.metadataCache.getFileCache(file);
-            const excluded = this.isInExcludedFolder(file);
-            if (excluded) {
-              continue;
-            }
-            const { handled } = yield this.tryFilterEngine(file, cache != null ? cache : null);
-            if (handled) {
-              changed += 1;
-            }
-            processed += 1;
-            if (processed % 25 === 0) {
-              yield new Promise((resolve) => setTimeout(resolve, 0));
-            }
-          }
-          new import_obsidian11.Notice(`[Auto Note Mover] Applied rules to ${changed} file${changed === 1 ? "" : "s"}.`);
-        } catch (error) {
-          console.error("[Auto Note Mover] Failed to apply rules across vault", error);
-          new import_obsidian11.Notice("Auto Note Mover: Failed to apply rules. See console for details.");
-        } finally {
-          this.runningApplyPromise = null;
-        }
-      }))();
-      return this.runningApplyPromise;
-    });
-  }
-  runDryRun() {
-    return __async(this, null, function* () {
-      const files = this.app.vault.getMarkdownFiles();
-      const report = [];
-      for (const file of files) {
-        if (this.isInExcludedFolder(file))
-          continue;
-        const cache = this.app.metadataCache.getFileCache(file);
-        const { handled, logs } = yield this.tryFilterEngine(file, cache != null ? cache : null, true);
-        if (handled && logs.length > 0) {
-          report.push(`File: ${file.path}`);
-          logs.forEach((log) => report.push(`  - ${log}`));
-        }
-      }
-      return report;
-    });
-  }
-  isInExcludedFolder(file) {
-    var _a, _b, _c;
-    const parentPath = (0, import_obsidian11.normalizePath)((_b = (_a = file.parent) == null ? void 0 : _a.path) != null ? _b : "");
-    for (const entry of this.settings.excluded_folder) {
-      const folder = (_c = entry.folder) == null ? void 0 : _c.trim();
-      if (!folder)
-        continue;
-      if (!this.settings.use_regex_to_check_for_excluded_folder) {
-        const normalizedFolder = (0, import_obsidian11.normalizePath)(folder).replace(/\/+$/, "");
-        if (!normalizedFolder)
-          continue;
-        if (parentPath === normalizedFolder || parentPath.startsWith(`${normalizedFolder}/`) || normalizedFolder === ".") {
-          return true;
-        }
-      } else {
-        try {
-          const regex = new RegExp(folder);
-          if (regex.test(parentPath)) {
-            return true;
-          }
-        } catch (error) {
-          console.error("[Auto Note Mover] Invalid excluded folder regex", folder, error);
-        }
-      }
-    }
-    return false;
-  }
-  collectEnabledRules(groups, fallback) {
-    const enabled = (groups != null ? groups : []).filter((group) => group.enabled !== false);
-    const flattened = enabled.flatMap((group) => {
-      var _a;
-      return (_a = group.rules) != null ? _a : [];
-    });
-    if (flattened.length) {
-      return flattened;
-    }
-    return fallback != null ? fallback : [];
-  }
-  rulesRequireProperty(rules, property) {
-    const target = property.toLowerCase();
-    return rules.some((rule) => this.filterNodeUsesProperty(rule.filter, target));
-  }
-  filterNodeUsesProperty(node, property) {
-    var _a;
-    if (node.type === "condition") {
-      return ((_a = node.property) == null ? void 0 : _a.toLowerCase()) === property;
-    }
-    return node.children.some((child) => this.filterNodeUsesProperty(child, property));
-  }
-};
-
-// services/MetadataService.ts
-var import_obsidian12 = __toModule(require("obsidian"));
-var METADATA_CACHE_COOLDOWN_MS = 1e3;
-var METADATA_RETENTION_MS = 30 * 60 * 1e3;
-var METADATA_CACHE_RATIO = 0.5;
-var MetadataService = class {
-  constructor(app) {
-    this.app = app;
-    this.metadataFingerprints = new Map();
-    this.ignoreUntil = new Map();
-  }
-  shouldIgnore(file) {
-    const now = Date.now();
-    const skipUntil = this.ignoreUntil.get(file.path);
-    return !!(skipUntil && skipUntil > now);
-  }
-  setIgnoreCooldown(file) {
-    const cooldownMs = METADATA_CACHE_COOLDOWN_MS;
-    this.ignoreUntil.set(file.path, Date.now() + cooldownMs);
-    window.setTimeout(() => this.ignoreUntil.delete(file.path), cooldownMs * 2);
-  }
-  hasMetadataChanged(file, fileCache, caller) {
-    const now = Date.now();
-    const metadataHash = this.computeMetadataFingerprint(file, fileCache);
-    if (metadataHash) {
-      const previous = this.metadataFingerprints.get(file.path);
-      if (caller !== "cmd" && (previous == null ? void 0 : previous.hash) === metadataHash) {
-        return false;
-      }
-      this.metadataFingerprints.set(file.path, { hash: metadataHash, updatedAt: now });
-      this.pruneMetadataFingerprints(now);
-    }
-    return true;
-  }
-  refresh() {
-    this.metadataFingerprints.clear();
-    this.ignoreUntil.clear();
-  }
-  computeMetadataFingerprint(file, fileCache) {
-    var _a, _b, _c;
-    if (!fileCache)
-      return null;
-    const safeFrontmatter = (() => {
-      const fm = fileCache.frontmatter;
-      if (!fm)
-        return null;
-      const clone = {};
-      Object.entries(fm).forEach(([key, value]) => {
-        if (key === "position")
-          return;
-        clone[key] = value;
-      });
-      return clone;
-    })();
-    const tags = (_a = (0, import_obsidian12.getAllTags)(fileCache)) != null ? _a : [];
-    const info = {
-      path: file.path,
-      name: file.basename,
-      folder: (_c = (_b = file.parent) == null ? void 0 : _b.path) != null ? _c : "",
-      extension: file.extension
-    };
-    const payload = {
-      info,
-      fm: safeFrontmatter,
-      tags
-    };
-    try {
-      return JSON.stringify(payload);
-    } catch (error) {
-      console.warn("[Auto Note Mover] Failed to hash metadata for fingerprinting", error);
-      return null;
-    }
-  }
-  pruneMetadataFingerprints(now) {
-    const files = this.app.vault.getMarkdownFiles();
-    const limit = Math.max(100, Math.floor(files.length * METADATA_CACHE_RATIO));
-    const cutoff = now - METADATA_RETENTION_MS;
-    for (const [path, entry] of this.metadataFingerprints.entries()) {
-      if (entry.updatedAt < cutoff) {
-        this.metadataFingerprints.delete(path);
-      }
-    }
-    if (this.metadataFingerprints.size <= limit) {
-      return;
-    }
-    const sorted = Array.from(this.metadataFingerprints.entries()).sort((a, b) => a[1].updatedAt - b[1].updatedAt);
-    while (this.metadataFingerprints.size > limit && sorted.length) {
-      const [path] = sorted.shift();
-      this.metadataFingerprints.delete(path);
-    }
-  }
-};
-
-// services/LegacyMigrationService.ts
-var import_obsidian13 = __toModule(require("obsidian"));
-var LegacyMigrationService = class {
-  constructor(plugin) {
-    this.plugin = plugin;
-  }
-  migrate(settings) {
-    return __async(this, null, function* () {
-      if (settings.filter_rules_migrated) {
-        return;
-      }
-      if (settings.property_rules && settings.property_rules.length > 0) {
-        const migratedFilterRules = this.convertLegacyPropertyRules(settings.property_rules);
-        if (migratedFilterRules.length) {
-          settings.filter_rules = migratedFilterRules;
-          settings.filter_rules_migrated = true;
-          yield this.plugin.saveSettings();
-        }
-      }
-    });
-  }
-  clearLegacyConfiguration() {
-    return __async(this, null, function* () {
-      this.plugin.settings.property_rules = [];
-      delete this.plugin.settings.folder_tag_pattern;
-      this.plugin.settings.filter_rules_migrated = true;
-      this.plugin.settings.rule_groups = [];
-      yield this.plugin.saveSettings();
-      this.plugin.refreshMetadataFingerprints();
-      new import_obsidian13.Notice("[Auto Note Mover] Legacy Auto Note Mover configuration cleared.");
-    });
-  }
-  convertLegacyPropertyRules(legacyRules) {
-    const migrated = [];
-    legacyRules.forEach((legacyRule, index) => {
-      var _a, _b, _c, _d;
-      const folder = (_a = legacyRule.folder) == null ? void 0 : _a.trim();
-      if (!folder) {
-        return;
-      }
-      const conditions = [];
-      const property = (_b = legacyRule.property) == null ? void 0 : _b.trim();
-      const value = (_c = legacyRule.value) == null ? void 0 : _c.trim();
-      if (property && value) {
-        conditions.push({
-          type: "condition",
-          property,
-          comparator: "equals",
-          value,
-          caseSensitive: false
-        });
-      }
-      const titlePattern = (_d = legacyRule.title) == null ? void 0 : _d.trim();
-      if (titlePattern) {
-        conditions.push({
-          type: "condition",
-          property: "file.name",
-          comparator: "matchesRegex",
-          value: titlePattern
-        });
-      }
-      if (!conditions.length) {
-        return;
-      }
-      const filter = conditions.length === 1 ? conditions[0] : {
-        type: "group",
-        operator: "all",
-        children: conditions
-      };
-      const actions = [
-        {
-          type: "move",
-          targetFolder: folder,
-          createFolderIfMissing: false
-        }
-      ];
-      migrated.push({
-        id: `legacy-${index}`,
-        name: legacyRule.property || legacyRule.title || `Legacy Rule ${index + 1}`,
-        enabled: true,
-        filter,
-        actions,
-        stopOnMatch: true
-      });
-    });
-    return migrated;
-  }
-};
-
-// services/SimulationService.ts
-var SimulationService = class {
-  constructor(app, coreService) {
-    this.app = app;
-    this.coreService = coreService;
-  }
-  runSimulation(file) {
-    return __async(this, null, function* () {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const matches = yield this.coreService.getMatchingRules(file, cache);
-      return {
-        file,
-        matches: matches.map((m) => ({
-          rule: m.rule,
-          actions: m.actions
-        }))
-      };
-    });
-  }
-  runSimulationForAllFiles() {
-    return __async(this, null, function* () {
-      const files = this.app.vault.getMarkdownFiles();
-      const results = [];
-      for (const file of files) {
-        const result = yield this.runSimulation(file);
-        if (result.matches.length > 0) {
-          results.push(result);
-        }
-      }
-      return results;
-    });
-  }
-};
-
-// services/HistoryService.ts
-var import_obsidian14 = __toModule(require("obsidian"));
-var HistoryService = class {
-  constructor(app) {
-    this.app = app;
-    this.logPath = (0, import_obsidian14.normalizePath)(".obsidian/plugins/my-auto-note-mover/activity.log");
-  }
-  logAction(file, action, details) {
-    return __async(this, null, function* () {
-      const timestamp = new Date().toISOString();
-      const logEntry = `[${timestamp}] ${action}: ${file.path} -> ${details}
-`;
-      try {
-        let currentContent = "";
-        if (yield this.app.vault.adapter.exists(this.logPath)) {
-          currentContent = yield this.app.vault.adapter.read(this.logPath);
-        }
-        yield this.app.vault.adapter.write(this.logPath, currentContent + logEntry);
-      } catch (error) {
-        console.error("[Auto Note Mover] Failed to write to history log", error);
-      }
-    });
-  }
-  getHistory() {
-    return __async(this, null, function* () {
-      if (yield this.app.vault.adapter.exists(this.logPath)) {
-        return yield this.app.vault.adapter.read(this.logPath);
-      }
-      return "";
-    });
-  }
-  clearHistory() {
-    return __async(this, null, function* () {
-      if (yield this.app.vault.adapter.exists(this.logPath)) {
-        yield this.app.vault.adapter.write(this.logPath, "");
-      }
-    });
-  }
-};
-
-// settings/ui/SimulationModal.ts
-var import_obsidian15 = __toModule(require("obsidian"));
-var SimulationModal = class extends import_obsidian15.Modal {
-  constructor(app, simulationService) {
-    super(app);
-    this.simulationService = simulationService;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.empty();
-    contentEl.addClass("anm-simulation-modal");
-    contentEl.createEl("h2", { text: "Auto Note Mover Simulation" });
-    const controls = contentEl.createDiv("anm-simulation-controls");
-    new import_obsidian15.Setting(controls).setName("Run on current file").setDesc("Simulate rules for the currently active file.").addButton((btn) => btn.setButtonText("Run").setCta().onClick(() => __async(this, null, function* () {
-      const file = this.app.workspace.getActiveFile();
-      if (file) {
-        const result = yield this.simulationService.runSimulation(file);
-        this.displayResults([result]);
-      } else {
-        this.displayMessage("No active file found.");
-      }
-    })));
-    new import_obsidian15.Setting(controls).setName("Run on all files").setDesc("Simulate rules for all markdown files in the vault. This may take a moment.").addButton((btn) => btn.setButtonText("Run All").onClick(() => __async(this, null, function* () {
-      btn.setButtonText("Running...").setDisabled(true);
-      const results = yield this.simulationService.runSimulationForAllFiles();
-      this.displayResults(results);
-      btn.setButtonText("Run All").setDisabled(false);
-    })));
-    this.resultContainer = contentEl.createDiv("anm-simulation-results");
-  }
-  displayMessage(msg) {
-    this.resultContainer.empty();
-    this.resultContainer.createEl("p", { text: msg });
-  }
-  displayResults(results) {
-    this.resultContainer.empty();
-    if (results.length === 0) {
-      this.resultContainer.createEl("p", { text: "No rules matched any files." });
-      return;
-    }
-    this.resultContainer.createEl("h3", { text: `Results (${results.length} files matched)` });
-    const list = this.resultContainer.createDiv("anm-result-list");
-    results.forEach((res) => {
-      const item = list.createDiv("anm-result-item");
-      item.createEl("strong", { text: res.file.path });
-      const ul = item.createEl("ul");
-      res.matches.forEach((match) => {
-        const ruleLi = ul.createEl("li");
-        ruleLi.createSpan({ text: `Rule: "${match.rule.name}"` });
-        const actionUl = ruleLi.createEl("ul");
-        match.actions.forEach((action) => {
-          let actionText = action.type;
-          if (action.type === "move")
-            actionText += ` to "${action.targetFolder}"`;
-          else if (action.type === "rename")
-            actionText += ` (prefix: ${action.prefix}, suffix: ${action.suffix})`;
-          else if (action.type === "setProperty")
-            actionText += ` "${action.property}" = "${action.value}"`;
-          actionUl.createEl("li", { text: actionText });
-        });
-      });
-    });
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
   }
 };
 
 // main.ts
-var AutoNoteMover = class extends import_obsidian16.Plugin {
+var AutoNoteMover = class extends import_obsidian8.Plugin {
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
-      this.metadataService = new MetadataService(this.app);
-      this.historyService = new HistoryService(this.app);
-      this.coreService = new CoreService(this.app, this.settings, this.metadataService, this.historyService);
-      this.legacyMigrationService = new LegacyMigrationService(this);
-      this.simulationService = new SimulationService(this.app, this.coreService);
-      let triggerIndicator;
-      const setIndicator = () => {
-        if (!this.settings.statusBar_trigger_indicator)
-          return;
-        triggerIndicator.setText(getTriggerIndicator(this.settings.trigger_auto_manual));
-      };
-      if (this.settings.statusBar_trigger_indicator) {
-        triggerIndicator = this.addStatusBarItem();
-        setIndicator();
-        this.registerDomEvent(window, "change", setIndicator);
-      }
-      this.app.workspace.onLayoutReady(() => {
-        this.registerEvent(this.app.vault.on("create", (file) => {
-          if (file instanceof import_obsidian16.TFile)
-            void this.coreService.fileCheck(file);
-        }));
-        this.registerEvent(this.app.metadataCache.on("changed", (file) => {
-          if (file instanceof import_obsidian16.TFile)
-            void this.coreService.fileCheck(file);
-        }));
-        this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
-          if (file instanceof import_obsidian16.TFile)
-            void this.coreService.fileCheck(file, oldPath);
-        }));
-      });
-      const moveNoteCommand = (view) => {
-        if (isFmDisable(this.app.metadataCache.getFileCache(view.file))) {
-          new import_obsidian16.Notice("Auto Note Mover is disabled in the frontmatter.");
-          return;
-        }
-        void this.coreService.fileCheck(view.file, void 0, "cmd");
-      };
-      this.addCommand({
-        id: "Move-the-note",
-        name: "Move the note",
-        checkCallback: (checking) => {
-          const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
-          if (markdownView) {
-            if (!checking) {
-              moveNoteCommand(markdownView);
-            }
-            return true;
-          }
-        }
-      });
-      this.addCommand({
-        id: "Toggle-Auto-Manual",
-        name: "Toggle Auto-Manual",
-        callback: () => {
-          if (this.settings.trigger_auto_manual === "Automatic") {
-            this.settings.trigger_auto_manual = "Manual";
-            this.saveData(this.settings);
-            new import_obsidian16.Notice("[Auto Note Mover]\nTrigger is Manual.");
-          } else if (this.settings.trigger_auto_manual === "Manual") {
-            this.settings.trigger_auto_manual = "Automatic";
-            this.saveData(this.settings);
-            new import_obsidian16.Notice("[Auto Note Mover]\nTrigger is Automatic.");
-          }
-          setIndicator();
-          this.coreService.updateSettings(this.settings);
-        }
-      });
-      this.addCommand({
-        id: "Clear-Legacy-Configuration",
-        name: "Clear legacy Auto Note Mover configuration",
-        callback: () => {
-          void this.legacyMigrationService.clearLegacyConfiguration();
-        }
-      });
-      this.addCommand({
-        id: "Run-Simulation",
-        name: "Run simulation (dry run)",
-        callback: () => {
-          new SimulationModal(this.app, this.simulationService).open();
-        }
-      });
-      this.addSettingTab(new AutoNoteMoverSettingTab(this.app, this));
+      this.binder = new BinderService(this.app);
+      this.identifierService = new IdentifierService(this.app);
+      this.groupService = new GroupService(this.app, this.identifierService);
+      this.triggerService = new TriggerService(this.app);
+      this.actionService = new ActionService(this.app, this.binder);
+      this.jobService = new JobService(this.app, this.actionService, this.binder);
+      this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.jobService, this.binder, this.identifierService, this.actionService);
+      this.triggerService.initializeListeners();
+      this.addSettingTab(new CuratorSettingsTab(this.app, this));
+      this.rulesetService.updateConfig(this.settings);
     });
   }
   onunload() {
   }
   loadSettings() {
     return __async(this, null, function* () {
-      var _a, _b, _c;
-      const loaded = yield this.loadData();
-      this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
-      if (Array.isArray(this.settings.tracked_properties)) {
-        this.settings.tracked_properties = this.settings.tracked_properties.map((entry) => {
-          var _a2;
-          if (typeof entry === "string") {
-            const key2 = entry === "tags" ? "file.tags" : entry;
-            return { key: key2, label: void 0 };
-          }
-          const key = (entry == null ? void 0 : entry.key) === "tags" ? "file.tags" : (_a2 = entry == null ? void 0 : entry.key) != null ? _a2 : "";
-          return {
-            key,
-            label: entry == null ? void 0 : entry.label
-          };
-        });
-      } else {
-        this.settings.tracked_properties = DEFAULT_SETTINGS.tracked_properties.map((prop) => __spreadValues({}, prop));
-      }
-      if ((_a = loaded == null ? void 0 : loaded.folder_tag_pattern) == null ? void 0 : _a.length) {
-        const migratedRules = loaded.folder_tag_pattern.map((legacyRule) => {
-          var _a2, _b2;
-          const folder = (_a2 = legacyRule.folder) != null ? _a2 : "";
-          if (legacyRule.pattern) {
-            return { property: "", value: "", title: legacyRule.pattern, folder };
-          }
-          return { property: "tags", value: (_b2 = legacyRule.tag) != null ? _b2 : "", title: "", folder };
-        }).filter((rule) => {
-          if (!rule.folder) {
-            return false;
-          }
-          const hasPropertyMatch = rule.property && rule.value;
-          const hasTitleMatch = !!rule.title;
-          return hasPropertyMatch || hasTitleMatch;
-        });
-        if (migratedRules.length) {
-          this.settings.property_rules = migratedRules;
-        }
-      }
-      this.settings.property_rules = ((_b = this.settings.property_rules) != null ? _b : []).map((rule) => {
-        var _a2, _b2, _c2, _d;
-        return {
-          property: (_a2 = rule.property) != null ? _a2 : "",
-          value: (_b2 = rule.value) != null ? _b2 : "",
-          title: (_c2 = rule.title) != null ? _c2 : "",
-          folder: (_d = rule.folder) != null ? _d : ""
-        };
-      });
-      if (!Array.isArray(this.settings.rule_groups) || !this.settings.rule_groups.length) {
-        this.settings.rule_groups = [
-          {
-            id: `group-${Date.now()}`,
-            name: "Rules",
-            enabled: true,
-            rules: (_c = this.settings.filter_rules) != null ? _c : []
-          }
-        ];
-      }
+      this.settings = Object.assign({}, {
+        identifiers: [],
+        groups: [],
+        triggers: [],
+        actions: [],
+        jobs: [],
+        rulesets: []
+      }, yield this.loadData());
     });
   }
   saveSettings() {
     return __async(this, null, function* () {
       yield this.saveData(this.settings);
-      if (this.coreService) {
-        this.coreService.updateSettings(this.settings);
+      if (this.rulesetService) {
+        this.rulesetService.updateConfig(this.settings);
       }
-    });
-  }
-  refreshMetadataFingerprints() {
-    this.metadataService.refresh();
-  }
-  applyRulesToAllFiles() {
-    return __async(this, null, function* () {
-      yield this.coreService.applyRulesToAllFiles();
     });
   }
 };

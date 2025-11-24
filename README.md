@@ -2,18 +2,19 @@
 
 ![Curator Logo](assets/icon.png)
 
-**Curator** is an Obsidian plugin that automatically organizes your vault with powerful, rule-based automation. Move, rename, template, and tag your notes based on their properties, tags, and paths.
+**Curator** is an Obsidian plugin that automatically organizes your vault with powerful, rule-based automation. Move, rename, template, and tag your notes based on their properties, tags, and content—all without lifting a finger.
 
 ## ✨ Key Features
 
 - 🎯 **Rule-Based Automation** - Create sophisticated rules with nested conditions (AND/OR/NOT logic)
 - 📁 **Smart File Organization** - Automatically move notes to the right folders
 - 🏷️ **Dynamic Properties** - Set or update frontmatter based on your rules
-- 📝 **Template Integration** - Apply templates automatically (works with Templater) [FUTURE RELEASE]
+- 📝 **Template Integration** - Apply templates automatically (works with Templater)
 - 🔄 **Batch Renaming** - Add prefixes, suffixes, or completely rename files
 - 🧪 **Dry Run Mode** - Test your rules safely before applying them
 - 📊 **Weighted Prioritization** - Control which rules take precedence
 - 🔍 **Debug Mode** - Verbose logging for troubleshooting
+- 🎨 **Tabbed Settings** - Clean, organized interface
 
 ## 📦 Installation
 
@@ -145,4 +146,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Made with ❤️ by [jbuc](https://github.com/jbuc)**
-
