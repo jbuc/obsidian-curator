@@ -273,10 +273,17 @@ export class DefinitionsTab {
                 .setName('Type')
                 .addDropdown(dropdown => dropdown
                     .addOption('obsidian_event', 'Obsidian Event')
+                    .addOption('system_event', 'System Event')
+                    .addOption('folder_event', 'Folder Event')
                     .addOption('manual', 'Manual')
                     .setValue(trigger.type)
                     .onChange(value => {
                         trigger.type = value as any;
+                        // Reset config defaults
+                        if (trigger.type === 'system_event') trigger.event = 'startup';
+                        else if (trigger.type === 'folder_event') trigger.event = 'enter';
+                        else if (trigger.type === 'obsidian_event') trigger.event = 'modify';
+
                         this.onUpdate(this.config);
                         this.display();
                     }));
@@ -292,6 +299,73 @@ export class DefinitionsTab {
                         .setValue(trigger.event || 'modify')
                         .onChange(value => {
                             trigger.event = value as any;
+                            this.onUpdate(this.config);
+                        }));
+            } else if (trigger.type === 'system_event') {
+                new Setting(div)
+                    .setName('Event')
+                    .addDropdown(dropdown => dropdown
+                        .addOption('startup', 'Obsidian Starts')
+                        .addOption('sync_start', 'Sync Starts')
+                        .addOption('sync_finish', 'Sync Finishes')
+                        .setValue(trigger.event || 'startup')
+                        .onChange(value => {
+                            trigger.event = value as any;
+                            this.onUpdate(this.config);
+                        }));
+
+                // Time Constraints
+                const timeContainer = div.createDiv('time-constraints');
+                timeContainer.style.marginLeft = '20px';
+                timeContainer.style.borderLeft = '2px solid var(--background-modifier-border)';
+                timeContainer.style.paddingLeft = '10px';
+
+                new Setting(timeContainer)
+                    .setName('Time Constraints (Optional)')
+                    .setDesc('Only run within this time range');
+
+                new Setting(timeContainer)
+                    .setName('Start Time')
+                    .setDesc('ISO format (e.g. 2023-01-01T09:00:00) or Time (09:00)')
+                    .addText(text => text
+                        .setPlaceholder('YYYY-MM-DDTHH:mm:ss')
+                        .setValue(trigger.timeConstraints?.start || '')
+                        .onChange(value => {
+                            if (!trigger.timeConstraints) trigger.timeConstraints = {};
+                            trigger.timeConstraints.start = value;
+                            this.onUpdate(this.config);
+                        }));
+
+                new Setting(timeContainer)
+                    .setName('End Time')
+                    .setDesc('ISO format (e.g. 2023-01-01T17:00:00) or Time (17:00)')
+                    .addText(text => text
+                        .setPlaceholder('YYYY-MM-DDTHH:mm:ss')
+                        .setValue(trigger.timeConstraints?.end || '')
+                        .onChange(value => {
+                            if (!trigger.timeConstraints) trigger.timeConstraints = {};
+                            trigger.timeConstraints.end = value;
+                            this.onUpdate(this.config);
+                        }));
+            } else if (trigger.type === 'folder_event') {
+                new Setting(div)
+                    .setName('Event')
+                    .addDropdown(dropdown => dropdown
+                        .addOption('enter', 'File Entered Folder')
+                        .addOption('leave', 'File Left Folder')
+                        .setValue(trigger.event || 'enter')
+                        .onChange(value => {
+                            trigger.event = value as any;
+                            this.onUpdate(this.config);
+                        }));
+
+                new Setting(div)
+                    .setName('Target Folder')
+                    .addText(text => text
+                        .setPlaceholder('folder/path')
+                        .setValue(trigger.folder || '')
+                        .onChange(value => {
+                            trigger.folder = value;
                             this.onUpdate(this.config);
                         }));
             }

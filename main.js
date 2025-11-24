@@ -198,21 +198,83 @@ var TriggerService = class {
     }));
     this.eventRefs.push(this.app.vault.on("rename", (file, oldPath) => {
       if (file instanceof import_obsidian2.TFile)
-        this.handleEvent("rename", file);
+        this.handleEvent("rename", file, oldPath);
     }));
     this.eventRefs.push(this.app.vault.on("delete", (file) => {
       if (file instanceof import_obsidian2.TFile)
         this.handleEvent("delete", file);
     }));
+    this.startSyncPolling();
   }
-  handleEvent(eventType, file) {
-    console.log(`[DEBUG] Handling event ${eventType} for ${file.path}`);
+  startSyncPolling() {
+    var _a, _b;
+    const syncPlugin = (_b = (_a = this.app.internalPlugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.sync;
+    if (!syncPlugin || !syncPlugin.enabled)
+      return;
+    let lastStatus = "";
+    const intervalId = window.setInterval(() => {
+      const statusBarItem = document.querySelector(".status-bar-item.plugin-sync");
+      if (!statusBarItem)
+        return;
+      const text = statusBarItem.textContent || "";
+      const ariaLabel = statusBarItem.getAttribute("aria-label") || "";
+      const status = text + ariaLabel;
+      if (status !== lastStatus) {
+        if (status.includes("Fully synced")) {
+          this.handleSystemEvent("sync_finish");
+        } else if (status.includes("Syncing")) {
+          this.handleSystemEvent("sync_start");
+        }
+        lastStatus = status;
+      }
+    }, 2e3);
+  }
+  handleEvent(eventType, file, oldPath) {
+    var _a;
     for (const trigger of this.activeTriggers.values()) {
       if (trigger.type === "obsidian_event" && trigger.event === eventType) {
-        console.log(`[DEBUG] Firing trigger ${trigger.id}`);
         this.fireTrigger(trigger.id, file);
       }
+      if (trigger.type === "folder_event" && eventType === "rename" && oldPath && trigger.folder) {
+        const oldFolder = oldPath.substring(0, oldPath.lastIndexOf("/"));
+        const newFolder = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+        const targetFolder = trigger.folder;
+        if (trigger.event === "enter") {
+          if (oldFolder !== targetFolder && newFolder === targetFolder) {
+            this.fireTrigger(trigger.id, file);
+          }
+        } else if (trigger.event === "leave") {
+          if (oldFolder === targetFolder && newFolder !== targetFolder) {
+            this.fireTrigger(trigger.id, file);
+          }
+        }
+      }
     }
+  }
+  handleSystemEvent(eventType) {
+    return __async(this, null, function* () {
+      const files = this.app.vault.getMarkdownFiles();
+      for (const trigger of this.activeTriggers.values()) {
+        if (trigger.type === "system_event" && trigger.event === eventType) {
+          if (trigger.timeConstraints) {
+            const now = new Date();
+            if (trigger.timeConstraints.start) {
+              const start = new Date(trigger.timeConstraints.start);
+              if (now < start)
+                continue;
+            }
+            if (trigger.timeConstraints.end) {
+              const end = new Date(trigger.timeConstraints.end);
+              if (now > end)
+                continue;
+            }
+          }
+          for (const file of files) {
+            this.fireTrigger(trigger.id, file);
+          }
+        }
+      }
+    });
   }
   fireTrigger(triggerId, file) {
     const callbacks = this.listeners.get(triggerId);
@@ -260,7 +322,8 @@ var ActionService = class {
   moveFile(file, config) {
     return __async(this, null, function* () {
       let targetFolder = (0, import_obsidian3.normalizePath)(config.folder);
-      if (!(yield this.app.vault.adapter.exists(targetFolder))) {
+      const folderExists = yield this.app.vault.adapter.exists(targetFolder);
+      if (!folderExists) {
         if (config.createIfMissing) {
           yield this.app.vault.createFolder(targetFolder);
           this.binder.log("info", `Created folder ${targetFolder}`);
@@ -270,9 +333,11 @@ var ActionService = class {
         }
       }
       const targetPath = (0, import_obsidian3.normalizePath)(`${targetFolder}/${file.name}`);
-      if (targetPath === file.path)
+      if (targetPath === file.path) {
         return;
-      if (yield this.app.vault.adapter.exists(targetPath)) {
+      }
+      const targetFileExists = yield this.app.vault.adapter.exists(targetPath);
+      if (targetFileExists) {
         this.binder.log("warning", `File ${targetPath} already exists. Skipping move.`, file.path);
         return;
       }
@@ -347,13 +412,11 @@ var JobService = class {
     return __async(this, null, function* () {
       this.binder.log("info", `Starting job ${job.name}`, file.path);
       for (const actionId of job.actionIds) {
-        this.binder.log("info", `Processing actionId: ${actionId}`);
         const action = this.actions.get(actionId);
         if (!action) {
           this.binder.log("error", `Job ${job.name} references missing action ${actionId}`, file.path);
           continue;
         }
-        this.binder.log("info", `Found action: ${action.name} (type: ${action.type})`);
         try {
           yield this.actionService.executeAction(file, action);
         } catch (error) {
@@ -391,13 +454,14 @@ var RulesetService = class {
     const activeTriggerIds = new Set(this.rulesets.filter((r) => r.enabled).map((r) => r.triggerId));
     config.triggers.forEach((t) => {
       if (activeTriggerIds.has(t.id)) {
-        this.triggerService.registerTrigger(t, (triggerId, file) => this.handleTrigger(triggerId, file));
+        this.triggerService.registerTrigger(t, (triggerId, file) => {
+          this.handleTrigger(triggerId, file);
+        });
       }
     });
   }
   handleTrigger(triggerId, file) {
     return __async(this, null, function* () {
-      console.log(`[DEBUG] RulesetService handling trigger ${triggerId}`);
       const matchingRulesets = this.rulesets.filter((r) => r.enabled && r.triggerId === triggerId);
       for (const ruleset of matchingRulesets) {
         const group = this.groups.get(ruleset.groupId);
@@ -685,14 +749,57 @@ var DefinitionsTab = class {
         this.onUpdate(this.config);
         this.display();
       }));
-      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("manual", "Manual").setValue(trigger.type).onChange((value) => {
+      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("manual", "Manual").setValue(trigger.type).onChange((value) => {
         trigger.type = value;
+        if (trigger.type === "system_event")
+          trigger.event = "startup";
+        else if (trigger.type === "folder_event")
+          trigger.event = "enter";
+        else if (trigger.type === "obsidian_event")
+          trigger.event = "modify";
         this.onUpdate(this.config);
         this.display();
       }));
       if (trigger.type === "obsidian_event") {
         new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(trigger.event || "modify").onChange((value) => {
           trigger.event = value;
+          this.onUpdate(this.config);
+        }));
+      } else if (trigger.type === "system_event") {
+        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("startup", "Obsidian Starts").addOption("sync_start", "Sync Starts").addOption("sync_finish", "Sync Finishes").setValue(trigger.event || "startup").onChange((value) => {
+          trigger.event = value;
+          this.onUpdate(this.config);
+        }));
+        const timeContainer = div.createDiv("time-constraints");
+        timeContainer.style.marginLeft = "20px";
+        timeContainer.style.borderLeft = "2px solid var(--background-modifier-border)";
+        timeContainer.style.paddingLeft = "10px";
+        new import_obsidian5.Setting(timeContainer).setName("Time Constraints (Optional)").setDesc("Only run within this time range");
+        new import_obsidian5.Setting(timeContainer).setName("Start Time").setDesc("ISO format (e.g. 2023-01-01T09:00:00) or Time (09:00)").addText((text) => {
+          var _a;
+          return text.setPlaceholder("YYYY-MM-DDTHH:mm:ss").setValue(((_a = trigger.timeConstraints) == null ? void 0 : _a.start) || "").onChange((value) => {
+            if (!trigger.timeConstraints)
+              trigger.timeConstraints = {};
+            trigger.timeConstraints.start = value;
+            this.onUpdate(this.config);
+          });
+        });
+        new import_obsidian5.Setting(timeContainer).setName("End Time").setDesc("ISO format (e.g. 2023-01-01T17:00:00) or Time (17:00)").addText((text) => {
+          var _a;
+          return text.setPlaceholder("YYYY-MM-DDTHH:mm:ss").setValue(((_a = trigger.timeConstraints) == null ? void 0 : _a.end) || "").onChange((value) => {
+            if (!trigger.timeConstraints)
+              trigger.timeConstraints = {};
+            trigger.timeConstraints.end = value;
+            this.onUpdate(this.config);
+          });
+        });
+      } else if (trigger.type === "folder_event") {
+        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("enter", "File Entered Folder").addOption("leave", "File Left Folder").setValue(trigger.event || "enter").onChange((value) => {
+          trigger.event = value;
+          this.onUpdate(this.config);
+        }));
+        new import_obsidian5.Setting(div).setName("Target Folder").addText((text) => text.setPlaceholder("folder/path").setValue(trigger.folder || "").onChange((value) => {
+          trigger.folder = value;
           this.onUpdate(this.config);
         }));
       }
@@ -939,6 +1046,7 @@ var AutoNoteMover = class extends import_obsidian8.Plugin {
       this.triggerService.initializeListeners();
       this.addSettingTab(new CuratorSettingsTab(this.app, this));
       this.rulesetService.updateConfig(this.settings);
+      this.triggerService.handleSystemEvent("startup");
     });
   }
   onunload() {
