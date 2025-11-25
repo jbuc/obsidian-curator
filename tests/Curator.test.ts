@@ -1,5 +1,4 @@
 import { BinderService } from '../core/BinderService';
-import { IdentifierService } from '../core/IdentifierService';
 import { GroupService } from '../core/GroupService';
 import { TriggerService } from '../core/TriggerService';
 import { ActionService } from '../core/ActionService';
@@ -39,7 +38,6 @@ Object.assign(mockFile, {
 
 describe('Curator End-to-End', () => {
     let binderService: BinderService;
-    let identifierService: IdentifierService;
     let groupService: GroupService;
     let triggerService: TriggerService;
     let actionService: ActionService;
@@ -68,12 +66,25 @@ describe('Curator End-to-End', () => {
                 renameFile: jest.fn().mockResolvedValue(undefined),
                 processFrontmatter: jest.fn()
             },
+            plugins: {
+                plugins: {
+                    dataview: {
+                        api: {
+                            pages: jest.fn((query) => {
+                                if (query === '#test') {
+                                    return [{ file: { path: 'folder/note.md' } }];
+                                }
+                                return [];
+                            })
+                        }
+                    }
+                }
+            },
             _id: Math.random()
         } as unknown as App;
 
         binderService = new BinderService(mockApp);
-        identifierService = new IdentifierService(mockApp);
-        groupService = new GroupService(mockApp, identifierService);
+        groupService = new GroupService(mockApp);
         triggerService = new TriggerService(mockApp);
         actionService = new ActionService(mockApp, binderService);
         rulesetService = new RulesetService(
@@ -81,7 +92,6 @@ describe('Curator End-to-End', () => {
             triggerService,
             groupService,
             binderService,
-            identifierService,
             actionService
         );
     });
@@ -89,11 +99,8 @@ describe('Curator End-to-End', () => {
     test('should move file when trigger fires and group matches', async () => {
         // 1. Setup Configuration
         const config: CuratorConfig = {
-            identifiers: [
-                { id: 'id1', name: 'Has Tag #test', type: 'tag', config: { tag: '#test' } }
-            ],
             groups: [
-                { id: 'g1', name: 'Test Group', identifiers: ['id1'], operator: 'AND' }
+                { id: 'g1', name: 'Test Group', query: '#test' }
             ],
             triggers: [
                 { id: 't1', name: 'On Modify', type: 'obsidian_event', event: 'modify' }
@@ -189,7 +196,6 @@ describe('Curator End-to-End', () => {
 
     test('should fire folder enter trigger when file is moved into folder', async () => {
         const config: CuratorConfig = {
-            identifiers: [],
             groups: [],
             triggers: [
                 {
@@ -239,7 +245,6 @@ describe('Curator End-to-End', () => {
 
     test('should fire startup trigger', async () => {
         const config: CuratorConfig = {
-            identifiers: [],
             groups: [],
             triggers: [
                 {
@@ -278,7 +283,6 @@ describe('Curator End-to-End', () => {
         futureDate.setFullYear(futureDate.getFullYear() + 1);
 
         const config: CuratorConfig = {
-            identifiers: [],
             groups: [],
             triggers: [
                 {

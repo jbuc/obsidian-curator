@@ -21,27 +21,13 @@ export interface BinderState {
 }
 
 /**
- * A test that returns true/false for a given file.
- */
-export interface Identifier {
-    id: string;
-    name: string;
-    type: string; // e.g., 'tag', 'folder', 'frontmatter', 'script'
-    config: any; // Configuration specific to the type
-}
-
-/**
- * A logical combination of Identifiers.
+ * A named Dataview query that defines a set of files.
+ * Replaces the old Group/Identifier system.
  */
 export interface Group {
     id: string;
     name: string;
-    identifiers: string[]; // IDs of Identifiers
-    operator: 'AND' | 'OR'; // How to combine them. For more complex logic, we might need a tree structure.
-    // For now, let's keep it simple: A group is a list of identifiers combined by an operator.
-    // If we need (A AND B) OR C, that might be a higher level concept or nested groups.
-    // Let's support nested groups by allowing identifiers to point to other groups? 
-    // Or just keep it simple for now: A group matches if [operator] of its identifiers match.
+    query: string; // Dataview source query (e.g. 'FROM "folder" AND #tag')
 }
 
 /**
@@ -96,7 +82,6 @@ export interface Ruleset {
  * Configuration for the entire plugin.
  */
 export interface CuratorConfig {
-    identifiers: Identifier[];
     groups: Group[];
     triggers: Trigger[];
     actions: Action[];

@@ -1,12 +1,12 @@
 import { App, Setting } from 'obsidian';
-import { CuratorConfig, Identifier, Group, Trigger, Action } from '../../core/types';
+import { CuratorConfig, Group, Trigger, Action } from '../../core/types';
 
 export class DefinitionsTab {
     private app: App;
     private containerEl: HTMLElement;
     private config: CuratorConfig;
     private onUpdate: (config: CuratorConfig) => void;
-    private activeSection: 'identifiers' | 'groups' | 'triggers' | 'actions' = 'identifiers';
+    private activeSection: 'groups' | 'triggers' | 'actions' = 'groups';
 
     constructor(app: App, containerEl: HTMLElement, config: CuratorConfig, onUpdate: (config: CuratorConfig) => void) {
         this.app = app;
@@ -25,7 +25,6 @@ export class DefinitionsTab {
         navContainer.style.gap = '10px';
         navContainer.style.marginBottom = '20px';
 
-        this.createNavButton(navContainer, 'Identifiers', 'identifiers');
         this.createNavButton(navContainer, 'Groups', 'groups');
         this.createNavButton(navContainer, 'Triggers', 'triggers');
         this.createNavButton(navContainer, 'Actions', 'actions');
@@ -33,7 +32,6 @@ export class DefinitionsTab {
         const contentContainer = this.containerEl.createDiv('definitions-content');
 
         switch (this.activeSection) {
-            case 'identifiers': this.renderIdentifiers(contentContainer); break;
             case 'groups': this.renderGroups(contentContainer); break;
             case 'triggers': this.renderTriggers(contentContainer); break;
             case 'actions': this.renderActions(contentContainer); break;
@@ -51,112 +49,10 @@ export class DefinitionsTab {
         };
     }
 
-    private renderIdentifiers(container: HTMLElement) {
-        new Setting(container)
-            .setName('Add Identifier')
-            .setDesc('Create a new test for your notes.')
-            .addButton(btn => btn
-                .setButtonText('Add Identifier')
-                .setCta()
-                .onClick(() => {
-                    this.config.identifiers.push({
-                        id: crypto.randomUUID(),
-                        name: 'New Identifier',
-                        type: 'tag',
-                        config: { tag: '' }
-                    });
-                    this.onUpdate(this.config);
-                    this.display();
-                }));
-
-        this.config.identifiers.forEach((identifier, index) => {
-            const div = container.createDiv('definition-item');
-            div.style.border = '1px solid var(--background-modifier-border)';
-            div.style.padding = '10px';
-            div.style.marginBottom = '10px';
-            div.style.borderRadius = '4px';
-
-            new Setting(div)
-                .setName('Name')
-                .addText(text => text
-                    .setValue(identifier.name)
-                    .onChange(value => {
-                        identifier.name = value;
-                        this.onUpdate(this.config);
-                    }))
-                .addExtraButton(btn => btn
-                    .setIcon('trash')
-                    .onClick(() => {
-                        this.config.identifiers.splice(index, 1);
-                        this.onUpdate(this.config);
-                        this.display();
-                    }));
-
-            new Setting(div)
-                .setName('Type')
-                .addDropdown(dropdown => dropdown
-                    .addOption('tag', 'Tag')
-                    .addOption('folder', 'Folder')
-                    .addOption('frontmatter', 'Frontmatter')
-                    .setValue(identifier.type)
-                    .onChange(value => {
-                        identifier.type = value;
-                        // Reset config based on type
-                        if (value === 'tag') identifier.config = { tag: '' };
-                        else if (value === 'folder') identifier.config = { folder: '' };
-                        else if (value === 'frontmatter') identifier.config = { key: '', value: '' };
-                        this.onUpdate(this.config);
-                        this.display();
-                    }));
-
-            // Config based on type
-            if (identifier.type === 'tag') {
-                new Setting(div)
-                    .setName('Tag')
-                    .addText(text => text
-                        .setPlaceholder('#tag')
-                        .setValue(identifier.config.tag)
-                        .onChange(value => {
-                            identifier.config.tag = value;
-                            this.onUpdate(this.config);
-                        }));
-            } else if (identifier.type === 'folder') {
-                new Setting(div)
-                    .setName('Folder')
-                    .addText(text => text
-                        .setPlaceholder('folder/path')
-                        .setValue(identifier.config.folder)
-                        .onChange(value => {
-                            identifier.config.folder = value;
-                            this.onUpdate(this.config);
-                        }));
-            } else if (identifier.type === 'frontmatter') {
-                new Setting(div)
-                    .setName('Key')
-                    .addText(text => text
-                        .setPlaceholder('key')
-                        .setValue(identifier.config.key)
-                        .onChange(value => {
-                            identifier.config.key = value;
-                            this.onUpdate(this.config);
-                        }));
-                new Setting(div)
-                    .setName('Value (Optional)')
-                    .addText(text => text
-                        .setPlaceholder('value')
-                        .setValue(identifier.config.value)
-                        .onChange(value => {
-                            identifier.config.value = value;
-                            this.onUpdate(this.config);
-                        }));
-            }
-        });
-    }
-
     private renderGroups(container: HTMLElement) {
         new Setting(container)
             .setName('Add Group')
-            .setDesc('Combine identifiers to select notes.')
+            .setDesc('Create a new group of notes using a Dataview query.')
             .addButton(btn => btn
                 .setButtonText('Add Group')
                 .setCta()
@@ -164,8 +60,7 @@ export class DefinitionsTab {
                     this.config.groups.push({
                         id: crypto.randomUUID(),
                         name: 'New Group',
-                        identifiers: [],
-                        operator: 'AND'
+                        query: ''
                     });
                     this.onUpdate(this.config);
                     this.display();
@@ -195,34 +90,15 @@ export class DefinitionsTab {
                     }));
 
             new Setting(div)
-                .setName('Operator')
-                .addDropdown(dropdown => dropdown
-                    .addOption('AND', 'AND (All match)')
-                    .addOption('OR', 'OR (Any match)')
-                    .setValue(group.operator)
+                .setName('Dataview Query')
+                .setDesc('Enter a Dataview source query (e.g. FROM "folder" AND #tag)')
+                .addTextArea(text => text
+                    .setPlaceholder('FROM "Daily Notes"')
+                    .setValue(group.query)
                     .onChange(value => {
-                        group.operator = value as 'AND' | 'OR';
+                        group.query = value;
                         this.onUpdate(this.config);
                     }));
-
-            // Identifiers Selection
-            const idContainer = div.createDiv('identifiers-selection');
-            idContainer.createEl('h4', { text: 'Identifiers' });
-
-            this.config.identifiers.forEach(identifier => {
-                new Setting(idContainer)
-                    .setName(identifier.name)
-                    .addToggle(toggle => toggle
-                        .setValue(group.identifiers.includes(identifier.id))
-                        .onChange(value => {
-                            if (value) {
-                                group.identifiers.push(identifier.id);
-                            } else {
-                                group.identifiers = group.identifiers.filter(id => id !== identifier.id);
-                            }
-                            this.onUpdate(this.config);
-                        }));
-            });
         });
     }
 

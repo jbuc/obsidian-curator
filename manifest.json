@@ -6,5 +6,8 @@
 	"description": "Automatically organize your notes with powerful rule-based automation. Move, rename, and template notes based on their properties, tags, and content.",
 	"author": "jbuc",
 	"authorUrl": "https://github.com/jbuc/",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"dependencies": [
+		"dataview"
+	]
 }

@@ -51,7 +51,7 @@ var __async = (__this, __arguments, generator) => {
 __export(exports, {
   default: () => AutoNoteMover
 });
-var import_obsidian8 = __toModule(require("obsidian"));
+var import_obsidian7 = __toModule(require("obsidian"));
 
 // core/BinderService.ts
 var BinderService = class {
@@ -83,92 +83,40 @@ var BinderService = class {
   }
 };
 
-// core/IdentifierService.ts
-var import_obsidian = __toModule(require("obsidian"));
-var IdentifierService = class {
+// core/GroupService.ts
+var GroupService = class {
   constructor(app) {
     this.app = app;
   }
-  matches(file, identifier) {
-    switch (identifier.type) {
-      case "tag":
-        return this.checkTag(file, identifier.config);
-      case "folder":
-        return this.checkFolder(file, identifier.config);
-      case "frontmatter":
-        return this.checkFrontmatter(file, identifier.config);
-      default:
-        console.warn(`[Curator] Unknown identifier type: ${identifier.type}`);
-        return false;
+  isInGroup(file, group) {
+    var _a, _b, _c;
+    if (!group.query || group.query.trim() === "") {
+      return true;
     }
-  }
-  checkTag(file, config) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache)
+    const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
+    if (!dataviewAPI) {
+      console.warn("[Curator] Dataview plugin not found or API not available.");
       return false;
-    const tags = (0, import_obsidian.getAllTags)(cache);
-    if (!tags)
-      return false;
-    const target = config.tag.startsWith("#") ? config.tag : "#" + config.tag;
-    return tags.some((t) => t === target || t.startsWith(target + "/"));
-  }
-  checkFolder(file, config) {
-    if (!file.parent)
-      return false;
-    const parentPath = file.parent.path;
-    if (config.includeSubfolders) {
-      return parentPath === config.folder || parentPath.startsWith(config.folder + "/");
-    } else {
-      return parentPath === config.folder;
     }
-  }
-  checkFrontmatter(file, config) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache || !cache.frontmatter)
+    try {
+      const pages = dataviewAPI.pages(group.query);
+      for (const page of pages) {
+        if (page.file && page.file.path === file.path) {
+          return true;
+        }
+      }
       return false;
-    const val = cache.frontmatter[config.key];
-    if (config.exists) {
-      return val !== void 0;
+    } catch (error) {
+      console.error(`[Curator] Error executing Dataview query for group ${group.name}:`, error);
+      return false;
     }
-    return val === config.value;
-  }
-};
-
-// core/GroupService.ts
-var GroupService = class {
-  constructor(app, identifierService) {
-    this.app = app;
-    this.identifierService = identifierService;
-    this.identifiers = new Map();
   }
   updateIdentifiers(identifiers) {
-    this.identifiers.clear();
-    identifiers.forEach((id) => this.identifiers.set(id.id, id));
-  }
-  isInGroup(file, group) {
-    if (!group.identifiers || group.identifiers.length === 0) {
-      return false;
-    }
-    const results = group.identifiers.map((idStr) => {
-      const identifier = this.identifiers.get(idStr);
-      if (!identifier) {
-        console.warn(`[Curator] Group ${group.name} references missing identifier ${idStr}`);
-        return false;
-      }
-      return this.identifierService.matches(file, identifier);
-    });
-    if (group.operator === "AND") {
-      return results.every((r) => r === true);
-    } else if (group.operator === "OR") {
-      return results.some((r) => r === true);
-    } else {
-      return false;
-    }
   }
 };
 
 // core/TriggerService.ts
-var import_obsidian2 = __toModule(require("obsidian"));
+var import_obsidian = __toModule(require("obsidian"));
 var TriggerService = class {
   constructor(app) {
     this.listeners = new Map();
@@ -189,19 +137,19 @@ var TriggerService = class {
     this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
     this.eventRefs = [];
     this.eventRefs.push(this.app.vault.on("create", (file) => {
-      if (file instanceof import_obsidian2.TFile)
+      if (file instanceof import_obsidian.TFile)
         this.handleEvent("create", file);
     }));
     this.eventRefs.push(this.app.vault.on("modify", (file) => {
-      if (file instanceof import_obsidian2.TFile)
+      if (file instanceof import_obsidian.TFile)
         this.handleEvent("modify", file);
     }));
     this.eventRefs.push(this.app.vault.on("rename", (file, oldPath) => {
-      if (file instanceof import_obsidian2.TFile)
+      if (file instanceof import_obsidian.TFile)
         this.handleEvent("rename", file, oldPath);
     }));
     this.eventRefs.push(this.app.vault.on("delete", (file) => {
-      if (file instanceof import_obsidian2.TFile)
+      if (file instanceof import_obsidian.TFile)
         this.handleEvent("delete", file);
     }));
     this.startSyncPolling();
@@ -291,7 +239,7 @@ var TriggerService = class {
 };
 
 // core/ActionService.ts
-var import_obsidian3 = __toModule(require("obsidian"));
+var import_obsidian2 = __toModule(require("obsidian"));
 var ActionService = class {
   constructor(app, binder) {
     this.app = app;
@@ -321,7 +269,7 @@ var ActionService = class {
   }
   moveFile(file, config) {
     return __async(this, null, function* () {
-      let targetFolder = (0, import_obsidian3.normalizePath)(config.folder);
+      let targetFolder = (0, import_obsidian2.normalizePath)(config.folder);
       const folderExists = yield this.app.vault.adapter.exists(targetFolder);
       if (!folderExists) {
         if (config.createIfMissing) {
@@ -332,7 +280,7 @@ var ActionService = class {
           return;
         }
       }
-      const targetPath = (0, import_obsidian3.normalizePath)(`${targetFolder}/${file.name}`);
+      const targetPath = (0, import_obsidian2.normalizePath)(`${targetFolder}/${file.name}`);
       if (targetPath === file.path) {
         return;
       }
@@ -360,7 +308,7 @@ var ActionService = class {
       }
       if (newName === file.basename)
         return;
-      const targetPath = (0, import_obsidian3.normalizePath)(`${(_a = file.parent) == null ? void 0 : _a.path}/${newName}.${file.extension}`);
+      const targetPath = (0, import_obsidian2.normalizePath)(`${(_a = file.parent) == null ? void 0 : _a.path}/${newName}.${file.extension}`);
       if (yield this.app.vault.adapter.exists(targetPath)) {
         this.binder.log("warning", `File ${targetPath} already exists. Skipping rename.`, file.path);
         return;
@@ -398,7 +346,7 @@ var ActionService = class {
 
 // core/RulesetService.ts
 var RulesetService = class {
-  constructor(app, triggerService, groupService, binder, identifierService, actionService) {
+  constructor(app, triggerService, groupService, binder, actionService) {
     this.rulesets = [];
     this.groups = new Map();
     this.actions = new Map();
@@ -406,7 +354,6 @@ var RulesetService = class {
     this.triggerService = triggerService;
     this.groupService = groupService;
     this.binder = binder;
-    this.identifierService = identifierService;
     this.actionService = actionService;
   }
   updateConfig(config) {
@@ -415,7 +362,6 @@ var RulesetService = class {
     config.groups.forEach((g) => this.groups.set(g.id, g));
     this.actions.clear();
     config.actions.forEach((a) => this.actions.set(a.id, a));
-    this.groupService.updateIdentifiers(config.identifiers);
     const activeTriggerIds = new Set(this.rulesets.filter((r) => r.enabled).map((r) => r.triggerId));
     config.triggers.forEach((t) => {
       if (activeTriggerIds.has(t.id)) {
@@ -468,10 +414,10 @@ var RulesetService = class {
 };
 
 // ui/CuratorSettingsTab.ts
-var import_obsidian7 = __toModule(require("obsidian"));
+var import_obsidian6 = __toModule(require("obsidian"));
 
 // ui/components/RulesTab.ts
-var import_obsidian4 = __toModule(require("obsidian"));
+var import_obsidian3 = __toModule(require("obsidian"));
 var RulesTab = class {
   constructor(app, containerEl, config, onUpdate) {
     this.app = app;
@@ -483,7 +429,7 @@ var RulesTab = class {
     this.containerEl.empty();
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
-    new import_obsidian4.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
+    new import_obsidian3.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
       this.addRuleset();
     }));
     const rulesetsList = this.containerEl.createDiv("rulesets-list");
@@ -509,7 +455,7 @@ var RulesTab = class {
     rulesetContainer.style.padding = "10px";
     rulesetContainer.style.marginBottom = "10px";
     rulesetContainer.style.borderRadius = "4px";
-    new import_obsidian4.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
+    new import_obsidian3.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
       ruleset.name = value;
       this.onUpdate(this.config);
     })).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
@@ -520,7 +466,7 @@ var RulesTab = class {
       this.onUpdate(this.config);
       this.display();
     }));
-    new import_obsidian4.Setting(rulesetContainer).setName("Trigger").setDesc("When to run").addDropdown((dropdown) => {
+    new import_obsidian3.Setting(rulesetContainer).setName("Trigger").setDesc("When to run").addDropdown((dropdown) => {
       dropdown.addOption("", "Select Trigger");
       this.config.triggers.forEach((t) => dropdown.addOption(t.id, t.name));
       dropdown.setValue(ruleset.triggerId);
@@ -547,12 +493,12 @@ var RulesTab = class {
       ruleHeader.style.alignItems = "center";
       const title = rule.groupId ? `If matches Group: ${((_a = this.config.groups.find((g) => g.id === rule.groupId)) == null ? void 0 : _a.name) || "Unknown"}` : "Always (No Group)";
       ruleHeader.createEl("span", { text: title, cls: "rule-title" });
-      new import_obsidian4.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+      new import_obsidian3.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
         ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
         this.display();
       }));
-      new import_obsidian4.Setting(ruleDiv).setName("Condition (Group)").setDesc("Leave empty to run always").addDropdown((dropdown) => {
+      new import_obsidian3.Setting(ruleDiv).setName("Condition (Group)").setDesc("Leave empty to run always").addDropdown((dropdown) => {
         dropdown.addOption("", "Always (No Group)");
         this.config.groups.forEach((g) => dropdown.addOption(g.id, g.name));
         dropdown.setValue(rule.groupId || "");
@@ -567,14 +513,14 @@ var RulesTab = class {
       rule.actionIds.forEach((actionId, actionIndex) => {
         const action = this.config.actions.find((a) => a.id === actionId);
         if (action) {
-          new import_obsidian4.Setting(actionsDiv).setName(`${actionIndex + 1}. ${action.name}`).addExtraButton((btn) => btn.setIcon("cross").setTooltip("Remove Action").onClick(() => {
+          new import_obsidian3.Setting(actionsDiv).setName(`${actionIndex + 1}. ${action.name}`).addExtraButton((btn) => btn.setIcon("cross").setTooltip("Remove Action").onClick(() => {
             rule.actionIds.splice(actionIndex, 1);
             this.onUpdate(this.config);
             this.display();
           }));
         }
       });
-      new import_obsidian4.Setting(actionsDiv).setName("Add Action").addDropdown((dropdown) => {
+      new import_obsidian3.Setting(actionsDiv).setName("Add Action").addDropdown((dropdown) => {
         dropdown.addOption("", "Select Action");
         this.config.actions.forEach((a) => dropdown.addOption(a.id, a.name));
         dropdown.onChange((value) => {
@@ -586,7 +532,7 @@ var RulesTab = class {
         });
       });
     });
-    new import_obsidian4.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
+    new import_obsidian3.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
       ruleset.rules.push({
         actionIds: []
       });
@@ -597,10 +543,10 @@ var RulesTab = class {
 };
 
 // ui/components/DefinitionsTab.ts
-var import_obsidian5 = __toModule(require("obsidian"));
+var import_obsidian4 = __toModule(require("obsidian"));
 var DefinitionsTab = class {
   constructor(app, containerEl, config, onUpdate) {
-    this.activeSection = "identifiers";
+    this.activeSection = "groups";
     this.app = app;
     this.containerEl = containerEl;
     this.config = config;
@@ -613,15 +559,11 @@ var DefinitionsTab = class {
     navContainer.style.display = "flex";
     navContainer.style.gap = "10px";
     navContainer.style.marginBottom = "20px";
-    this.createNavButton(navContainer, "Identifiers", "identifiers");
     this.createNavButton(navContainer, "Groups", "groups");
     this.createNavButton(navContainer, "Triggers", "triggers");
     this.createNavButton(navContainer, "Actions", "actions");
     const contentContainer = this.containerEl.createDiv("definitions-content");
     switch (this.activeSection) {
-      case "identifiers":
-        this.renderIdentifiers(contentContainer);
-        break;
       case "groups":
         this.renderGroups(contentContainer);
         break;
@@ -643,71 +585,12 @@ var DefinitionsTab = class {
       this.display();
     };
   }
-  renderIdentifiers(container) {
-    new import_obsidian5.Setting(container).setName("Add Identifier").setDesc("Create a new test for your notes.").addButton((btn) => btn.setButtonText("Add Identifier").setCta().onClick(() => {
-      this.config.identifiers.push({
-        id: crypto.randomUUID(),
-        name: "New Identifier",
-        type: "tag",
-        config: { tag: "" }
-      });
-      this.onUpdate(this.config);
-      this.display();
-    }));
-    this.config.identifiers.forEach((identifier, index) => {
-      const div = container.createDiv("definition-item");
-      div.style.border = "1px solid var(--background-modifier-border)";
-      div.style.padding = "10px";
-      div.style.marginBottom = "10px";
-      div.style.borderRadius = "4px";
-      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(identifier.name).onChange((value) => {
-        identifier.name = value;
-        this.onUpdate(this.config);
-      })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
-        this.config.identifiers.splice(index, 1);
-        this.onUpdate(this.config);
-        this.display();
-      }));
-      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("tag", "Tag").addOption("folder", "Folder").addOption("frontmatter", "Frontmatter").setValue(identifier.type).onChange((value) => {
-        identifier.type = value;
-        if (value === "tag")
-          identifier.config = { tag: "" };
-        else if (value === "folder")
-          identifier.config = { folder: "" };
-        else if (value === "frontmatter")
-          identifier.config = { key: "", value: "" };
-        this.onUpdate(this.config);
-        this.display();
-      }));
-      if (identifier.type === "tag") {
-        new import_obsidian5.Setting(div).setName("Tag").addText((text) => text.setPlaceholder("#tag").setValue(identifier.config.tag).onChange((value) => {
-          identifier.config.tag = value;
-          this.onUpdate(this.config);
-        }));
-      } else if (identifier.type === "folder") {
-        new import_obsidian5.Setting(div).setName("Folder").addText((text) => text.setPlaceholder("folder/path").setValue(identifier.config.folder).onChange((value) => {
-          identifier.config.folder = value;
-          this.onUpdate(this.config);
-        }));
-      } else if (identifier.type === "frontmatter") {
-        new import_obsidian5.Setting(div).setName("Key").addText((text) => text.setPlaceholder("key").setValue(identifier.config.key).onChange((value) => {
-          identifier.config.key = value;
-          this.onUpdate(this.config);
-        }));
-        new import_obsidian5.Setting(div).setName("Value (Optional)").addText((text) => text.setPlaceholder("value").setValue(identifier.config.value).onChange((value) => {
-          identifier.config.value = value;
-          this.onUpdate(this.config);
-        }));
-      }
-    });
-  }
   renderGroups(container) {
-    new import_obsidian5.Setting(container).setName("Add Group").setDesc("Combine identifiers to select notes.").addButton((btn) => btn.setButtonText("Add Group").setCta().onClick(() => {
+    new import_obsidian4.Setting(container).setName("Add Group").setDesc("Create a new group of notes using a Dataview query.").addButton((btn) => btn.setButtonText("Add Group").setCta().onClick(() => {
       this.config.groups.push({
         id: crypto.randomUUID(),
         name: "New Group",
-        identifiers: [],
-        operator: "AND"
+        query: ""
       });
       this.onUpdate(this.config);
       this.display();
@@ -718,7 +601,7 @@ var DefinitionsTab = class {
       div.style.padding = "10px";
       div.style.marginBottom = "10px";
       div.style.borderRadius = "4px";
-      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(group.name).onChange((value) => {
+      new import_obsidian4.Setting(div).setName("Name").addText((text) => text.setValue(group.name).onChange((value) => {
         group.name = value;
         this.onUpdate(this.config);
       })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
@@ -726,26 +609,14 @@ var DefinitionsTab = class {
         this.onUpdate(this.config);
         this.display();
       }));
-      new import_obsidian5.Setting(div).setName("Operator").addDropdown((dropdown) => dropdown.addOption("AND", "AND (All match)").addOption("OR", "OR (Any match)").setValue(group.operator).onChange((value) => {
-        group.operator = value;
+      new import_obsidian4.Setting(div).setName("Dataview Query").setDesc('Enter a Dataview source query (e.g. FROM "folder" AND #tag)').addTextArea((text) => text.setPlaceholder('FROM "Daily Notes"').setValue(group.query).onChange((value) => {
+        group.query = value;
         this.onUpdate(this.config);
       }));
-      const idContainer = div.createDiv("identifiers-selection");
-      idContainer.createEl("h4", { text: "Identifiers" });
-      this.config.identifiers.forEach((identifier) => {
-        new import_obsidian5.Setting(idContainer).setName(identifier.name).addToggle((toggle) => toggle.setValue(group.identifiers.includes(identifier.id)).onChange((value) => {
-          if (value) {
-            group.identifiers.push(identifier.id);
-          } else {
-            group.identifiers = group.identifiers.filter((id) => id !== identifier.id);
-          }
-          this.onUpdate(this.config);
-        }));
-      });
     });
   }
   renderTriggers(container) {
-    new import_obsidian5.Setting(container).setName("Add Trigger").setDesc("Define when rules should run.").addButton((btn) => btn.setButtonText("Add Trigger").setCta().onClick(() => {
+    new import_obsidian4.Setting(container).setName("Add Trigger").setDesc("Define when rules should run.").addButton((btn) => btn.setButtonText("Add Trigger").setCta().onClick(() => {
       this.config.triggers.push({
         id: crypto.randomUUID(),
         name: "New Trigger",
@@ -761,7 +632,7 @@ var DefinitionsTab = class {
       div.style.padding = "10px";
       div.style.marginBottom = "10px";
       div.style.borderRadius = "4px";
-      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(trigger.name).onChange((value) => {
+      new import_obsidian4.Setting(div).setName("Name").addText((text) => text.setValue(trigger.name).onChange((value) => {
         trigger.name = value;
         this.onUpdate(this.config);
       })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
@@ -769,7 +640,7 @@ var DefinitionsTab = class {
         this.onUpdate(this.config);
         this.display();
       }));
-      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("manual", "Manual").setValue(trigger.type).onChange((value) => {
+      new import_obsidian4.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("manual", "Manual").setValue(trigger.type).onChange((value) => {
         trigger.type = value;
         if (trigger.type === "system_event")
           trigger.event = "startup";
@@ -781,12 +652,12 @@ var DefinitionsTab = class {
         this.display();
       }));
       if (trigger.type === "obsidian_event") {
-        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(trigger.event || "modify").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(trigger.event || "modify").onChange((value) => {
           trigger.event = value;
           this.onUpdate(this.config);
         }));
       } else if (trigger.type === "system_event") {
-        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("startup", "Obsidian Starts").addOption("sync_start", "Sync Starts").addOption("sync_finish", "Sync Finishes").setValue(trigger.event || "startup").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("startup", "Obsidian Starts").addOption("sync_start", "Sync Starts").addOption("sync_finish", "Sync Finishes").setValue(trigger.event || "startup").onChange((value) => {
           trigger.event = value;
           this.onUpdate(this.config);
         }));
@@ -794,8 +665,8 @@ var DefinitionsTab = class {
         timeContainer.style.marginLeft = "20px";
         timeContainer.style.borderLeft = "2px solid var(--background-modifier-border)";
         timeContainer.style.paddingLeft = "10px";
-        new import_obsidian5.Setting(timeContainer).setName("Time Constraints (Optional)").setDesc("Only run within this time range");
-        new import_obsidian5.Setting(timeContainer).setName("Start Time").setDesc("ISO format (e.g. 2023-01-01T09:00:00) or Time (09:00)").addText((text) => {
+        new import_obsidian4.Setting(timeContainer).setName("Time Constraints (Optional)").setDesc("Only run within this time range");
+        new import_obsidian4.Setting(timeContainer).setName("Start Time").setDesc("ISO format (e.g. 2023-01-01T09:00:00) or Time (09:00)").addText((text) => {
           var _a;
           return text.setPlaceholder("YYYY-MM-DDTHH:mm:ss").setValue(((_a = trigger.timeConstraints) == null ? void 0 : _a.start) || "").onChange((value) => {
             if (!trigger.timeConstraints)
@@ -804,7 +675,7 @@ var DefinitionsTab = class {
             this.onUpdate(this.config);
           });
         });
-        new import_obsidian5.Setting(timeContainer).setName("End Time").setDesc("ISO format (e.g. 2023-01-01T17:00:00) or Time (17:00)").addText((text) => {
+        new import_obsidian4.Setting(timeContainer).setName("End Time").setDesc("ISO format (e.g. 2023-01-01T17:00:00) or Time (17:00)").addText((text) => {
           var _a;
           return text.setPlaceholder("YYYY-MM-DDTHH:mm:ss").setValue(((_a = trigger.timeConstraints) == null ? void 0 : _a.end) || "").onChange((value) => {
             if (!trigger.timeConstraints)
@@ -814,11 +685,11 @@ var DefinitionsTab = class {
           });
         });
       } else if (trigger.type === "folder_event") {
-        new import_obsidian5.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("enter", "File Entered Folder").addOption("leave", "File Left Folder").setValue(trigger.event || "enter").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Event").addDropdown((dropdown) => dropdown.addOption("enter", "File Entered Folder").addOption("leave", "File Left Folder").setValue(trigger.event || "enter").onChange((value) => {
           trigger.event = value;
           this.onUpdate(this.config);
         }));
-        new import_obsidian5.Setting(div).setName("Target Folder").addText((text) => text.setPlaceholder("folder/path").setValue(trigger.folder || "").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Target Folder").addText((text) => text.setPlaceholder("folder/path").setValue(trigger.folder || "").onChange((value) => {
           trigger.folder = value;
           this.onUpdate(this.config);
         }));
@@ -826,7 +697,7 @@ var DefinitionsTab = class {
     });
   }
   renderActions(container) {
-    new import_obsidian5.Setting(container).setName("Add Action").setDesc("Define what to do with notes.").addButton((btn) => btn.setButtonText("Add Action").setCta().onClick(() => {
+    new import_obsidian4.Setting(container).setName("Add Action").setDesc("Define what to do with notes.").addButton((btn) => btn.setButtonText("Add Action").setCta().onClick(() => {
       this.config.actions.push({
         id: crypto.randomUUID(),
         name: "New Action",
@@ -842,7 +713,7 @@ var DefinitionsTab = class {
       div.style.padding = "10px";
       div.style.marginBottom = "10px";
       div.style.borderRadius = "4px";
-      new import_obsidian5.Setting(div).setName("Name").addText((text) => text.setValue(action.name).onChange((value) => {
+      new import_obsidian4.Setting(div).setName("Name").addText((text) => text.setValue(action.name).onChange((value) => {
         action.name = value;
         this.onUpdate(this.config);
       })).addExtraButton((btn) => btn.setIcon("trash").onClick(() => {
@@ -850,7 +721,7 @@ var DefinitionsTab = class {
         this.onUpdate(this.config);
         this.display();
       }));
-      new import_obsidian5.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("move", "Move").addOption("rename", "Rename").addOption("tag", "Tag").setValue(action.type).onChange((value) => {
+      new import_obsidian4.Setting(div).setName("Type").addDropdown((dropdown) => dropdown.addOption("move", "Move").addOption("rename", "Rename").addOption("tag", "Tag").setValue(action.type).onChange((value) => {
         action.type = value;
         if (value === "move")
           action.config = { folder: "" };
@@ -862,29 +733,29 @@ var DefinitionsTab = class {
         this.display();
       }));
       if (action.type === "move") {
-        new import_obsidian5.Setting(div).setName("Folder").addText((text) => text.setPlaceholder("folder/path").setValue(action.config.folder).onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Folder").addText((text) => text.setPlaceholder("folder/path").setValue(action.config.folder).onChange((value) => {
           action.config.folder = value;
           this.onUpdate(this.config);
         }));
-        new import_obsidian5.Setting(div).setName("Create if missing").addToggle((toggle) => toggle.setValue(action.config.createIfMissing || false).onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Create if missing").addToggle((toggle) => toggle.setValue(action.config.createIfMissing || false).onChange((value) => {
           action.config.createIfMissing = value;
           this.onUpdate(this.config);
         }));
       } else if (action.type === "rename") {
-        new import_obsidian5.Setting(div).setName("Prefix").addText((text) => text.setValue(action.config.prefix || "").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Prefix").addText((text) => text.setValue(action.config.prefix || "").onChange((value) => {
           action.config.prefix = value;
           this.onUpdate(this.config);
         }));
-        new import_obsidian5.Setting(div).setName("Suffix").addText((text) => text.setValue(action.config.suffix || "").onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Suffix").addText((text) => text.setValue(action.config.suffix || "").onChange((value) => {
           action.config.suffix = value;
           this.onUpdate(this.config);
         }));
       } else if (action.type === "tag") {
-        new import_obsidian5.Setting(div).setName("Tag").addText((text) => text.setValue(action.config.tag).onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Tag").addText((text) => text.setValue(action.config.tag).onChange((value) => {
           action.config.tag = value;
           this.onUpdate(this.config);
         }));
-        new import_obsidian5.Setting(div).setName("Operation").addDropdown((dropdown) => dropdown.addOption("add", "Add").addOption("remove", "Remove").setValue(action.config.operation).onChange((value) => {
+        new import_obsidian4.Setting(div).setName("Operation").addDropdown((dropdown) => dropdown.addOption("add", "Add").addOption("remove", "Remove").setValue(action.config.operation).onChange((value) => {
           action.config.operation = value;
           this.onUpdate(this.config);
         }));
@@ -894,7 +765,7 @@ var DefinitionsTab = class {
 };
 
 // ui/components/LogbookTab.ts
-var import_obsidian6 = __toModule(require("obsidian"));
+var import_obsidian5 = __toModule(require("obsidian"));
 var LogbookTab = class {
   constructor(app, containerEl, binder) {
     this.app = app;
@@ -910,7 +781,7 @@ var LogbookTab = class {
     header.style.marginBottom = "10px";
     const headerH3 = header.createEl("h3", { text: "Logbook" });
     headerH3.style.margin = "0";
-    new import_obsidian6.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
+    new import_obsidian5.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
       this.binder.clear();
       this.display();
     });
@@ -958,7 +829,7 @@ var LogbookTab = class {
 };
 
 // ui/CuratorSettingsTab.ts
-var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
+var CuratorSettingsTab = class extends import_obsidian6.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.activeTab = "rules";
@@ -1003,16 +874,15 @@ var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
 };
 
 // main.ts
-var AutoNoteMover = class extends import_obsidian8.Plugin {
+var AutoNoteMover = class extends import_obsidian7.Plugin {
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
       this.binder = new BinderService(this.app);
-      this.identifierService = new IdentifierService(this.app);
-      this.groupService = new GroupService(this.app, this.identifierService);
+      this.groupService = new GroupService(this.app);
       this.triggerService = new TriggerService(this.app);
       this.actionService = new ActionService(this.app, this.binder);
-      this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.binder, this.identifierService, this.actionService);
+      this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.binder, this.actionService);
       this.triggerService.initializeListeners();
       this.addSettingTab(new CuratorSettingsTab(this.app, this));
       this.rulesetService.updateConfig(this.settings);
@@ -1024,10 +894,6 @@ var AutoNoteMover = class extends import_obsidian8.Plugin {
   loadSettings() {
     return __async(this, null, function* () {
       const DEFAULT_SETTINGS = {
-        identifiers: [
-          { id: "default-tag-todo", name: "Has #todo", type: "tag", config: { tag: "#todo" } },
-          { id: "default-folder-daily", name: "In Daily Notes", type: "folder", config: { folder: "Daily Notes" } }
-        ],
         groups: [],
         triggers: [
           { id: "default-trigger-modify", name: "On File Modified", type: "obsidian_event", event: "modify" },

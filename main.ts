@@ -1,7 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { CuratorConfig } from 'core/types';
 import { BinderService } from 'core/BinderService';
-import { IdentifierService } from 'core/IdentifierService';
 import { GroupService } from 'core/GroupService';
 import { TriggerService } from 'core/TriggerService';
 import { ActionService } from 'core/ActionService';
@@ -11,7 +10,6 @@ import { CuratorSettingsTab } from 'ui/CuratorSettingsTab';
 export default class AutoNoteMover extends Plugin {
 	settings: CuratorConfig;
 	private binder: BinderService;
-	private identifierService: IdentifierService;
 	private groupService: GroupService;
 	private triggerService: TriggerService;
 	private actionService: ActionService;
@@ -22,8 +20,7 @@ export default class AutoNoteMover extends Plugin {
 
 		// Initialize Services
 		this.binder = new BinderService(this.app);
-		this.identifierService = new IdentifierService(this.app);
-		this.groupService = new GroupService(this.app, this.identifierService);
+		this.groupService = new GroupService(this.app);
 		this.triggerService = new TriggerService(this.app);
 		this.actionService = new ActionService(this.app, this.binder);
 		this.rulesetService = new RulesetService(
@@ -31,7 +28,6 @@ export default class AutoNoteMover extends Plugin {
 			this.triggerService,
 			this.groupService,
 			this.binder,
-			this.identifierService,
 			this.actionService
 		);
 
@@ -54,10 +50,6 @@ export default class AutoNoteMover extends Plugin {
 
 	async loadSettings() {
 		const DEFAULT_SETTINGS: CuratorConfig = {
-			identifiers: [
-				{ id: 'default-tag-todo', name: 'Has #todo', type: 'tag', config: { tag: '#todo' } },
-				{ id: 'default-folder-daily', name: 'In Daily Notes', type: 'folder', config: { folder: 'Daily Notes' } }
-			],
 			groups: [],
 			triggers: [
 				{ id: 'default-trigger-modify', name: 'On File Modified', type: 'obsidian_event', event: 'modify' },

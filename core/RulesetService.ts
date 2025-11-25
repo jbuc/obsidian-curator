@@ -1,9 +1,8 @@
 import { App, TFile } from 'obsidian';
-import { Ruleset, Group, Trigger, Identifier, Action, CuratorConfig, Rule } from './types';
+import { Ruleset, Group, Trigger, Action, CuratorConfig, Rule } from './types';
 import { TriggerService } from './TriggerService';
 import { GroupService } from './GroupService';
 import { BinderService } from './BinderService';
-import { IdentifierService } from './IdentifierService';
 import { ActionService } from './ActionService';
 
 export class RulesetService {
@@ -11,7 +10,6 @@ export class RulesetService {
     private triggerService: TriggerService;
     private groupService: GroupService;
     private binder: BinderService;
-    private identifierService: IdentifierService;
     private actionService: ActionService;
 
     private rulesets: Ruleset[] = [];
@@ -23,14 +21,12 @@ export class RulesetService {
         triggerService: TriggerService,
         groupService: GroupService,
         binder: BinderService,
-        identifierService: IdentifierService,
         actionService: ActionService
     ) {
         this.app = app;
         this.triggerService = triggerService;
         this.groupService = groupService;
         this.binder = binder;
-        this.identifierService = identifierService;
         this.actionService = actionService;
     }
 
@@ -42,9 +38,6 @@ export class RulesetService {
 
         this.actions.clear();
         config.actions.forEach(a => this.actions.set(a.id, a));
-
-        // Update dependencies
-        this.groupService.updateIdentifiers(config.identifiers);
 
         // Re-register triggers
         const activeTriggerIds = new Set(this.rulesets.filter(r => r.enabled).map(r => r.triggerId));
