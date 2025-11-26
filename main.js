@@ -1056,7 +1056,11 @@ var AutoNoteMover = class extends import_obsidian8.Plugin {
       this.triggerService.initializeListeners();
       this.addSettingTab(new CuratorSettingsTab(this.app, this));
       this.rulesetService.updateConfig(this.settings);
-      this.triggerService.handleSystemEvent("startup");
+      this.app.workspace.onLayoutReady(() => {
+        setTimeout(() => {
+          this.triggerService.handleSystemEvent("startup");
+        }, 2e3);
+      });
     });
   }
   onunload() {
