@@ -183,6 +183,10 @@ var init_TriggerService = __esm({
         (_a = this.listeners.get(trigger.id)) == null ? void 0 : _a.push(callback);
         this.activeTriggers.set(trigger.id, trigger);
       }
+      clearTriggers() {
+        this.listeners.clear();
+        this.activeTriggers.clear();
+      }
       initializeListeners() {
         this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
         this.eventRefs = [];
@@ -430,6 +434,7 @@ var init_RulesetService = __esm({
         config.groups.forEach((g) => this.groups.set(g.id, g));
         this.actions.clear();
         config.actions.forEach((a) => this.actions.set(a.id, a));
+        this.triggerService.clearTriggers();
         const activeTriggerIds = new Set(this.rulesets.filter((r) => r.enabled).map((r) => r.triggerId));
         config.triggers.forEach((t) => {
           if (activeTriggerIds.has(t.id)) {
