@@ -89,27 +89,41 @@ var GroupService = class {
     this.app = app;
   }
   isInGroup(file, group) {
-    var _a, _b, _c;
-    if (!group.query || group.query.trim() === "") {
-      return true;
-    }
-    const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
-    if (!dataviewAPI) {
-      console.warn("[Curator] Dataview plugin not found or API not available.");
-      return false;
-    }
-    try {
-      const pages = dataviewAPI.pages(group.query);
-      for (const page of pages) {
-        if (page.file && page.file.path === file.path) {
-          return true;
-        }
+    return __async(this, null, function* () {
+      var _a, _b, _c;
+      if (!group.query || group.query.trim() === "") {
+        return true;
       }
-      return false;
-    } catch (error) {
-      console.error(`[Curator] Error executing Dataview query for group ${group.name}:`, error);
-      return false;
-    }
+      const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
+      if (!dataviewAPI) {
+        console.warn("[Curator] Dataview plugin not found or API not available.");
+        return false;
+      }
+      try {
+        let dql = group.query.trim();
+        if (!/^(TABLE|LIST|TASK|CALENDAR)/i.test(dql)) {
+          dql = `LIST ${dql}`;
+        }
+        const result = yield dataviewAPI.query(dql);
+        if (!result.successful) {
+          console.warn(`[Curator] Dataview query failed for group ${group.name}: ${result.error}`);
+          return false;
+        }
+        const values = result.value.values;
+        for (const item of values) {
+          if (item && item.path === file.path) {
+            return true;
+          }
+          if (item && item.file && item.file.path === file.path) {
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error(`[Curator] Error executing Dataview query for group ${group.name}:`, error);
+        return false;
+      }
+    });
   }
   updateIdentifiers(identifiers) {
   }
@@ -384,7 +398,7 @@ var RulesetService = class {
               this.binder.log("warning", `Rule in ${ruleset.name} references missing group ${rule.groupId}`, file.path);
               match = false;
             } else {
-              match = this.groupService.isInGroup(file, group);
+              match = yield this.groupService.isInGroup(file, group);
             }
           }
           if (match) {
