@@ -172,6 +172,7 @@ var init_TriggerService = __esm({
         this.listeners = new Map();
         this.eventRefs = [];
         this.activeTriggers = new Map();
+        this.intervals = [];
         this.app = app;
       }
       registerTrigger(id, trigger, callback) {
@@ -182,10 +183,17 @@ var init_TriggerService = __esm({
         }
         (_a = this.listeners.get(id)) == null ? void 0 : _a.push(callback);
         this.activeTriggers.set(id, trigger);
+        if (trigger.type === "time_event") {
+          this.registerTimeEvent(id, trigger);
+        } else if (trigger.type === "manual") {
+          this.registerManualCommand(id, trigger);
+        }
       }
       clearTriggers() {
         this.listeners.clear();
         this.activeTriggers.clear();
+        this.intervals.forEach((id) => window.clearInterval(id));
+        this.intervals = [];
       }
       initializeListeners() {
         this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
@@ -278,6 +286,40 @@ var init_TriggerService = __esm({
           }
         });
       }
+      registerTimeEvent(id, trigger) {
+        if (trigger.interval) {
+          const intervalMs = trigger.interval * 60 * 1e3;
+          const intervalId = window.setInterval(() => {
+            const files = this.app.vault.getMarkdownFiles();
+            files.forEach((file) => this.fireTrigger(id, file));
+          }, intervalMs);
+          this.intervals.push(intervalId);
+        } else if (trigger.delay) {
+          const delayMs = trigger.delay * 60 * 1e3;
+          const timeoutId = window.setTimeout(() => {
+            const files = this.app.vault.getMarkdownFiles();
+            files.forEach((file) => this.fireTrigger(id, file));
+          }, delayMs);
+          this.intervals.push(timeoutId);
+        }
+      }
+      registerManualCommand(id, trigger) {
+        if (trigger.commandName) {
+          const commandId = `curator-manual-${id}`;
+          this.app.addCommand({
+            id: commandId,
+            name: trigger.commandName,
+            callback: () => {
+              const activeFile = this.app.workspace.getActiveFile();
+              if (activeFile) {
+                this.fireTrigger(id, activeFile);
+              } else {
+                new import_obsidian2.Notice("No active file to run Curator on.");
+              }
+            }
+          });
+        }
+      }
       fireTrigger(triggerId, file) {
         const callbacks = this.listeners.get(triggerId);
         if (callbacks) {
@@ -323,6 +365,11 @@ var init_ActionService = __esm({
               case "tag":
                 if (action.config.tag) {
                   yield this.tagFile(file, { tag: action.config.tag, operation: action.config.operation || "add" });
+                }
+                break;
+              case "update":
+                if (action.config.key) {
+                  yield this.updateFrontmatter(file, { key: action.config.key, value: action.config.value || "" });
                 }
                 break;
               default:
@@ -406,6 +453,16 @@ var init_ActionService = __esm({
               }
             }
             frontmatter["tags"] = tags;
+          });
+        });
+      }
+      updateFrontmatter(file, config) {
+        return __async(this, null, function* () {
+          yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
+            if (config.key) {
+              frontmatter[config.key] = config.value;
+              this.binder.log("success", `Updated frontmatter: ${config.key} = ${config.value}`, file.path);
+            }
           });
         });
       }
@@ -509,7 +566,7 @@ var init_RulesetService = __esm({
 __export(exports, {
   default: () => AutoNoteMover
 });
-var import_obsidian7 = __toModule(require("obsidian"));
+var import_obsidian8 = __toModule(require("obsidian"));
 init_BinderService();
 init_GroupService();
 init_TriggerService();
@@ -517,10 +574,94 @@ init_ActionService();
 init_RulesetService();
 
 // ui/CuratorSettingsTab.ts
-var import_obsidian6 = __toModule(require("obsidian"));
+var import_obsidian7 = __toModule(require("obsidian"));
 
 // ui/components/RulesTab.ts
+var import_obsidian5 = __toModule(require("obsidian"));
+
+// ui/components/FolderSuggest.ts
 var import_obsidian4 = __toModule(require("obsidian"));
+var FolderSuggest = class {
+  constructor(app, inputEl) {
+    this.app = app;
+    this.inputEl = inputEl;
+    this.suggestions = [];
+    this.isOpen = false;
+    this.containerEl = createDiv("suggestion-container");
+    this.containerEl.style.position = "absolute";
+    this.containerEl.style.zIndex = "1000";
+    this.containerEl.style.display = "none";
+    this.containerEl.style.maxHeight = "200px";
+    this.containerEl.style.overflowY = "auto";
+    this.containerEl.style.backgroundColor = "var(--background-secondary)";
+    this.containerEl.style.border = "1px solid var(--background-modifier-border)";
+    document.body.appendChild(this.containerEl);
+    this.inputEl.addEventListener("input", this.onInput.bind(this));
+    this.inputEl.addEventListener("blur", () => setTimeout(() => this.close(), 200));
+    this.inputEl.addEventListener("focus", this.onInput.bind(this));
+  }
+  onInput() {
+    const val = this.inputEl.value;
+    this.suggestions = this.getSuggestions(val);
+    if (this.suggestions.length > 0) {
+      this.open();
+      this.renderSuggestions();
+    } else {
+      this.close();
+    }
+  }
+  getSuggestions(inputStr) {
+    const abstractFiles = this.app.vault.getAllLoadedFiles();
+    const folders = [];
+    const lowerCaseInputStr = inputStr.toLowerCase();
+    abstractFiles.forEach((file) => {
+      if (file instanceof import_obsidian4.TFolder) {
+        if (file.path.toLowerCase().contains(lowerCaseInputStr)) {
+          folders.push(file);
+        }
+      }
+    });
+    return folders;
+  }
+  renderSuggestions() {
+    this.containerEl.empty();
+    const rect = this.inputEl.getBoundingClientRect();
+    this.containerEl.style.top = `${rect.bottom}px`;
+    this.containerEl.style.left = `${rect.left}px`;
+    this.containerEl.style.width = `${rect.width}px`;
+    this.suggestions.forEach((folder) => {
+      const item = this.containerEl.createDiv("suggestion-item");
+      item.setText(folder.path);
+      item.style.padding = "5px";
+      item.style.cursor = "pointer";
+      item.addEventListener("mouseenter", () => {
+        item.style.backgroundColor = "var(--background-modifier-hover)";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.backgroundColor = "";
+      });
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        this.selectSuggestion(folder);
+      });
+    });
+  }
+  selectSuggestion(folder) {
+    this.inputEl.value = folder.path;
+    this.inputEl.trigger("input");
+    this.close();
+  }
+  open() {
+    this.containerEl.style.display = "block";
+    this.isOpen = true;
+  }
+  close() {
+    this.containerEl.style.display = "none";
+    this.isOpen = false;
+  }
+};
+
+// ui/components/RulesTab.ts
 var RulesTab = class {
   constructor(app, containerEl, config, onUpdate) {
     this.app = app;
@@ -532,7 +673,7 @@ var RulesTab = class {
     this.containerEl.empty();
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
-    new import_obsidian4.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
+    new import_obsidian5.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
       this.addRuleset();
     }));
     const rulesetsList = this.containerEl.createDiv("rulesets-list");
@@ -540,13 +681,25 @@ var RulesTab = class {
       this.renderRuleset(rulesetsList, ruleset, index);
     });
   }
+  addRuleset() {
+    const newRuleset = {
+      id: crypto.randomUUID(),
+      name: "New Ruleset",
+      enabled: true,
+      trigger: { type: "obsidian_event", event: "modify" },
+      rules: []
+    };
+    this.config.rulesets.push(newRuleset);
+    this.onUpdate(this.config);
+    this.display();
+  }
   renderRuleset(container, ruleset, index) {
     const rulesetContainer = container.createDiv("ruleset-container");
     rulesetContainer.style.border = "1px solid var(--background-modifier-border)";
     rulesetContainer.style.padding = "10px";
     rulesetContainer.style.marginBottom = "10px";
     rulesetContainer.style.borderRadius = "4px";
-    new import_obsidian4.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
+    new import_obsidian5.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
       ruleset.name = value;
       this.onUpdate(this.config);
     })).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
@@ -562,7 +715,7 @@ var RulesTab = class {
     triggerDiv.style.padding = "10px";
     triggerDiv.style.backgroundColor = "var(--background-primary-alt)";
     triggerDiv.style.borderRadius = "4px";
-    new import_obsidian4.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("manual", "Manual").setValue(ruleset.trigger.type).onChange((value) => {
+    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("time_event", "Time/Schedule").addOption("manual", "Manual Command").setValue(ruleset.trigger.type).onChange((value) => {
       ruleset.trigger.type = value;
       if (ruleset.trigger.type === "system_event")
         ruleset.trigger.event = "startup";
@@ -570,30 +723,84 @@ var RulesTab = class {
         ruleset.trigger.event = "enter";
       else if (ruleset.trigger.type === "obsidian_event")
         ruleset.trigger.event = "modify";
+      else if (ruleset.trigger.type === "time_event")
+        ruleset.trigger.interval = 5;
+      else if (ruleset.trigger.type === "manual")
+        ruleset.trigger.commandName = "Run My Rule";
       this.onUpdate(this.config);
       this.display();
     }));
     if (ruleset.trigger.type === "obsidian_event") {
-      new import_obsidian4.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(ruleset.trigger.event || "modify").onChange((value) => {
+      new import_obsidian5.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("create", "File Created").addOption("modify", "File Modified").addOption("rename", "File Renamed").addOption("delete", "File Deleted").setValue(ruleset.trigger.event || "modify").onChange((value) => {
         ruleset.trigger.event = value;
         this.onUpdate(this.config);
       }));
     } else if (ruleset.trigger.type === "system_event") {
-      new import_obsidian4.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("startup", "Obsidian Starts").addOption("sync_start", "Sync Starts").addOption("sync_finish", "Sync Finishes").setValue(ruleset.trigger.event || "startup").onChange((value) => {
+      new import_obsidian5.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("startup", "Obsidian Starts").addOption("sync_start", "Sync Starts").addOption("sync_finish", "Sync Finishes").setValue(ruleset.trigger.event || "startup").onChange((value) => {
         ruleset.trigger.event = value;
         this.onUpdate(this.config);
       }));
+      new import_obsidian5.Setting(triggerDiv).setName("Time Constraints").setDesc("Only run if current time is between...").addText((text) => {
+        var _a;
+        return text.setPlaceholder("Start (HH:mm)").setValue(((_a = ruleset.trigger.timeConstraints) == null ? void 0 : _a.start) || "").onChange((value) => {
+          if (!ruleset.trigger.timeConstraints)
+            ruleset.trigger.timeConstraints = {};
+          ruleset.trigger.timeConstraints.start = value;
+          this.onUpdate(this.config);
+        });
+      }).addText((text) => {
+        var _a;
+        return text.setPlaceholder("End (HH:mm)").setValue(((_a = ruleset.trigger.timeConstraints) == null ? void 0 : _a.end) || "").onChange((value) => {
+          if (!ruleset.trigger.timeConstraints)
+            ruleset.trigger.timeConstraints = {};
+          ruleset.trigger.timeConstraints.end = value;
+          this.onUpdate(this.config);
+        });
+      });
     } else if (ruleset.trigger.type === "folder_event") {
-      new import_obsidian4.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("enter", "File Entered Folder").addOption("leave", "File Left Folder").setValue(ruleset.trigger.event || "enter").onChange((value) => {
+      new import_obsidian5.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("enter", "File Moved TO Folder").addOption("leave", "File Moved FROM Folder").setValue(ruleset.trigger.event || "enter").onChange((value) => {
         ruleset.trigger.event = value;
         this.onUpdate(this.config);
       }));
-      new import_obsidian4.Setting(triggerDiv).setName("Target Folder").addText((text) => text.setPlaceholder("folder/path").setValue(ruleset.trigger.folder || "").onChange((value) => {
-        ruleset.trigger.folder = value;
+      const folderSetting = new import_obsidian5.Setting(triggerDiv).setName("Target Folder").setDesc("Select the folder to monitor.");
+      const folderInput = folderSetting.controlEl.createEl("input", { type: "text" });
+      folderInput.value = ruleset.trigger.folder || "";
+      folderInput.placeholder = "folder/path";
+      new FolderSuggest(this.app, folderInput);
+      folderInput.onchange = () => {
+        ruleset.trigger.folder = folderInput.value;
+        this.onUpdate(this.config);
+      };
+    } else if (ruleset.trigger.type === "time_event") {
+      new import_obsidian5.Setting(triggerDiv).setName("Schedule Type").addDropdown((dropdown) => dropdown.addOption("interval", "Every X Minutes").addOption("delay", "Is Open For X Minutes (Delay)").setValue(ruleset.trigger.interval ? "interval" : ruleset.trigger.delay ? "delay" : "interval").onChange((value) => {
+        if (value === "interval") {
+          ruleset.trigger.interval = 5;
+          delete ruleset.trigger.delay;
+        } else {
+          ruleset.trigger.delay = 5;
+          delete ruleset.trigger.interval;
+        }
+        this.onUpdate(this.config);
+        this.display();
+      }));
+      if (ruleset.trigger.interval !== void 0) {
+        new import_obsidian5.Setting(triggerDiv).setName("Interval (Minutes)").addText((text) => text.setValue(String(ruleset.trigger.interval)).onChange((value) => {
+          ruleset.trigger.interval = Number(value);
+          this.onUpdate(this.config);
+        }));
+      } else if (ruleset.trigger.delay !== void 0) {
+        new import_obsidian5.Setting(triggerDiv).setName("Delay (Minutes after startup)").addText((text) => text.setValue(String(ruleset.trigger.delay)).onChange((value) => {
+          ruleset.trigger.delay = Number(value);
+          this.onUpdate(this.config);
+        }));
+      }
+    } else if (ruleset.trigger.type === "manual") {
+      new import_obsidian5.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
+        ruleset.trigger.commandName = value;
         this.onUpdate(this.config);
       }));
     }
-    new import_obsidian4.Setting(rulesetContainer).addButton((btn) => btn.setButtonText("Test Run (Dry Run)").setTooltip("Simulate this ruleset on all files to see what would happen.").onClick(() => __async(this, null, function* () {
+    new import_obsidian5.Setting(rulesetContainer).addButton((btn) => btn.setButtonText("Test Run (Dry Run)").setTooltip("Simulate this ruleset on all files to see what would happen.").onClick(() => __async(this, null, function* () {
       const { RulesetService: RulesetService2 } = yield Promise.resolve().then(() => (init_RulesetService(), RulesetService_exports));
       const { GroupService: GroupService2 } = yield Promise.resolve().then(() => (init_GroupService(), GroupService_exports));
       const { TriggerService: TriggerService2 } = yield Promise.resolve().then(() => (init_TriggerService(), TriggerService_exports));
@@ -606,7 +813,7 @@ var RulesTab = class {
       const rulesetService = new RulesetService2(this.app, triggerService, groupService, binder, actionService);
       rulesetService.updateConfig(this.config);
       const results = yield rulesetService.dryRun(ruleset.id);
-      const modal = new import_obsidian4.Modal(this.app);
+      const modal = new import_obsidian5.Modal(this.app);
       modal.titleEl.setText(`Dry Run: ${ruleset.name}`);
       if (results.length === 0) {
         modal.contentEl.createEl("p", { text: "No files matched the criteria." });
@@ -645,12 +852,12 @@ var RulesTab = class {
       ruleHeader.style.marginBottom = "10px";
       ruleHeader.createEl("span", { text: `Rule ${ruleIndex + 1}`, cls: "rule-title" });
       (_a = ruleHeader.querySelector(".rule-title")) == null ? void 0 : _a.setAttribute("style", "font-weight: bold;");
-      new import_obsidian4.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+      new import_obsidian5.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
         ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
         this.display();
       }));
-      const querySetting = new import_obsidian4.Setting(ruleDiv);
+      const querySetting = new import_obsidian5.Setting(ruleDiv);
       querySetting.setName("Condition (Dataview Query)");
       querySetting.setDesc("Leave empty to match all files.");
       querySetting.controlEl.style.width = "100%";
@@ -673,8 +880,9 @@ var RulesTab = class {
         actionDiv.style.gap = "10px";
         actionDiv.style.alignItems = "center";
         actionDiv.style.marginBottom = "5px";
+        actionDiv.style.flexWrap = "wrap";
         const typeSelect = actionDiv.createEl("select");
-        ["move", "rename", "tag"].forEach((t) => {
+        ["move", "rename", "tag", "update"].forEach((t) => {
           const opt = typeSelect.createEl("option", { text: t, value: t });
           if (t === action.type)
             opt.selected = true;
@@ -687,6 +895,8 @@ var RulesTab = class {
             action.config = { prefix: "", suffix: "" };
           else if (action.type === "tag")
             action.config = { tag: "", operation: "add" };
+          else if (action.type === "update")
+            action.config = { key: "", value: "" };
           this.onUpdate(this.config);
           this.display();
         };
@@ -694,6 +904,7 @@ var RulesTab = class {
           const folderInput = actionDiv.createEl("input", { type: "text" });
           folderInput.placeholder = "Folder Path";
           folderInput.value = action.config.folder || "";
+          new FolderSuggest(this.app, folderInput);
           folderInput.onchange = () => {
             action.config.folder = folderInput.value;
             this.onUpdate(this.config);
@@ -704,6 +915,46 @@ var RulesTab = class {
           tagInput.value = action.config.tag || "";
           tagInput.onchange = () => {
             action.config.tag = tagInput.value;
+            this.onUpdate(this.config);
+          };
+          const opSelect = actionDiv.createEl("select");
+          ["add", "remove"].forEach((op) => {
+            const opt = opSelect.createEl("option", { text: op, value: op });
+            if (op === action.config.operation)
+              opt.selected = true;
+          });
+          opSelect.onchange = () => {
+            action.config.operation = opSelect.value;
+            this.onUpdate(this.config);
+          };
+        } else if (action.type === "update") {
+          const keyInput = actionDiv.createEl("input", { type: "text" });
+          keyInput.placeholder = "Property Key";
+          keyInput.value = action.config.key || "";
+          keyInput.onchange = () => {
+            action.config.key = keyInput.value;
+            this.onUpdate(this.config);
+          };
+          const valInput = actionDiv.createEl("input", { type: "text" });
+          valInput.placeholder = "Value";
+          valInput.value = action.config.value || "";
+          valInput.onchange = () => {
+            action.config.value = valInput.value;
+            this.onUpdate(this.config);
+          };
+        } else if (action.type === "rename") {
+          const prefixInput = actionDiv.createEl("input", { type: "text" });
+          prefixInput.placeholder = "Prefix";
+          prefixInput.value = action.config.prefix || "";
+          prefixInput.onchange = () => {
+            action.config.prefix = prefixInput.value;
+            this.onUpdate(this.config);
+          };
+          const suffixInput = actionDiv.createEl("input", { type: "text" });
+          suffixInput.placeholder = "Suffix";
+          suffixInput.value = action.config.suffix || "";
+          suffixInput.onchange = () => {
+            action.config.suffix = suffixInput.value;
             this.onUpdate(this.config);
           };
         }
@@ -721,7 +972,7 @@ var RulesTab = class {
         this.display();
       };
     });
-    new import_obsidian4.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
+    new import_obsidian5.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
       ruleset.rules.push({
         query: "",
         actions: []
@@ -730,22 +981,10 @@ var RulesTab = class {
       this.display();
     }));
   }
-  addRuleset() {
-    const newRuleset = {
-      id: crypto.randomUUID(),
-      name: "New Ruleset",
-      enabled: true,
-      trigger: { type: "obsidian_event", event: "modify" },
-      rules: []
-    };
-    this.config.rulesets.push(newRuleset);
-    this.onUpdate(this.config);
-    this.display();
-  }
 };
 
 // ui/components/LogbookTab.ts
-var import_obsidian5 = __toModule(require("obsidian"));
+var import_obsidian6 = __toModule(require("obsidian"));
 var LogbookTab = class {
   constructor(app, containerEl, binder) {
     this.app = app;
@@ -761,7 +1000,7 @@ var LogbookTab = class {
     header.style.marginBottom = "10px";
     const headerH3 = header.createEl("h3", { text: "Logbook" });
     headerH3.style.margin = "0";
-    new import_obsidian5.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
+    new import_obsidian6.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
       this.binder.clear();
       this.display();
     });
@@ -809,7 +1048,7 @@ var LogbookTab = class {
 };
 
 // ui/CuratorSettingsTab.ts
-var CuratorSettingsTab = class extends import_obsidian6.PluginSettingTab {
+var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.activeTab = "rules";
@@ -848,7 +1087,7 @@ var CuratorSettingsTab = class extends import_obsidian6.PluginSettingTab {
 };
 
 // main.ts
-var AutoNoteMover = class extends import_obsidian7.Plugin {
+var AutoNoteMover = class extends import_obsidian8.Plugin {
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
