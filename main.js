@@ -940,7 +940,11 @@ var RulesTab = class {
           ruleset.trigger.query = e.target.value;
           this.onUpdate(this.config);
         };
-      });
+      }).addToggle((toggle) => toggle.setValue(ruleset.trigger.useQueryForRules || false).setTooltip("Use this query for all rules (hides rule condition)").onChange((value) => {
+        ruleset.trigger.useQueryForRules = value;
+        this.onUpdate(this.config);
+        this.display();
+      }));
     } else if (ruleset.trigger.type === "schedule") {
       new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
         ruleset.trigger.time = value;
@@ -1058,28 +1062,35 @@ var RulesTab = class {
       if (this.collapsedItems.has(rule.id)) {
         return;
       }
-      const querySetting = new import_obsidian6.Setting(ruleDiv);
-      querySetting.setName("Condition (Dataview Query)");
-      querySetting.setDesc("Leave empty to match all files.");
-      querySetting.addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
-        new QueryHelperModal(this.app, (query) => {
-          rule.query = query;
+      if (!ruleset.trigger.useQueryForRules) {
+        const querySetting = new import_obsidian6.Setting(ruleDiv);
+        querySetting.setName("Condition (Dataview Query)");
+        querySetting.setDesc("Leave empty to match all files.");
+        querySetting.addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
+          new QueryHelperModal(this.app, (query) => {
+            rule.query = query;
+            this.onUpdate(this.config);
+            this.display();
+          }).open();
+        }));
+        querySetting.controlEl.style.width = "100%";
+        const queryContainer = ruleDiv.createDiv();
+        const textArea = queryContainer.createEl("textarea");
+        textArea.style.width = "100%";
+        textArea.style.minHeight = "60px";
+        textArea.style.marginBottom = "10px";
+        textArea.placeholder = 'FROM "folder" AND #tag';
+        textArea.value = rule.query;
+        textArea.oninput = (e) => {
+          rule.query = e.target.value;
           this.onUpdate(this.config);
-          this.display();
-        }).open();
-      }));
-      querySetting.controlEl.style.width = "100%";
-      const queryContainer = ruleDiv.createDiv();
-      const textArea = queryContainer.createEl("textarea");
-      textArea.style.width = "100%";
-      textArea.style.minHeight = "60px";
-      textArea.style.marginBottom = "10px";
-      textArea.placeholder = 'FROM "folder" AND #tag';
-      textArea.value = rule.query;
-      textArea.oninput = (e) => {
-        rule.query = e.target.value;
-        this.onUpdate(this.config);
-      };
+        };
+      } else {
+        ruleDiv.createEl("p", { text: "Condition: Matches Trigger Scope (Inherited)", cls: "text-muted" });
+        if (rule.query) {
+          rule.query = "";
+        }
+      }
       const actionsDiv = ruleDiv.createDiv("rule-actions");
       actionsDiv.createEl("h5", { text: "Actions" });
       rule.actions.forEach((action, actionIndex) => {
