@@ -571,7 +571,7 @@ var init_RulesetService = __esm({
 __export(exports, {
   default: () => AutoNoteMover
 });
-var import_obsidian8 = __toModule(require("obsidian"));
+var import_obsidian9 = __toModule(require("obsidian"));
 init_BinderService();
 init_GroupService();
 init_TriggerService();
@@ -579,10 +579,10 @@ init_ActionService();
 init_RulesetService();
 
 // ui/CuratorSettingsTab.ts
-var import_obsidian7 = __toModule(require("obsidian"));
+var import_obsidian8 = __toModule(require("obsidian"));
 
 // ui/components/RulesTab.ts
-var import_obsidian5 = __toModule(require("obsidian"));
+var import_obsidian6 = __toModule(require("obsidian"));
 
 // ui/components/FolderSuggest.ts
 var import_obsidian4 = __toModule(require("obsidian"));
@@ -700,6 +700,95 @@ var FolderSuggest = class {
   }
 };
 
+// ui/components/QueryHelperModal.ts
+var import_obsidian5 = __toModule(require("obsidian"));
+var QueryHelperModal = class extends import_obsidian5.Modal {
+  constructor(app, onSelect) {
+    super(app);
+    this.templates = [
+      {
+        name: "Files in Folder with Property",
+        description: "Select files in a specific folder that have a property containing specific text.",
+        query: 'FROM "Folder/Path" WHERE contains(my_property, "search text")'
+      },
+      {
+        name: "Tagged Notes Missing Property",
+        description: "Select notes with a specific tag that do NOT have a certain property.",
+        query: "FROM #tag WHERE !my_property"
+      },
+      {
+        name: "Match Filename",
+        description: "Select files where the filename contains a specific word.",
+        query: 'WHERE contains(file.name, "Project")'
+      },
+      {
+        name: "Relative Date (Created Recently)",
+        description: "Select files created in the last 7 days.",
+        query: "WHERE file.cday >= date(today) - dur(7 days)"
+      },
+      {
+        name: "Relative Date (Modified Recently)",
+        description: "Select files modified in the last 24 hours.",
+        query: "WHERE file.mtime >= date(now) - dur(24 hours)"
+      },
+      {
+        name: "Tasks in Specific File",
+        description: "Select tasks from a specific file (if using task queries).",
+        query: 'FROM "Projects/Active Project.md" WHERE !completed'
+      }
+    ];
+    this.onSelect = onSelect;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "Dataview Query Templates" });
+    contentEl.createEl("p", { text: "Click a template to insert it into your query field." });
+    const list = contentEl.createDiv("query-template-list");
+    list.style.display = "flex";
+    list.style.flexDirection = "column";
+    list.style.gap = "10px";
+    this.templates.forEach((template) => {
+      const item = list.createDiv("query-template-item");
+      item.style.border = "1px solid var(--background-modifier-border)";
+      item.style.padding = "10px";
+      item.style.borderRadius = "4px";
+      item.style.cursor = "pointer";
+      item.style.transition = "background-color 0.2s ease";
+      item.onmouseover = () => {
+        item.style.backgroundColor = "var(--background-secondary)";
+      };
+      item.onmouseout = () => {
+        item.style.backgroundColor = "transparent";
+      };
+      item.onclick = () => {
+        this.onSelect(template.query);
+        this.close();
+      };
+      const header = item.createDiv("query-template-header");
+      header.style.fontWeight = "bold";
+      header.style.marginBottom = "5px";
+      header.setText(template.name);
+      const desc = item.createDiv("query-template-desc");
+      desc.style.fontSize = "0.9em";
+      desc.style.color = "var(--text-muted)";
+      desc.style.marginBottom = "5px";
+      desc.setText(template.description);
+      const code = item.createEl("code");
+      code.style.display = "block";
+      code.style.padding = "5px";
+      code.style.backgroundColor = "var(--background-primary)";
+      code.style.borderRadius = "3px";
+      code.style.fontFamily = "var(--font-monospace)";
+      code.setText(template.query);
+    });
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
 // ui/components/RulesTab.ts
 var RulesTab = class {
   constructor(app, containerEl, config, onUpdate) {
@@ -712,7 +801,7 @@ var RulesTab = class {
     this.containerEl.empty();
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
-    new import_obsidian5.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
+    new import_obsidian6.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
       this.addRuleset();
     }));
     const rulesetsList = this.containerEl.createDiv("rulesets-list");
@@ -738,7 +827,7 @@ var RulesTab = class {
     rulesetContainer.style.padding = "10px";
     rulesetContainer.style.marginBottom = "10px";
     rulesetContainer.style.borderRadius = "4px";
-    new import_obsidian5.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
+    new import_obsidian6.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
       ruleset.name = value;
       this.onUpdate(this.config);
     })).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
@@ -754,7 +843,7 @@ var RulesTab = class {
     triggerDiv.style.padding = "10px";
     triggerDiv.style.backgroundColor = "var(--background-primary-alt)";
     triggerDiv.style.borderRadius = "4px";
-    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
+    new import_obsidian6.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
       ruleset.trigger.type = value;
       if (ruleset.trigger.type === "manual")
         ruleset.trigger.commandName = "Run My Rule";
@@ -762,7 +851,13 @@ var RulesTab = class {
       this.display();
     }));
     if (ruleset.trigger.type === "change_from" || ruleset.trigger.type === "change_to") {
-      new import_obsidian5.Setting(triggerDiv).setName("Dataview Query").setDesc("Define the set of notes to monitor.").addTextArea((text) => {
+      new import_obsidian6.Setting(triggerDiv).setName("Dataview Query").setDesc("Define the set of notes to monitor.").addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
+        new QueryHelperModal(this.app, (query) => {
+          ruleset.trigger.query = query;
+          this.onUpdate(this.config);
+          this.display();
+        }).open();
+      })).addTextArea((text) => {
         text.setPlaceholder('FROM "projects" AND #active').setValue(ruleset.trigger.query || "");
         text.inputEl.oninput = (e) => {
           ruleset.trigger.query = e.target.value;
@@ -770,7 +865,7 @@ var RulesTab = class {
         };
       });
     } else if (ruleset.trigger.type === "schedule") {
-      new import_obsidian5.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
+      new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
         ruleset.trigger.time = value;
         this.onUpdate(this.config);
       }));
@@ -797,12 +892,12 @@ var RulesTab = class {
         label.createEl("span", { text: day });
       });
     } else if (ruleset.trigger.type === "manual") {
-      new import_obsidian5.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
+      new import_obsidian6.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
         ruleset.trigger.commandName = value;
         this.onUpdate(this.config);
       }));
     }
-    new import_obsidian5.Setting(rulesetContainer).addButton((btn) => btn.setButtonText("Test Run (Dry Run)").setTooltip("Simulate this ruleset on all files to see what would happen.").onClick(() => __async(this, null, function* () {
+    new import_obsidian6.Setting(rulesetContainer).addButton((btn) => btn.setButtonText("Test Run (Dry Run)").setTooltip("Simulate this ruleset on all files to see what would happen.").onClick(() => __async(this, null, function* () {
       const { RulesetService: RulesetService2 } = yield Promise.resolve().then(() => (init_RulesetService(), RulesetService_exports));
       const { GroupService: GroupService2 } = yield Promise.resolve().then(() => (init_GroupService(), GroupService_exports));
       const { TriggerService: TriggerService2 } = yield Promise.resolve().then(() => (init_TriggerService(), TriggerService_exports));
@@ -815,7 +910,7 @@ var RulesTab = class {
       const rulesetService = new RulesetService2(this.app, triggerService, groupService, binder, actionService);
       rulesetService.updateConfig(this.config);
       const results = yield rulesetService.dryRun(ruleset.id);
-      const modal = new import_obsidian5.Modal(this.app);
+      const modal = new import_obsidian6.Modal(this.app);
       modal.titleEl.setText(`Dry Run: ${ruleset.name}`);
       if (results.length === 0) {
         modal.contentEl.createEl("p", { text: "No files matched the criteria." });
@@ -854,14 +949,21 @@ var RulesTab = class {
       ruleHeader.style.marginBottom = "10px";
       ruleHeader.createEl("span", { text: `Rule ${ruleIndex + 1}`, cls: "rule-title" });
       (_a = ruleHeader.querySelector(".rule-title")) == null ? void 0 : _a.setAttribute("style", "font-weight: bold;");
-      new import_obsidian5.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+      new import_obsidian6.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
         ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
         this.display();
       }));
-      const querySetting = new import_obsidian5.Setting(ruleDiv);
+      const querySetting = new import_obsidian6.Setting(ruleDiv);
       querySetting.setName("Condition (Dataview Query)");
       querySetting.setDesc("Leave empty to match all files.");
+      querySetting.addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
+        new QueryHelperModal(this.app, (query) => {
+          rule.query = query;
+          this.onUpdate(this.config);
+          this.display();
+        }).open();
+      }));
       querySetting.controlEl.style.width = "100%";
       const queryContainer = ruleDiv.createDiv();
       const textArea = queryContainer.createEl("textarea");
@@ -974,7 +1076,7 @@ var RulesTab = class {
         this.display();
       };
     });
-    new import_obsidian5.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
+    new import_obsidian6.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
       ruleset.rules.push({
         query: "",
         actions: []
@@ -986,7 +1088,7 @@ var RulesTab = class {
 };
 
 // ui/components/LogbookTab.ts
-var import_obsidian6 = __toModule(require("obsidian"));
+var import_obsidian7 = __toModule(require("obsidian"));
 var LogbookTab = class {
   constructor(app, containerEl, binder) {
     this.app = app;
@@ -1002,7 +1104,7 @@ var LogbookTab = class {
     header.style.marginBottom = "10px";
     const headerH3 = header.createEl("h3", { text: "Logbook" });
     headerH3.style.margin = "0";
-    new import_obsidian6.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
+    new import_obsidian7.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
       this.binder.clear();
       this.display();
     });
@@ -1050,7 +1152,7 @@ var LogbookTab = class {
 };
 
 // ui/CuratorSettingsTab.ts
-var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
+var CuratorSettingsTab = class extends import_obsidian8.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.activeTab = "rules";
@@ -1089,7 +1191,7 @@ var CuratorSettingsTab = class extends import_obsidian7.PluginSettingTab {
 };
 
 // main.ts
-var AutoNoteMover = class extends import_obsidian8.Plugin {
+var AutoNoteMover = class extends import_obsidian9.Plugin {
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
