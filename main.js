@@ -159,6 +159,31 @@ var init_GroupService = __esm({
           return matchingFiles.some((f) => f.path === file.path);
         });
       }
+      validateQuery(query) {
+        return __async(this, null, function* () {
+          var _a, _b, _c;
+          if (!query || query.trim() === "") {
+            return { valid: true };
+          }
+          const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
+          if (!dataviewAPI) {
+            return { valid: false, error: "Dataview plugin not found." };
+          }
+          try {
+            let dql = query.trim();
+            if (!/^(TABLE|LIST|TASK|CALENDAR)/i.test(dql)) {
+              dql = `LIST ${dql}`;
+            }
+            const result = yield dataviewAPI.query(dql);
+            if (!result.successful) {
+              return { valid: false, error: result.error };
+            }
+            return { valid: true };
+          } catch (error) {
+            return { valid: false, error: String(error) };
+          }
+        });
+      }
       updateIdentifiers(identifiers) {
       }
     };
@@ -790,6 +815,7 @@ var QueryHelperModal = class extends import_obsidian5.Modal {
 };
 
 // ui/components/RulesTab.ts
+init_GroupService();
 var RulesTab = class {
   constructor(app, containerEl, config, onUpdate) {
     this.collapsedItems = new Set();
@@ -797,6 +823,23 @@ var RulesTab = class {
     this.containerEl = containerEl;
     this.config = config;
     this.onUpdate = onUpdate;
+    this.groupService = new GroupService(app);
+  }
+  validateQueryInput(inputEl, statusEl, query) {
+    return __async(this, null, function* () {
+      statusEl.setText("Checking...");
+      statusEl.style.color = "var(--text-muted)";
+      const { valid, error } = yield this.groupService.validateQuery(query);
+      if (valid) {
+        statusEl.setText("Valid");
+        statusEl.style.color = "var(--text-success)";
+        inputEl.style.borderColor = "";
+      } else {
+        statusEl.setText(`Invalid: ${error}`);
+        statusEl.style.color = "var(--text-error)";
+        inputEl.style.borderColor = "var(--text-error)";
+      }
+    });
   }
   display() {
     this.containerEl.empty();
@@ -936,9 +979,15 @@ var RulesTab = class {
         }).open();
       })).addTextArea((text) => {
         text.setPlaceholder('FROM "projects" AND #active').setValue(ruleset.trigger.query || "");
+        const statusEl = triggerDiv.createDiv("query-status");
+        statusEl.style.fontSize = "0.8em";
+        statusEl.style.marginTop = "5px";
+        this.validateQueryInput(text.inputEl, statusEl, ruleset.trigger.query || "");
         text.inputEl.oninput = (e) => {
-          ruleset.trigger.query = e.target.value;
+          const val = e.target.value;
+          ruleset.trigger.query = val;
           this.onUpdate(this.config);
+          this.validateQueryInput(text.inputEl, statusEl, val);
         };
       }).addToggle((toggle) => toggle.setValue(ruleset.trigger.useQueryForRules || false).setTooltip("Use this query for all rules (hides rule condition)").onChange((value) => {
         ruleset.trigger.useQueryForRules = value;
@@ -1081,9 +1130,15 @@ var RulesTab = class {
         textArea.style.marginBottom = "10px";
         textArea.placeholder = 'FROM "folder" AND #tag';
         textArea.value = rule.query;
+        const statusEl = queryContainer.createDiv("query-status");
+        statusEl.style.fontSize = "0.8em";
+        statusEl.style.marginBottom = "10px";
+        this.validateQueryInput(textArea, statusEl, rule.query);
         textArea.oninput = (e) => {
-          rule.query = e.target.value;
+          const val = e.target.value;
+          rule.query = val;
           this.onUpdate(this.config);
+          this.validateQueryInput(textArea, statusEl, val);
         };
       } else {
         ruleDiv.createEl("p", { text: "Condition: Matches Trigger Scope (Inherited)", cls: "text-muted" });
