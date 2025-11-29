@@ -192,7 +192,7 @@ var init_TriggerService = __esm({
         }
         (_a = this.listeners.get(id)) == null ? void 0 : _a.push(callback);
         this.activeTriggers.set(id, trigger);
-        if (trigger.type === "interval" || trigger.type === "schedule") {
+        if (trigger.type === "schedule") {
           this.registerTimeEvent(id, trigger);
         } else if (trigger.type === "manual") {
           this.registerManualCommand(id, trigger);
@@ -270,14 +270,33 @@ var init_TriggerService = __esm({
         });
       }
       registerTimeEvent(id, trigger) {
-        if (trigger.type === "interval" && trigger.interval) {
-          const intervalMs = trigger.interval * 60 * 1e3;
-          const intervalId = window.setInterval(() => {
-            const files = this.app.vault.getMarkdownFiles();
-            files.forEach((file) => this.fireTrigger(id, file));
-          }, intervalMs);
-          this.intervals.push(intervalId);
-        } else if (trigger.type === "schedule" && trigger.time) {
+        if (!this.intervals.length) {
+          this.startScheduler();
+        }
+      }
+      startScheduler() {
+        const intervalId = window.setInterval(() => {
+          this.checkSchedules();
+        }, 60 * 1e3);
+        this.intervals.push(intervalId);
+      }
+      checkSchedules() {
+        const now = new Date();
+        const currentDay = now.getDay();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTime = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`;
+        for (const [id, trigger] of this.activeTriggers.entries()) {
+          if (trigger.type === "schedule" && trigger.time) {
+            if (trigger.days && trigger.days.length > 0) {
+              if (!trigger.days.includes(currentDay))
+                continue;
+            }
+            if (trigger.time === currentTime) {
+              const files = this.app.vault.getMarkdownFiles();
+              files.forEach((file) => this.fireTrigger(id, file));
+            }
+          }
         }
       }
       registerManualCommand(id, trigger) {
@@ -308,6 +327,8 @@ var init_TriggerService = __esm({
         this.eventRefs = [];
         this.listeners.clear();
         this.activeTriggers.clear();
+        this.intervals.forEach((id) => window.clearInterval(id));
+        this.intervals = [];
       }
     };
   }
@@ -733,11 +754,9 @@ var RulesTab = class {
     triggerDiv.style.padding = "10px";
     triggerDiv.style.backgroundColor = "var(--background-primary-alt)";
     triggerDiv.style.borderRadius = "4px";
-    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("interval", "An interval occurs").addOption("schedule", "A date/time passes").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
+    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
       ruleset.trigger.type = value;
-      if (ruleset.trigger.type === "interval")
-        ruleset.trigger.interval = 5;
-      else if (ruleset.trigger.type === "manual")
+      if (ruleset.trigger.type === "manual")
         ruleset.trigger.commandName = "Run My Rule";
       this.onUpdate(this.config);
       this.display();
@@ -750,16 +769,33 @@ var RulesTab = class {
           this.onUpdate(this.config);
         };
       });
-    } else if (ruleset.trigger.type === "interval") {
-      new import_obsidian5.Setting(triggerDiv).setName("Interval (Minutes)").addText((text) => text.setValue(String(ruleset.trigger.interval || 5)).onChange((value) => {
-        ruleset.trigger.interval = Number(value);
-        this.onUpdate(this.config);
-      }));
     } else if (ruleset.trigger.type === "schedule") {
-      new import_obsidian5.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run daily at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
+      new import_obsidian5.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
         ruleset.trigger.time = value;
         this.onUpdate(this.config);
       }));
+      const daysDiv = triggerDiv.createDiv("days-of-week");
+      daysDiv.style.marginTop = "10px";
+      daysDiv.createEl("span", { text: "Days: " });
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      days.forEach((day, index2) => {
+        const label = daysDiv.createEl("label");
+        label.style.marginRight = "10px";
+        const checkbox = label.createEl("input", { type: "checkbox" });
+        checkbox.checked = ruleset.trigger.days ? ruleset.trigger.days.includes(index2) : true;
+        checkbox.onchange = () => {
+          if (!ruleset.trigger.days)
+            ruleset.trigger.days = [0, 1, 2, 3, 4, 5, 6];
+          if (checkbox.checked) {
+            if (!ruleset.trigger.days.includes(index2))
+              ruleset.trigger.days.push(index2);
+          } else {
+            ruleset.trigger.days = ruleset.trigger.days.filter((d) => d !== index2);
+          }
+          this.onUpdate(this.config);
+        };
+        label.createEl("span", { text: day });
+      });
     } else if (ruleset.trigger.type === "manual") {
       new import_obsidian5.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
         ruleset.trigger.commandName = value;
