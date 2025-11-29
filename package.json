@@ -1,6 +1,6 @@
 {
 	"name": "curator",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Automatically organize your notes with powerful rule-based automation. Move, rename, and template notes based on their properties, tags, and content.",
 	"main": "main.js",
 	"scripts": {
