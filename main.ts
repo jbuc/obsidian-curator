@@ -39,24 +39,14 @@ export default class AutoNoteMover extends Plugin {
 
 		// Initial Config Update
 		this.rulesetService.updateConfig(this.settings);
-
-		// Trigger Startup Event
-		this.triggerService.handleSystemEvent('startup');
 	}
 
 	onunload() {
-
+		this.triggerService.unload();
 	}
 
 	async loadSettings() {
 		const DEFAULT_SETTINGS: CuratorConfig = {
-			groups: [],
-			triggers: [
-				{ id: 'default-trigger-modify', name: 'On File Modified', type: 'obsidian_event', event: 'modify' },
-				{ id: 'default-trigger-create', name: 'On File Created', type: 'obsidian_event', event: 'create' },
-				{ id: 'default-trigger-startup', name: 'On Obsidian Startup', type: 'system_event', event: 'startup' }
-			],
-			actions: [],
 			rulesets: []
 		};
 

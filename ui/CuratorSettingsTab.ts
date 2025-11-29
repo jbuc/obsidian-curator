@@ -1,12 +1,11 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import AutoNoteMover from '../main';
 import { RulesTab } from './components/RulesTab';
-import { DefinitionsTab } from './components/DefinitionsTab';
 import { LogbookTab } from './components/LogbookTab';
 
 export class CuratorSettingsTab extends PluginSettingTab {
     plugin: AutoNoteMover;
-    activeTab: 'rules' | 'definitions' | 'logbook' = 'rules';
+    activeTab: 'rules' | 'logbook' = 'rules';
 
     constructor(app: App, plugin: AutoNoteMover) {
         super(app, plugin);
@@ -25,18 +24,12 @@ export class CuratorSettingsTab extends PluginSettingTab {
         navContainer.style.marginBottom = '20px';
 
         this.createNavButton(navContainer, 'Rules', 'rules');
-        this.createNavButton(navContainer, 'Definitions', 'definitions');
         this.createNavButton(navContainer, 'Logbook', 'logbook');
 
         const contentContainer = containerEl.createDiv('curator-content');
 
         if (this.activeTab === 'rules') {
             new RulesTab(this.app, contentContainer, this.plugin.settings, (newConfig) => {
-                this.plugin.settings = newConfig;
-                this.plugin.saveSettings();
-            }).display();
-        } else if (this.activeTab === 'definitions') {
-            new DefinitionsTab(this.app, contentContainer, this.plugin.settings, (newConfig) => {
                 this.plugin.settings = newConfig;
                 this.plugin.saveSettings();
             }).display();
@@ -47,7 +40,7 @@ export class CuratorSettingsTab extends PluginSettingTab {
         }
     }
 
-    private createNavButton(container: HTMLElement, text: string, tab: 'rules' | 'definitions' | 'logbook') {
+    private createNavButton(container: HTMLElement, text: string, tab: 'rules' | 'logbook') {
         const btn = container.createEl('button', { text });
         if (this.activeTab === tab) {
             btn.addClass('mod-cta');

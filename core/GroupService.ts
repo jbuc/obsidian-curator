@@ -1,5 +1,4 @@
 import { App, TFile } from 'obsidian';
-import { Group } from './types';
 
 export class GroupService {
     private app: App;
@@ -9,11 +8,38 @@ export class GroupService {
     }
 
     /**
-     * Checks if a file belongs to a group (matches the Dataview query).
+     * Validates a Dataview query.
      */
-    public isInGroup(file: TFile, group: Group): boolean {
-        if (!group.query || group.query.trim() === '') {
-            return true; // Empty query matches everything? Or nothing? Let's say everything for "no filter".
+    public async validateQuery(query: string): Promise<{ valid: boolean; error?: string }> {
+        if (!query || query.trim() === '') {
+            return { valid: true }; // Empty query is valid (matches all)
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dataviewAPI = (this.app as any).plugins?.plugins?.dataview?.api;
+
+        if (!dataviewAPI) {
+            return { valid: false, error: 'Dataview plugin not found' };
+        }
+
+        try {
+            // Try to parse the query using Dataview's internal API if possible, 
+            // or just run a lightweight query.
+            // Since we can't easily access the parser, we'll try to execute it.
+            // We use `pages` which is fast.
+            dataviewAPI.pages(query);
+            return { valid: true };
+        } catch (e) {
+            return { valid: false, error: e.message };
+        }
+    }
+
+    /**
+     * Checks if a file matches a Dataview query.
+     */
+    public matchesQuery(file: TFile, query: string): boolean {
+        if (!query || query.trim() === '') {
+            return true;
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,21 +51,10 @@ export class GroupService {
         }
 
         try {
-            // We use dataview.pages(query) to get all matching pages.
-            // Then we check if our file is in that list.
-            // This might be inefficient for large vaults if run frequently.
-            // Optimization: check if we can filter by path in the query itself?
-            // But the query is user-defined.
+            // Optimization: In a real implementation, we might want to cache query results
+            // if we are checking many files against the same query.
+            const pages = dataviewAPI.pages(query);
 
-            // Alternative: Use `dataviewAPI.page(file.path)` and evaluate the query against it?
-            // Dataview doesn't expose a "matches(query, page)" function easily.
-
-            // Let's stick to `pages(query)` and check for path existence.
-            // `pages` returns a DataArray of page objects.
-            const pages = dataviewAPI.pages(group.query);
-
-            // Check if any page in the result has the same path as our file
-            // pages is an iterable/array-like
             for (const page of pages) {
                 if (page.file && page.file.path === file.path) {
                     return true;
@@ -49,13 +64,40 @@ export class GroupService {
             return false;
 
         } catch (error) {
-            console.error(`[Curator] Error executing Dataview query for group ${group.name}:`, error);
+            console.error(`[Curator] Error executing Dataview query: ${query}`, error);
             return false;
         }
     }
 
-    // Legacy method stub to prevent build errors during refactor if called elsewhere
-    public updateIdentifiers(identifiers: any[]) {
-        // No-op
+    /**
+     * Returns all files that match a query.
+     */
+    public getMatchingFiles(query: string): TFile[] {
+        if (!query || query.trim() === '') {
+            return this.app.vault.getFiles();
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dataviewAPI = (this.app as any).plugins?.plugins?.dataview?.api;
+
+        if (!dataviewAPI) {
+            return [];
+        }
+
+        try {
+            const pages = dataviewAPI.pages(query);
+            const files: TFile[] = [];
+
+            for (const page of pages) {
+                const file = this.app.vault.getAbstractFileByPath(page.file.path);
+                if (file instanceof TFile) {
+                    files.push(file);
+                }
+            }
+            return files;
+        } catch (error) {
+            console.error(`[Curator] Error executing Dataview query: ${query}`, error);
+            return [];
+        }
     }
 }
