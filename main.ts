@@ -50,7 +50,21 @@ export default class AutoNoteMover extends Plugin {
 			rulesets: []
 		};
 
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loadedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+
+		// Migration/Sanitization: Ensure all rulesets have a valid trigger object
+		// This prevents crashes if the user has settings from a previous version (v1.0.0 or older)
+		if (this.settings.rulesets) {
+			this.settings.rulesets = this.settings.rulesets.filter(r => {
+				// Check if trigger is missing or is not an object (old version used triggerId string)
+				if (!r.trigger || typeof r.trigger !== 'object') {
+					console.warn(`[Curator] Dropping invalid/legacy ruleset "${r.name}" (missing trigger object).`);
+					return false;
+				}
+				return true;
+			});
+		}
 	}
 
 	async saveSettings() {

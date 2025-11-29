@@ -1334,7 +1334,17 @@ var AutoNoteMover = class extends import_obsidian9.Plugin {
       const DEFAULT_SETTINGS = {
         rulesets: []
       };
-      this.settings = Object.assign({}, DEFAULT_SETTINGS, yield this.loadData());
+      const loadedData = yield this.loadData();
+      this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+      if (this.settings.rulesets) {
+        this.settings.rulesets = this.settings.rulesets.filter((r) => {
+          if (!r.trigger || typeof r.trigger !== "object") {
+            console.warn(`[Curator] Dropping invalid/legacy ruleset "${r.name}" (missing trigger object).`);
+            return false;
+          }
+          return true;
+        });
+      }
     });
   }
   saveSettings() {
