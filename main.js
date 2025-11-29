@@ -767,7 +767,7 @@ var RulesTab = class {
       folderInput.value = ruleset.trigger.folder || "";
       folderInput.placeholder = "folder/path";
       new FolderSuggest(this.app, folderInput);
-      folderInput.onchange = () => {
+      folderInput.oninput = () => {
         ruleset.trigger.folder = folderInput.value;
         this.onUpdate(this.config);
       };
@@ -868,7 +868,7 @@ var RulesTab = class {
       textArea.style.marginBottom = "10px";
       textArea.placeholder = 'FROM "folder" AND #tag';
       textArea.value = rule.query;
-      textArea.onchange = (e) => {
+      textArea.oninput = (e) => {
         rule.query = e.target.value;
         this.onUpdate(this.config);
       };
@@ -905,7 +905,7 @@ var RulesTab = class {
           folderInput.placeholder = "Folder Path";
           folderInput.value = action.config.folder || "";
           new FolderSuggest(this.app, folderInput);
-          folderInput.onchange = () => {
+          folderInput.oninput = () => {
             action.config.folder = folderInput.value;
             this.onUpdate(this.config);
           };
@@ -913,7 +913,7 @@ var RulesTab = class {
           const tagInput = actionDiv.createEl("input", { type: "text" });
           tagInput.placeholder = "#tag";
           tagInput.value = action.config.tag || "";
-          tagInput.onchange = () => {
+          tagInput.oninput = () => {
             action.config.tag = tagInput.value;
             this.onUpdate(this.config);
           };
@@ -931,14 +931,14 @@ var RulesTab = class {
           const keyInput = actionDiv.createEl("input", { type: "text" });
           keyInput.placeholder = "Property Key";
           keyInput.value = action.config.key || "";
-          keyInput.onchange = () => {
+          keyInput.oninput = () => {
             action.config.key = keyInput.value;
             this.onUpdate(this.config);
           };
           const valInput = actionDiv.createEl("input", { type: "text" });
           valInput.placeholder = "Value";
           valInput.value = action.config.value || "";
-          valInput.onchange = () => {
+          valInput.oninput = () => {
             action.config.value = valInput.value;
             this.onUpdate(this.config);
           };
@@ -946,14 +946,14 @@ var RulesTab = class {
           const prefixInput = actionDiv.createEl("input", { type: "text" });
           prefixInput.placeholder = "Prefix";
           prefixInput.value = action.config.prefix || "";
-          prefixInput.onchange = () => {
+          prefixInput.oninput = () => {
             action.config.prefix = prefixInput.value;
             this.onUpdate(this.config);
           };
           const suffixInput = actionDiv.createEl("input", { type: "text" });
           suffixInput.placeholder = "Suffix";
           suffixInput.value = action.config.suffix || "";
-          suffixInput.onchange = () => {
+          suffixInput.oninput = () => {
             action.config.suffix = suffixInput.value;
             this.onUpdate(this.config);
           };
