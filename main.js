@@ -173,6 +173,7 @@ var init_TriggerService = __esm({
         this.eventRefs = [];
         this.activeTriggers = new Map();
         this.intervals = [];
+        this.lastActiveFile = null;
         this.app = app;
       }
       registerTrigger(id, trigger, callback) {
@@ -214,7 +215,24 @@ var init_TriggerService = __esm({
           if (file instanceof import_obsidian2.TFile)
             this.handleEvent("delete", file);
         }));
+        this.app.workspace.onLayoutReady(() => {
+          this.lastActiveFile = this.app.workspace.getActiveFile();
+        });
+        this.eventRefs.push(this.app.workspace.on("active-leaf-change", () => {
+          const currentFile = this.app.workspace.getActiveFile();
+          if (this.lastActiveFile && this.lastActiveFile !== currentFile) {
+            this.handleEditorEvent("active_leave", this.lastActiveFile);
+          }
+          this.lastActiveFile = currentFile;
+        }));
         this.startSyncPolling();
+      }
+      handleEditorEvent(eventType, file) {
+        for (const [id, trigger] of this.activeTriggers.entries()) {
+          if (trigger.type === "editor_event" && trigger.event === eventType) {
+            this.fireTrigger(id, file);
+          }
+        }
       }
       startSyncPolling() {
         var _a, _b;
@@ -749,7 +767,7 @@ var RulesTab = class {
     triggerDiv.style.padding = "10px";
     triggerDiv.style.backgroundColor = "var(--background-primary-alt)";
     triggerDiv.style.borderRadius = "4px";
-    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("time_event", "Time/Schedule").addOption("manual", "Manual Command").setValue(ruleset.trigger.type).onChange((value) => {
+    new import_obsidian5.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("obsidian_event", "Obsidian Event").addOption("system_event", "System Event").addOption("folder_event", "Folder Event").addOption("time_event", "Time/Schedule").addOption("manual", "Manual Command").addOption("editor_event", "Editor Event").setValue(ruleset.trigger.type).onChange((value) => {
       ruleset.trigger.type = value;
       if (ruleset.trigger.type === "system_event")
         ruleset.trigger.event = "startup";
@@ -761,6 +779,8 @@ var RulesTab = class {
         ruleset.trigger.interval = 5;
       else if (ruleset.trigger.type === "manual")
         ruleset.trigger.commandName = "Run My Rule";
+      else if (ruleset.trigger.type === "editor_event")
+        ruleset.trigger.event = "active_leave";
       this.onUpdate(this.config);
       this.display();
     }));
@@ -831,6 +851,11 @@ var RulesTab = class {
     } else if (ruleset.trigger.type === "manual") {
       new import_obsidian5.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
         ruleset.trigger.commandName = value;
+        this.onUpdate(this.config);
+      }));
+    } else if (ruleset.trigger.type === "editor_event") {
+      new import_obsidian5.Setting(triggerDiv).setName("Event").addDropdown((dropdown) => dropdown.addOption("active_leave", "Leaving a File (Active File Changes)").setValue(ruleset.trigger.event || "active_leave").onChange((value) => {
+        ruleset.trigger.event = value;
         this.onUpdate(this.config);
       }));
     }
