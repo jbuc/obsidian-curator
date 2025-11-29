@@ -1,0 +1,180 @@
+/* Curator Plugin Styles */
+
+/* Global Controls */
+.curator-global-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-content: flex-end;
+}
+
+/* Ruleset Container */
+.curator-ruleset-container {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background-color: var(--background-primary);
+    transition: box-shadow 0.2s ease;
+}
+
+.curator-ruleset-container:hover {
+    box-shadow: 0 2px 8px var(--background-modifier-box-shadow);
+}
+
+/* Ruleset Header */
+.curator-ruleset-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--background-secondary);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.curator-ruleset-header.collapsed {
+    border-bottom: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.curator-ruleset-name-input {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.curator-ruleset-name-input input {
+    width: 100%;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+}
+
+.curator-ruleset-name-input input:focus {
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--interactive-accent);
+}
+
+.curator-ruleset-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Ruleset Body */
+.curator-ruleset-body {
+    padding: 15px;
+}
+
+/* Trigger Section */
+.curator-trigger-config {
+    background-color: var(--background-secondary-alt);
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.curator-section-title {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Rules List */
+.curator-rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Rule Item */
+.curator-rule-item {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: var(--background-primary-alt);
+}
+
+.curator-rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--background-secondary);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    cursor: pointer;
+}
+
+.curator-rule-title {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.curator-rule-body {
+    padding: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Actions */
+.curator-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.curator-action-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    flex-wrap: wrap;
+}
+
+.curator-action-config {
+    display: flex;
+    flex-grow: 1;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.curator-action-config input,
+.curator-action-config select {
+    flex-grow: 1;
+    min-width: 120px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .curator-ruleset-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .curator-ruleset-name-input {
+        width: 100%;
+        margin-right: 0;
+        order: 1;
+    }
+    
+    .curator-ruleset-controls {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+    }
+
+    .curator-action-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .curator-action-config {
+        flex-direction: column;
+    }
+}

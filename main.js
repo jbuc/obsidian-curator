@@ -853,10 +853,7 @@ var RulesTab = class {
     this.containerEl.empty();
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
-    const globalControls = this.containerEl.createDiv("global-controls");
-    globalControls.style.display = "flex";
-    globalControls.style.gap = "10px";
-    globalControls.style.marginBottom = "10px";
+    const globalControls = this.containerEl.createDiv("curator-global-controls");
     new import_obsidian6.Setting(globalControls).addButton((btn) => btn.setButtonText("Expand All").onClick(() => {
       this.collapsedItems.clear();
       this.display();
@@ -891,87 +888,91 @@ var RulesTab = class {
     this.display();
   }
   renderRuleset(container, ruleset, index) {
-    const rulesetContainer = container.createDiv("ruleset-container");
-    rulesetContainer.style.border = "1px solid var(--background-modifier-border)";
-    rulesetContainer.style.padding = "10px";
-    rulesetContainer.style.marginBottom = "10px";
-    rulesetContainer.style.borderRadius = "4px";
-    const header = new import_obsidian6.Setting(rulesetContainer).setName(ruleset.name).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
-      ruleset.enabled = value;
+    const rulesetContainer = container.createDiv("curator-ruleset-container");
+    const header = rulesetContainer.createDiv("curator-ruleset-header");
+    if (this.collapsedItems.has(ruleset.id)) {
+      header.classList.add("collapsed");
+    }
+    const nameInputDiv = header.createDiv("curator-ruleset-name-input");
+    const nameInput = nameInputDiv.createEl("input", { type: "text", value: ruleset.name });
+    nameInput.placeholder = "Ruleset Name";
+    nameInput.oninput = () => {
+      ruleset.name = nameInput.value;
       this.onUpdate(this.config);
-    })).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(index === 0).onClick(() => {
-      if (index > 0) {
-        const temp = this.config.rulesets[index - 1];
-        this.config.rulesets[index - 1] = ruleset;
-        this.config.rulesets[index] = temp;
-        this.onUpdate(this.config);
-        this.display();
-      }
-    })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(index === this.config.rulesets.length - 1).onClick(() => {
-      if (index < this.config.rulesets.length - 1) {
-        const temp = this.config.rulesets[index + 1];
-        this.config.rulesets[index + 1] = ruleset;
-        this.config.rulesets[index] = temp;
-        this.onUpdate(this.config);
-        this.display();
-      }
-    })).addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(ruleset.id) ? "Expand" : "Collapse").onClick(() => {
-      if (this.collapsedItems.has(ruleset.id)) {
-        this.collapsedItems.delete(ruleset.id);
-      } else {
-        this.collapsedItems.add(ruleset.id);
-      }
-      this.display();
-    })).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Ruleset").onClick(() => {
-      this.config.rulesets.splice(index, 1);
+    };
+    nameInput.onclick = (e) => e.stopPropagation();
+    const controls = header.createDiv("curator-ruleset-controls");
+    const toggleLabel = controls.createEl("label");
+    toggleLabel.className = "checkbox-container";
+    const toggle = toggleLabel.createEl("input", { type: "checkbox" });
+    toggle.checked = ruleset.enabled;
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      ruleset.enabled = toggle.checked;
       this.onUpdate(this.config);
-      this.display();
-    }));
-    header.settingEl.empty();
-    header.addText((text) => text.setValue(ruleset.name).setPlaceholder("Ruleset Name").onChange((value) => {
-      ruleset.name = value;
-      this.onUpdate(this.config);
-    }));
-    header.addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
-      ruleset.enabled = value;
-      this.onUpdate(this.config);
-    }));
-    header.addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(index === 0).onClick(() => {
+    };
+    toggleLabel.createEl("span", { cls: "checkbox-switch" });
+    toggleLabel.title = "Enable/Disable Ruleset";
+    const moveUpBtn = controls.createEl("button", { cls: "clickable-icon" });
+    (0, import_obsidian6.setIcon)(moveUpBtn, "arrow-up");
+    moveUpBtn.onclick = (e) => {
+      e.stopPropagation();
       if (index > 0) {
         [this.config.rulesets[index - 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index - 1]];
         this.onUpdate(this.config);
         this.display();
       }
-    }));
-    header.addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(index === this.config.rulesets.length - 1).onClick(() => {
+    };
+    if (index === 0)
+      moveUpBtn.disabled = true;
+    const moveDownBtn = controls.createEl("button", { cls: "clickable-icon" });
+    (0, import_obsidian6.setIcon)(moveDownBtn, "arrow-down");
+    moveDownBtn.onclick = (e) => {
+      e.stopPropagation();
       if (index < this.config.rulesets.length - 1) {
         [this.config.rulesets[index + 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index + 1]];
         this.onUpdate(this.config);
         this.display();
       }
-    }));
-    header.addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(ruleset.id) ? "Expand" : "Collapse").onClick(() => {
+    };
+    if (index === this.config.rulesets.length - 1)
+      moveDownBtn.disabled = true;
+    const collapseBtn = controls.createEl("button", { cls: "clickable-icon" });
+    (0, import_obsidian6.setIcon)(collapseBtn, this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down");
+    collapseBtn.onclick = (e) => {
+      e.stopPropagation();
       if (this.collapsedItems.has(ruleset.id)) {
         this.collapsedItems.delete(ruleset.id);
       } else {
         this.collapsedItems.add(ruleset.id);
       }
       this.display();
-    }));
-    header.addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Ruleset").onClick(() => {
-      this.config.rulesets.splice(index, 1);
-      this.onUpdate(this.config);
+    };
+    const deleteBtn = controls.createEl("button", { cls: "clickable-icon" });
+    (0, import_obsidian6.setIcon)(deleteBtn, "trash");
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Are you sure you want to delete ruleset "${ruleset.name}"?`)) {
+        this.config.rulesets.splice(index, 1);
+        this.onUpdate(this.config);
+        this.display();
+      }
+    };
+    header.onclick = () => {
+      if (this.collapsedItems.has(ruleset.id)) {
+        this.collapsedItems.delete(ruleset.id);
+      } else {
+        this.collapsedItems.add(ruleset.id);
+      }
       this.display();
-    }));
+    };
     if (this.collapsedItems.has(ruleset.id)) {
       return;
     }
-    const triggerDiv = rulesetContainer.createDiv("trigger-config");
-    triggerDiv.style.marginBottom = "10px";
-    triggerDiv.style.padding = "10px";
-    triggerDiv.style.backgroundColor = "var(--background-primary-alt)";
-    triggerDiv.style.borderRadius = "4px";
-    new import_obsidian6.Setting(triggerDiv).setName("Trigger Type").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
+    const body = rulesetContainer.createDiv("curator-ruleset-body");
+    const triggerDiv = body.createDiv("curator-trigger-config");
+    triggerDiv.createDiv("curator-section-title").setText("Trigger");
+    new import_obsidian6.Setting(triggerDiv).setName("When...").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
       ruleset.trigger.type = value;
       if (ruleset.trigger.type === "manual")
         ruleset.trigger.commandName = "Run My Rule";
@@ -999,7 +1000,7 @@ var RulesTab = class {
         };
       });
     } else if (ruleset.trigger.type === "schedule") {
-      new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
+      new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
         ruleset.trigger.time = value;
         this.onUpdate(this.config);
       }));
@@ -1026,12 +1027,16 @@ var RulesTab = class {
         label.createEl("span", { text: day });
       });
     } else if (ruleset.trigger.type === "manual") {
-      new import_obsidian6.Setting(triggerDiv).setName("Command Name").setDesc("Name of the command in Command Palette").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
+      new import_obsidian6.Setting(triggerDiv).setName("Command Name").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
         ruleset.trigger.commandName = value;
         this.onUpdate(this.config);
       }));
     }
-    new import_obsidian6.Setting(rulesetContainer).addButton((btn) => btn.setButtonText("Test Run (Dry Run)").setTooltip("Simulate this ruleset on all files to see what would happen.").onClick(() => __async(this, null, function* () {
+    const testBtnDiv = body.createDiv();
+    testBtnDiv.style.textAlign = "right";
+    testBtnDiv.style.marginBottom = "15px";
+    const testBtn = testBtnDiv.createEl("button", { text: "Test Run (Dry Run)" });
+    testBtn.onclick = () => __async(this, null, function* () {
       const { RulesetService: RulesetService2 } = yield Promise.resolve().then(() => (init_RulesetService(), RulesetService_exports));
       const { GroupService: GroupService2 } = yield Promise.resolve().then(() => (init_GroupService(), GroupService_exports));
       const { TriggerService: TriggerService2 } = yield Promise.resolve().then(() => (init_TriggerService(), TriggerService_exports));
@@ -1063,63 +1068,76 @@ var RulesTab = class {
         });
       }
       modal.open();
-    })));
-    const rulesContainer = rulesetContainer.createDiv("rules-container");
-    rulesContainer.style.marginTop = "10px";
-    rulesContainer.style.paddingLeft = "10px";
-    rulesContainer.style.borderLeft = "2px solid var(--background-modifier-border)";
-    rulesContainer.createEl("h4", { text: "Rules (Processed in order)" });
+    });
+    const rulesList = body.createDiv("curator-rules-list");
+    rulesList.createDiv("curator-section-title").setText("Rules");
     ruleset.rules.forEach((rule, ruleIndex) => {
-      var _a;
       if (!rule.id)
         rule.id = crypto.randomUUID();
-      const ruleDiv = rulesContainer.createDiv("rule-item");
-      ruleDiv.style.marginBottom = "10px";
-      ruleDiv.style.padding = "10px";
-      ruleDiv.style.backgroundColor = "var(--background-secondary)";
-      ruleDiv.style.borderRadius = "4px";
-      const ruleHeader = ruleDiv.createDiv("rule-header");
-      ruleHeader.style.display = "flex";
-      ruleHeader.style.justifyContent = "space-between";
-      ruleHeader.style.alignItems = "center";
-      ruleHeader.style.marginBottom = "10px";
-      ruleHeader.createEl("span", { text: `Rule ${ruleIndex + 1}`, cls: "rule-title" });
-      (_a = ruleHeader.querySelector(".rule-title")) == null ? void 0 : _a.setAttribute("style", "font-weight: bold;");
-      const ruleControls = ruleHeader.createDiv("rule-controls");
-      ruleControls.style.display = "flex";
-      ruleControls.style.gap = "5px";
-      new import_obsidian6.Setting(ruleControls).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(ruleIndex === 0).onClick(() => {
+      const ruleItem = rulesList.createDiv("curator-rule-item");
+      const ruleHeader = ruleItem.createDiv("curator-rule-header");
+      ruleHeader.createSpan({ text: `Rule ${ruleIndex + 1}`, cls: "curator-rule-title" });
+      const ruleControls = ruleHeader.createDiv("curator-controls");
+      const rMoveUp = ruleControls.createEl("button", { cls: "clickable-icon" });
+      (0, import_obsidian6.setIcon)(rMoveUp, "arrow-up");
+      rMoveUp.onclick = (e) => {
+        e.stopPropagation();
         if (ruleIndex > 0) {
           [ruleset.rules[ruleIndex - 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex - 1]];
           this.onUpdate(this.config);
           this.display();
         }
-      })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(ruleIndex === ruleset.rules.length - 1).onClick(() => {
+      };
+      if (ruleIndex === 0)
+        rMoveUp.disabled = true;
+      const rMoveDown = ruleControls.createEl("button", { cls: "clickable-icon" });
+      (0, import_obsidian6.setIcon)(rMoveDown, "arrow-down");
+      rMoveDown.onclick = (e) => {
+        e.stopPropagation();
         if (ruleIndex < ruleset.rules.length - 1) {
           [ruleset.rules[ruleIndex + 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex + 1]];
           this.onUpdate(this.config);
           this.display();
         }
-      })).addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(rule.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(rule.id) ? "Expand" : "Collapse").onClick(() => {
+      };
+      if (ruleIndex === ruleset.rules.length - 1)
+        rMoveDown.disabled = true;
+      const rCollapse = ruleControls.createEl("button", { cls: "clickable-icon" });
+      (0, import_obsidian6.setIcon)(rCollapse, this.collapsedItems.has(rule.id) ? "chevron-right" : "chevron-down");
+      rCollapse.onclick = (e) => {
+        e.stopPropagation();
         if (this.collapsedItems.has(rule.id)) {
           this.collapsedItems.delete(rule.id);
         } else {
           this.collapsedItems.add(rule.id);
         }
         this.display();
-      })).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+      };
+      const rDelete = ruleControls.createEl("button", { cls: "clickable-icon" });
+      (0, import_obsidian6.setIcon)(rDelete, "trash");
+      rDelete.onclick = (e) => {
+        e.stopPropagation();
         ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
         this.display();
-      }));
+      };
+      ruleHeader.onclick = () => {
+        if (this.collapsedItems.has(rule.id)) {
+          this.collapsedItems.delete(rule.id);
+        } else {
+          this.collapsedItems.add(rule.id);
+        }
+        this.display();
+      };
       if (this.collapsedItems.has(rule.id)) {
         return;
       }
-      const querySetting = new import_obsidian6.Setting(ruleDiv);
+      const ruleBody = ruleItem.createDiv("curator-rule-body");
+      const querySetting = new import_obsidian6.Setting(ruleBody);
       querySetting.setName("Condition (Dataview Query)");
       querySetting.setDesc("Leave empty to match all files.");
       if (ruleset.trigger.type === "change_from" || ruleset.trigger.type === "change_to") {
-        querySetting.addToggle((toggle) => toggle.setValue(rule.useTriggerQuery || false).setTooltip("Use the Trigger's query for this rule").onChange((value) => {
+        querySetting.addToggle((toggle2) => toggle2.setValue(rule.useTriggerQuery || false).setTooltip("Use the Trigger's query for this rule").onChange((value) => {
           rule.useTriggerQuery = value;
           this.onUpdate(this.config);
           this.display();
@@ -1133,8 +1151,7 @@ var RulesTab = class {
             this.display();
           }).open();
         }));
-        querySetting.controlEl.style.width = "100%";
-        const queryContainer = ruleDiv.createDiv();
+        const queryContainer = ruleBody.createDiv();
         const textArea = queryContainer.createEl("textarea");
         textArea.style.width = "100%";
         textArea.style.minHeight = "60px";
@@ -1152,40 +1169,39 @@ var RulesTab = class {
           this.validateQueryInput(textArea, statusEl, val);
         };
       } else {
-        ruleDiv.createEl("p", { text: "Condition: Matches Trigger Scope (Inherited)", cls: "text-muted" });
-        if (rule.query) {
+        ruleBody.createEl("p", { text: "Condition: Matches Trigger Scope (Inherited)", cls: "text-muted" });
+        if (rule.query)
           rule.query = "";
-        }
       }
-      const actionsDiv = ruleDiv.createDiv("rule-actions");
-      actionsDiv.createEl("h5", { text: "Actions" });
+      const actionsDiv = ruleBody.createDiv("curator-action-list");
+      actionsDiv.createDiv("curator-section-title").setText("Actions");
       rule.actions.forEach((action, actionIndex) => {
-        const actionDiv = actionsDiv.createDiv("action-item");
-        actionDiv.style.display = "flex";
-        actionDiv.style.gap = "10px";
-        actionDiv.style.alignItems = "center";
-        actionDiv.style.marginBottom = "5px";
-        actionDiv.style.flexWrap = "wrap";
-        actionDiv.style.border = "1px solid var(--background-modifier-border-hover)";
-        actionDiv.style.padding = "5px";
-        actionDiv.style.borderRadius = "4px";
-        const actionControls = actionDiv.createDiv("action-controls");
-        actionControls.style.display = "flex";
-        actionControls.style.flexDirection = "column";
-        new import_obsidian6.Setting(actionControls).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(actionIndex === 0).onClick(() => {
+        const actionItem = actionsDiv.createDiv("curator-action-item");
+        const aControls = actionItem.createDiv("curator-controls");
+        const aMoveUp = aControls.createEl("button", { cls: "clickable-icon" });
+        (0, import_obsidian6.setIcon)(aMoveUp, "arrow-up");
+        aMoveUp.onclick = () => {
           if (actionIndex > 0) {
             [rule.actions[actionIndex - 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex - 1]];
             this.onUpdate(this.config);
             this.display();
           }
-        })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(actionIndex === rule.actions.length - 1).onClick(() => {
+        };
+        if (actionIndex === 0)
+          aMoveUp.disabled = true;
+        const aMoveDown = aControls.createEl("button", { cls: "clickable-icon" });
+        (0, import_obsidian6.setIcon)(aMoveDown, "arrow-down");
+        aMoveDown.onclick = () => {
           if (actionIndex < rule.actions.length - 1) {
             [rule.actions[actionIndex + 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex + 1]];
             this.onUpdate(this.config);
             this.display();
           }
-        }));
-        const typeSelect = actionDiv.createEl("select");
+        };
+        if (actionIndex === rule.actions.length - 1)
+          aMoveDown.disabled = true;
+        const configDiv = actionItem.createDiv("curator-action-config");
+        const typeSelect = configDiv.createEl("select");
         ["move", "rename", "tag", "update"].forEach((t) => {
           const opt = typeSelect.createEl("option", { text: t, value: t });
           if (t === action.type)
@@ -1205,7 +1221,7 @@ var RulesTab = class {
           this.display();
         };
         if (action.type === "move") {
-          const folderInput = actionDiv.createEl("input", { type: "text" });
+          const folderInput = configDiv.createEl("input", { type: "text" });
           folderInput.placeholder = "Folder Path";
           folderInput.value = action.config.folder || "";
           new FolderSuggest(this.app, folderInput);
@@ -1214,14 +1230,14 @@ var RulesTab = class {
             this.onUpdate(this.config);
           };
         } else if (action.type === "tag") {
-          const tagInput = actionDiv.createEl("input", { type: "text" });
+          const tagInput = configDiv.createEl("input", { type: "text" });
           tagInput.placeholder = "#tag";
           tagInput.value = action.config.tag || "";
           tagInput.oninput = () => {
             action.config.tag = tagInput.value;
             this.onUpdate(this.config);
           };
-          const opSelect = actionDiv.createEl("select");
+          const opSelect = configDiv.createEl("select");
           ["add", "remove"].forEach((op) => {
             const opt = opSelect.createEl("option", { text: op, value: op });
             if (op === action.config.operation)
@@ -1232,14 +1248,14 @@ var RulesTab = class {
             this.onUpdate(this.config);
           };
         } else if (action.type === "update") {
-          const keyInput = actionDiv.createEl("input", { type: "text" });
+          const keyInput = configDiv.createEl("input", { type: "text" });
           keyInput.placeholder = "Property Key";
           keyInput.value = action.config.key || "";
           keyInput.oninput = () => {
             action.config.key = keyInput.value;
             this.onUpdate(this.config);
           };
-          const valInput = actionDiv.createEl("input", { type: "text" });
+          const valInput = configDiv.createEl("input", { type: "text" });
           valInput.placeholder = "Value";
           valInput.value = action.config.value || "";
           valInput.oninput = () => {
@@ -1247,14 +1263,14 @@ var RulesTab = class {
             this.onUpdate(this.config);
           };
         } else if (action.type === "rename") {
-          const prefixInput = actionDiv.createEl("input", { type: "text" });
+          const prefixInput = configDiv.createEl("input", { type: "text" });
           prefixInput.placeholder = "Prefix";
           prefixInput.value = action.config.prefix || "";
           prefixInput.oninput = () => {
             action.config.prefix = prefixInput.value;
             this.onUpdate(this.config);
           };
-          const suffixInput = actionDiv.createEl("input", { type: "text" });
+          const suffixInput = configDiv.createEl("input", { type: "text" });
           suffixInput.placeholder = "Suffix";
           suffixInput.value = action.config.suffix || "";
           suffixInput.oninput = () => {
@@ -1262,21 +1278,25 @@ var RulesTab = class {
             this.onUpdate(this.config);
           };
         }
-        const deleteBtn = actionDiv.createEl("button", { text: "X" });
-        deleteBtn.onclick = () => {
+        const aDelete = actionItem.createEl("button", { cls: "clickable-icon" });
+        (0, import_obsidian6.setIcon)(aDelete, "trash");
+        aDelete.onclick = () => {
           rule.actions.splice(actionIndex, 1);
           this.onUpdate(this.config);
           this.display();
         };
       });
-      const addActionBtn = actionsDiv.createEl("button", { text: "+ Add Action" });
+      const addActionBtn = rulesList.createEl("button", { text: "+ Add Action" });
+      addActionBtn.style.marginTop = "5px";
       addActionBtn.onclick = () => {
         rule.actions.push({ type: "move", config: { folder: "" } });
         this.onUpdate(this.config);
         this.display();
       };
     });
-    new import_obsidian6.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
+    const addRuleBtn = body.createEl("button", { text: "+ Add Rule" });
+    addRuleBtn.style.marginTop = "10px";
+    addRuleBtn.onclick = () => {
       ruleset.rules.push({
         id: crypto.randomUUID(),
         query: "",
@@ -1284,7 +1304,7 @@ var RulesTab = class {
       });
       this.onUpdate(this.config);
       this.display();
-    }));
+    };
   }
 };
 
