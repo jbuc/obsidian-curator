@@ -792,6 +792,7 @@ var QueryHelperModal = class extends import_obsidian5.Modal {
 // ui/components/RulesTab.ts
 var RulesTab = class {
   constructor(app, containerEl, config, onUpdate) {
+    this.collapsedItems = new Set();
     this.app = app;
     this.containerEl = containerEl;
     this.config = config;
@@ -801,6 +802,23 @@ var RulesTab = class {
     this.containerEl.empty();
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
+    const globalControls = this.containerEl.createDiv("global-controls");
+    globalControls.style.display = "flex";
+    globalControls.style.gap = "10px";
+    globalControls.style.marginBottom = "10px";
+    new import_obsidian6.Setting(globalControls).addButton((btn) => btn.setButtonText("Expand All").onClick(() => {
+      this.collapsedItems.clear();
+      this.display();
+    })).addButton((btn) => btn.setButtonText("Collapse All").onClick(() => {
+      this.config.rulesets.forEach((r) => {
+        this.collapsedItems.add(r.id);
+        r.rules.forEach((rule) => {
+          if (rule.id)
+            this.collapsedItems.add(rule.id);
+        });
+      });
+      this.display();
+    }));
     new import_obsidian6.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
       this.addRuleset();
     }));
@@ -827,17 +845,76 @@ var RulesTab = class {
     rulesetContainer.style.padding = "10px";
     rulesetContainer.style.marginBottom = "10px";
     rulesetContainer.style.borderRadius = "4px";
-    new import_obsidian6.Setting(rulesetContainer).setName("Ruleset Name").addText((text) => text.setValue(ruleset.name).onChange((value) => {
-      ruleset.name = value;
-      this.onUpdate(this.config);
-    })).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
+    const header = new import_obsidian6.Setting(rulesetContainer).setName(ruleset.name).addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
       ruleset.enabled = value;
       this.onUpdate(this.config);
+    })).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(index === 0).onClick(() => {
+      if (index > 0) {
+        const temp = this.config.rulesets[index - 1];
+        this.config.rulesets[index - 1] = ruleset;
+        this.config.rulesets[index] = temp;
+        this.onUpdate(this.config);
+        this.display();
+      }
+    })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(index === this.config.rulesets.length - 1).onClick(() => {
+      if (index < this.config.rulesets.length - 1) {
+        const temp = this.config.rulesets[index + 1];
+        this.config.rulesets[index + 1] = ruleset;
+        this.config.rulesets[index] = temp;
+        this.onUpdate(this.config);
+        this.display();
+      }
+    })).addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(ruleset.id) ? "Expand" : "Collapse").onClick(() => {
+      if (this.collapsedItems.has(ruleset.id)) {
+        this.collapsedItems.delete(ruleset.id);
+      } else {
+        this.collapsedItems.add(ruleset.id);
+      }
+      this.display();
     })).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Ruleset").onClick(() => {
       this.config.rulesets.splice(index, 1);
       this.onUpdate(this.config);
       this.display();
     }));
+    header.settingEl.empty();
+    header.addText((text) => text.setValue(ruleset.name).setPlaceholder("Ruleset Name").onChange((value) => {
+      ruleset.name = value;
+      this.onUpdate(this.config);
+    }));
+    header.addToggle((toggle) => toggle.setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => {
+      ruleset.enabled = value;
+      this.onUpdate(this.config);
+    }));
+    header.addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(index === 0).onClick(() => {
+      if (index > 0) {
+        [this.config.rulesets[index - 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index - 1]];
+        this.onUpdate(this.config);
+        this.display();
+      }
+    }));
+    header.addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(index === this.config.rulesets.length - 1).onClick(() => {
+      if (index < this.config.rulesets.length - 1) {
+        [this.config.rulesets[index + 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index + 1]];
+        this.onUpdate(this.config);
+        this.display();
+      }
+    }));
+    header.addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(ruleset.id) ? "Expand" : "Collapse").onClick(() => {
+      if (this.collapsedItems.has(ruleset.id)) {
+        this.collapsedItems.delete(ruleset.id);
+      } else {
+        this.collapsedItems.add(ruleset.id);
+      }
+      this.display();
+    }));
+    header.addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Ruleset").onClick(() => {
+      this.config.rulesets.splice(index, 1);
+      this.onUpdate(this.config);
+      this.display();
+    }));
+    if (this.collapsedItems.has(ruleset.id)) {
+      return;
+    }
     const triggerDiv = rulesetContainer.createDiv("trigger-config");
     triggerDiv.style.marginBottom = "10px";
     triggerDiv.style.padding = "10px";
@@ -937,6 +1014,8 @@ var RulesTab = class {
     rulesContainer.createEl("h4", { text: "Rules (Processed in order)" });
     ruleset.rules.forEach((rule, ruleIndex) => {
       var _a;
+      if (!rule.id)
+        rule.id = crypto.randomUUID();
       const ruleDiv = rulesContainer.createDiv("rule-item");
       ruleDiv.style.marginBottom = "10px";
       ruleDiv.style.padding = "10px";
@@ -949,11 +1028,36 @@ var RulesTab = class {
       ruleHeader.style.marginBottom = "10px";
       ruleHeader.createEl("span", { text: `Rule ${ruleIndex + 1}`, cls: "rule-title" });
       (_a = ruleHeader.querySelector(".rule-title")) == null ? void 0 : _a.setAttribute("style", "font-weight: bold;");
-      new import_obsidian6.Setting(ruleHeader).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
+      const ruleControls = ruleHeader.createDiv("rule-controls");
+      ruleControls.style.display = "flex";
+      ruleControls.style.gap = "5px";
+      new import_obsidian6.Setting(ruleControls).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(ruleIndex === 0).onClick(() => {
+        if (ruleIndex > 0) {
+          [ruleset.rules[ruleIndex - 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex - 1]];
+          this.onUpdate(this.config);
+          this.display();
+        }
+      })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(ruleIndex === ruleset.rules.length - 1).onClick(() => {
+        if (ruleIndex < ruleset.rules.length - 1) {
+          [ruleset.rules[ruleIndex + 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex + 1]];
+          this.onUpdate(this.config);
+          this.display();
+        }
+      })).addExtraButton((btn) => btn.setIcon(this.collapsedItems.has(rule.id) ? "chevron-right" : "chevron-down").setTooltip(this.collapsedItems.has(rule.id) ? "Expand" : "Collapse").onClick(() => {
+        if (this.collapsedItems.has(rule.id)) {
+          this.collapsedItems.delete(rule.id);
+        } else {
+          this.collapsedItems.add(rule.id);
+        }
+        this.display();
+      })).addExtraButton((btn) => btn.setIcon("trash").setTooltip("Delete Rule").onClick(() => {
         ruleset.rules.splice(ruleIndex, 1);
         this.onUpdate(this.config);
         this.display();
       }));
+      if (this.collapsedItems.has(rule.id)) {
+        return;
+      }
       const querySetting = new import_obsidian6.Setting(ruleDiv);
       querySetting.setName("Condition (Dataview Query)");
       querySetting.setDesc("Leave empty to match all files.");
@@ -985,6 +1089,25 @@ var RulesTab = class {
         actionDiv.style.alignItems = "center";
         actionDiv.style.marginBottom = "5px";
         actionDiv.style.flexWrap = "wrap";
+        actionDiv.style.border = "1px solid var(--background-modifier-border-hover)";
+        actionDiv.style.padding = "5px";
+        actionDiv.style.borderRadius = "4px";
+        const actionControls = actionDiv.createDiv("action-controls");
+        actionControls.style.display = "flex";
+        actionControls.style.flexDirection = "column";
+        new import_obsidian6.Setting(actionControls).addExtraButton((btn) => btn.setIcon("arrow-up").setTooltip("Move Up").setDisabled(actionIndex === 0).onClick(() => {
+          if (actionIndex > 0) {
+            [rule.actions[actionIndex - 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex - 1]];
+            this.onUpdate(this.config);
+            this.display();
+          }
+        })).addExtraButton((btn) => btn.setIcon("arrow-down").setTooltip("Move Down").setDisabled(actionIndex === rule.actions.length - 1).onClick(() => {
+          if (actionIndex < rule.actions.length - 1) {
+            [rule.actions[actionIndex + 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex + 1]];
+            this.onUpdate(this.config);
+            this.display();
+          }
+        }));
         const typeSelect = actionDiv.createEl("select");
         ["move", "rename", "tag", "update"].forEach((t) => {
           const opt = typeSelect.createEl("option", { text: t, value: t });
@@ -1078,6 +1201,7 @@ var RulesTab = class {
     });
     new import_obsidian6.Setting(rulesContainer).addButton((btn) => btn.setButtonText("Add Rule").onClick(() => {
       ruleset.rules.push({
+        id: crypto.randomUUID(),
         query: "",
         actions: []
       });
