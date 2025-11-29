@@ -536,8 +536,12 @@ var init_RulesetService = __esm({
           }
           for (const rule of ruleset.rules) {
             let match = true;
-            if (rule.query && rule.query.trim() !== "") {
-              const tempGroup = { id: "temp", name: "Rule Query", query: rule.query };
+            let queryToUse = rule.query;
+            if (rule.useTriggerQuery) {
+              queryToUse = ruleset.trigger.query || "";
+            }
+            if (queryToUse && queryToUse.trim() !== "") {
+              const tempGroup = { id: "temp", name: "Rule Query", query: queryToUse };
               match = yield this.groupService.isInGroup(file, tempGroup);
             } else {
               match = true;
@@ -571,8 +575,12 @@ var init_RulesetService = __esm({
             const fileActions = [];
             for (const rule of ruleset.rules) {
               let match = true;
-              if (rule.query && rule.query.trim() !== "") {
-                const tempGroup = { id: "temp", name: "Rule Query", query: rule.query };
+              let queryToUse = rule.query;
+              if (rule.useTriggerQuery) {
+                queryToUse = ruleset.trigger.query || "";
+              }
+              if (queryToUse && queryToUse.trim() !== "") {
+                const tempGroup = { id: "temp", name: "Rule Query", query: queryToUse };
                 match = yield this.groupService.isInGroup(file, tempGroup);
               }
               if (match) {
@@ -989,11 +997,7 @@ var RulesTab = class {
           this.onUpdate(this.config);
           this.validateQueryInput(text.inputEl, statusEl, val);
         };
-      }).addToggle((toggle) => toggle.setValue(ruleset.trigger.useQueryForRules || false).setTooltip("Use this query for all rules (hides rule condition)").onChange((value) => {
-        ruleset.trigger.useQueryForRules = value;
-        this.onUpdate(this.config);
-        this.display();
-      }));
+      });
     } else if (ruleset.trigger.type === "schedule") {
       new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").setDesc("Run at this time.").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
         ruleset.trigger.time = value;
@@ -1111,10 +1115,17 @@ var RulesTab = class {
       if (this.collapsedItems.has(rule.id)) {
         return;
       }
-      if (!ruleset.trigger.useQueryForRules) {
-        const querySetting = new import_obsidian6.Setting(ruleDiv);
-        querySetting.setName("Condition (Dataview Query)");
-        querySetting.setDesc("Leave empty to match all files.");
+      const querySetting = new import_obsidian6.Setting(ruleDiv);
+      querySetting.setName("Condition (Dataview Query)");
+      querySetting.setDesc("Leave empty to match all files.");
+      if (ruleset.trigger.type === "change_from" || ruleset.trigger.type === "change_to") {
+        querySetting.addToggle((toggle) => toggle.setValue(rule.useTriggerQuery || false).setTooltip("Use the Trigger's query for this rule").onChange((value) => {
+          rule.useTriggerQuery = value;
+          this.onUpdate(this.config);
+          this.display();
+        }));
+      }
+      if (!rule.useTriggerQuery) {
         querySetting.addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
           new QueryHelperModal(this.app, (query) => {
             rule.query = query;
