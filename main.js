@@ -587,6 +587,7 @@ var FolderSuggest = class {
     this.inputEl = inputEl;
     this.suggestions = [];
     this.isOpen = false;
+    this.selectedIndex = -1;
     this.containerEl = createDiv("suggestion-container");
     this.containerEl.style.position = "absolute";
     this.containerEl.style.zIndex = "1000";
@@ -599,15 +600,45 @@ var FolderSuggest = class {
     this.inputEl.addEventListener("input", this.onInput.bind(this));
     this.inputEl.addEventListener("blur", () => setTimeout(() => this.close(), 200));
     this.inputEl.addEventListener("focus", this.onInput.bind(this));
+    this.inputEl.addEventListener("keydown", this.onKeyDown.bind(this));
   }
   onInput() {
     const val = this.inputEl.value;
     this.suggestions = this.getSuggestions(val);
+    this.selectedIndex = -1;
     if (this.suggestions.length > 0) {
       this.open();
       this.renderSuggestions();
     } else {
       this.close();
+    }
+  }
+  onKeyDown(e) {
+    if (!this.isOpen || this.suggestions.length === 0)
+      return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.selectedIndex = (this.selectedIndex + 1) % this.suggestions.length;
+      this.renderSuggestions();
+      this.scrollIntoView();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.selectedIndex = (this.selectedIndex - 1 + this.suggestions.length) % this.suggestions.length;
+      this.renderSuggestions();
+      this.scrollIntoView();
+    } else if (e.key === "Enter") {
+      if (this.selectedIndex >= 0 && this.selectedIndex < this.suggestions.length) {
+        e.preventDefault();
+        this.selectSuggestion(this.suggestions[this.selectedIndex]);
+      }
+    } else if (e.key === "Escape") {
+      this.close();
+    }
+  }
+  scrollIntoView() {
+    const selectedEl = this.containerEl.children[this.selectedIndex];
+    if (selectedEl) {
+      selectedEl.scrollIntoView({ block: "nearest" });
     }
   }
   getSuggestions(inputStr) {
@@ -629,16 +660,18 @@ var FolderSuggest = class {
     this.containerEl.style.top = `${rect.bottom}px`;
     this.containerEl.style.left = `${rect.left}px`;
     this.containerEl.style.width = `${rect.width}px`;
-    this.suggestions.forEach((folder) => {
+    this.suggestions.forEach((folder, index) => {
       const item = this.containerEl.createDiv("suggestion-item");
       item.setText(folder.path);
       item.style.padding = "5px";
       item.style.cursor = "pointer";
-      item.addEventListener("mouseenter", () => {
+      if (index === this.selectedIndex) {
         item.style.backgroundColor = "var(--background-modifier-hover)";
-      });
-      item.addEventListener("mouseleave", () => {
-        item.style.backgroundColor = "";
+        item.addClass("is-selected");
+      }
+      item.addEventListener("mouseenter", () => {
+        this.selectedIndex = index;
+        this.renderSuggestions();
       });
       item.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -658,6 +691,7 @@ var FolderSuggest = class {
   close() {
     this.containerEl.style.display = "none";
     this.isOpen = false;
+    this.selectedIndex = -1;
   }
 };
 
