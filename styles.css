@@ -21,6 +21,10 @@
     box-shadow: 0 2px 8px var(--background-modifier-box-shadow);
 }
 
+.is-file-backed {
+    border-left: 4px solid var(--interactive-accent);
+}
+
 /* Ruleset Header */
 .curator-ruleset-header {
     display: flex;
@@ -58,7 +62,7 @@
 .curator-ruleset-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 /* Ruleset Body */
@@ -82,6 +86,36 @@
     margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+/* Full Width Setting (e.g. Query Box) */
+.curator-full-width-setting {
+    margin-top: 10px;
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 10px;
+}
+
+.curator-full-width-setting .setting-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.curator-full-width-setting .setting-name {
+    font-weight: 600;
+}
+
+.curator-full-width-setting .setting-desc {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.curator-full-width-setting textarea {
+    width: 100%;
+    resize: vertical;
+    font-family: var(--font-monospace);
 }
 
 /* Rules List */
@@ -109,14 +143,57 @@
     cursor: pointer;
 }
 
-.curator-rule-title {
+.curator-rule-name-input {
+    flex-grow: 1;
+    margin-right: 10px;
+    background: transparent;
+    border: none;
     font-weight: 600;
     font-size: 0.95em;
+}
+
+.curator-rule-name-input:focus {
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--interactive-accent);
 }
 
 .curator-rule-body {
     padding: 12px;
     border-top: 1px solid var(--background-modifier-border);
+}
+
+
+
+/* Controls */
+.curator-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: nowrap;
+    /* Keep on one line unless forced */
+}
+
+/* Condition Section */
+.curator-condition-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.curator-inherit-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.curator-inherit-control .checkbox-container {
+    margin: 0;
+    /* Reset default margins on Obsidian toggles */
+}
+
+.curator-query-container {
+    margin-bottom: 10px;
 }
 
 /* Actions */
@@ -156,14 +233,30 @@
         flex-wrap: wrap;
         gap: 8px;
     }
-    
+
     .curator-ruleset-name-input {
         width: 100%;
         margin-right: 0;
         order: 1;
     }
-    
+
     .curator-ruleset-controls {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+    }
+
+    .curator-rule-header {
+        flex-wrap: wrap;
+    }
+
+    .curator-rule-name-input {
+        width: 100%;
+        order: 1;
+        margin-bottom: 5px;
+    }
+
+    .curator-controls {
         width: 100%;
         justify-content: flex-end;
         order: 2;

@@ -5,6 +5,7 @@ export class App {
     constructor() {
         this.vault = {
             on: jest.fn(),
+            offref: jest.fn(),
             getMarkdownFiles: jest.fn().mockReturnValue([]),
             read: jest.fn(),
         };
@@ -15,6 +16,7 @@ export class App {
         this.workspace = {
             onLayoutReady: jest.fn(),
             getActiveViewOfType: jest.fn(),
+            on: jest.fn(),
         };
     }
 }
@@ -34,6 +36,13 @@ export class TFile {
 
 export class Notice {
     constructor(message: string) { }
+}
+
+export class WorkspaceLeaf {
+    view: any;
+    constructor() {
+        this.view = { file: null };
+    }
 }
 
 export class Plugin {

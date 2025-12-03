@@ -6,6 +6,7 @@
 
 *   **Flexible Triggers**: Run automations when notes change, on a schedule, on startup, or manually.
 *   **Dataview Integration**: Use the full power of Dataview Query Language (DQL) to define exactly which notes to target.
+*   **Import/Export**: Easily share or backup your rulesets as Markdown files.
 *   **Comprehensive Actions**:
     *   **Move**: Organize notes into folders.
     *   **Rename**: Add prefixes or suffixes to filenames.

@@ -5,6 +5,7 @@ import { GroupService } from 'core/GroupService';
 import { TriggerService } from 'core/TriggerService';
 import { ActionService } from 'core/ActionService';
 import { RulesetService } from 'core/RulesetService';
+import { MarkdownConfigService } from 'core/MarkdownConfigService';
 import { CuratorSettingsTab } from 'ui/CuratorSettingsTab';
 
 export default class AutoNoteMover extends Plugin {
@@ -14,6 +15,7 @@ export default class AutoNoteMover extends Plugin {
 	private triggerService: TriggerService;
 	private actionService: ActionService;
 	private rulesetService: RulesetService;
+	private markdownConfigService: MarkdownConfigService;
 
 	async onload() {
 		await this.loadSettings();
@@ -30,37 +32,52 @@ export default class AutoNoteMover extends Plugin {
 			this.binder,
 			this.actionService
 		);
+		this.markdownConfigService = new MarkdownConfigService(this.app, this.rulesetService);
+		this.rulesetService.setMarkdownConfigService(this.markdownConfigService);
+		this.rulesetService.setSaveSettingsCallback(async (rulesets) => {
+			this.settings.rulesets = rulesets;
+			await this.saveSettings();
+		});
 
 		// Initialize Listeners
 		this.triggerService.initializeListeners();
 
+		// Initialize Markdown Config Watcher
+		this.markdownConfigService.setRulesetFolder(this.settings.rulesetFolder || 'Curator Rules');
+		await this.markdownConfigService.initialize();
+
 		// Add Settings Tab
-		this.addSettingTab(new CuratorSettingsTab(this.app, this));
+		this.addSettingTab(new CuratorSettingsTab(this.app, this, this.rulesetService));
 
 		// Initial Config Update
 		this.rulesetService.updateConfig(this.settings);
-
-		// Trigger Startup Event
-		this.triggerService.handleSystemEvent('startup');
 	}
 
 	onunload() {
-
+		this.triggerService.unload();
 	}
 
 	async loadSettings() {
 		const DEFAULT_SETTINGS: CuratorConfig = {
-			groups: [],
-			triggers: [
-				{ id: 'default-trigger-modify', name: 'On File Modified', type: 'obsidian_event', event: 'modify' },
-				{ id: 'default-trigger-create', name: 'On File Created', type: 'obsidian_event', event: 'create' },
-				{ id: 'default-trigger-startup', name: 'On Obsidian Startup', type: 'system_event', event: 'startup' }
-			],
-			actions: [],
-			rulesets: []
+			rulesets: [],
+			rulesetFolder: 'Curator Rules'
 		};
 
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loadedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+
+		// Migration/Sanitization: Ensure all rulesets have a valid trigger object
+		// This prevents crashes if the user has settings from a previous version (v1.0.0 or older)
+		if (this.settings.rulesets) {
+			this.settings.rulesets = this.settings.rulesets.filter(r => {
+				// Check if trigger is missing or is not an object (old version used triggerId string)
+				if (!r.trigger || typeof r.trigger !== 'object') {
+					console.warn(`[Curator] Dropping invalid/legacy ruleset "${r.name}" (missing trigger object).`);
+					return false;
+				}
+				return true;
+			});
+		}
 	}
 
 	async saveSettings() {
@@ -69,6 +86,9 @@ export default class AutoNoteMover extends Plugin {
 		// Update services with new config
 		if (this.rulesetService) {
 			this.rulesetService.updateConfig(this.settings);
+		}
+		if (this.markdownConfigService) {
+			this.markdownConfigService.setRulesetFolder(this.settings.rulesetFolder || 'Curator Rules');
 		}
 	}
 }

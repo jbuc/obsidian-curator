@@ -1,178 +1,129 @@
-import { App, TFile, EventRef } from 'obsidian';
+import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
 import { Trigger } from './types';
 
-type TriggerCallback = (triggerId: string, file: TFile) => void;
+type TriggerCallback = (file: TFile) => void;
 
 export class TriggerService {
     private app: App;
-    private listeners: Map<string, TriggerCallback[]> = new Map();
+    private listeners: Map<Trigger, TriggerCallback> = new Map();
     private eventRefs: EventRef[] = [];
-    private activeTriggers: Map<string, Trigger> = new Map();
+
+    // State tracking for change_from/change_to
+    private lastActiveFile: TFile | null = null;
+    private dirtyFiles: Set<string> = new Set(); // Files modified since last check
 
     constructor(app: App) {
         this.app = app;
     }
 
     public registerTrigger(trigger: Trigger, callback: TriggerCallback) {
-        console.log(`[DEBUG] Registering trigger ${trigger.id}`);
-        if (!this.listeners.has(trigger.id)) {
-            this.listeners.set(trigger.id, []);
-        }
-        this.listeners.get(trigger.id)?.push(callback);
-        this.activeTriggers.set(trigger.id, trigger);
+        this.listeners.set(trigger, callback);
+    }
 
-        // If it's the first time we're seeing this type of trigger, maybe we need to set up the global listener?
-        // Actually, it's better to just have global listeners that check against active triggers.
+    public clearTriggers() {
+        this.listeners.clear();
     }
 
     public initializeListeners() {
-        // Clear existing refs if any
+        // Clear existing refs
         this.eventRefs.forEach(ref => this.app.vault.offref(ref));
         this.eventRefs = [];
 
-        // Register global event listeners
-        this.eventRefs.push(
-            this.app.vault.on('create', (file) => {
-                if (file instanceof TFile) this.handleEvent('create', file);
-            })
-        );
+        // 1. File Modification Tracking
         this.eventRefs.push(
             this.app.vault.on('modify', (file) => {
-                if (file instanceof TFile) this.handleEvent('modify', file);
-            })
-        );
-        this.eventRefs.push(
-            this.app.vault.on('rename', (file, oldPath) => {
-                if (file instanceof TFile) this.handleEvent('rename', file, oldPath);
-            })
-        );
-        this.eventRefs.push(
-            this.app.vault.on('delete', (file) => {
-                if (file instanceof TFile) this.handleEvent('delete', file);
+                if (file instanceof TFile) {
+                    this.dirtyFiles.add(file.path);
+                }
             })
         );
 
-        this.startSyncPolling();
+        // 2. Active Leaf Change (Trigger point for change_from/change_to)
+        this.eventRefs.push(
+            this.app.workspace.on('active-leaf-change', (leaf) => {
+                this.handleActiveLeafChange(leaf);
+            })
+        );
+
+        // 3. Startup Triggers
+        // We can't easily detect "startup" here because this code runs ON startup.
+        // So we just fire them now? Or wait a bit?
+        // Let's wait 3 seconds to let Obsidian settle.
+        setTimeout(() => {
+            this.handleStartup();
+        }, 3000);
+
+        // 4. Schedule Triggers
+        // Check every minute
+        setInterval(() => {
+            this.handleSchedule();
+        }, 60 * 1000);
     }
 
-    private startSyncPolling() {
-        // Check if Sync plugin is enabled
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const syncPlugin = (this.app as any).internalPlugins?.plugins?.sync;
-        if (!syncPlugin || !syncPlugin.enabled) return;
+    private handleActiveLeafChange(leaf: WorkspaceLeaf | null) {
+        const currentFile = (leaf?.view as any)?.file instanceof TFile ? (leaf.view as any).file : null;
 
-        let lastStatus = '';
+        // If we switched AWAY from a file, check if it was modified
+        if (this.lastActiveFile && this.lastActiveFile !== currentFile) {
+            if (this.dirtyFiles.has(this.lastActiveFile.path)) {
+                // File was modified and we just left it. Fire triggers!
+                this.fireTriggers('change_from', this.lastActiveFile);
+                this.fireTriggers('change_to', this.lastActiveFile);
 
-        // Poll status bar for Sync status
-        // We use window.setInterval instead of registerInterval because we want this to run 
-        // even if the plugin is not the active tab, but we should clear it on unload.
-        // Actually, using registerInterval on the plugin class is better, but we are in a service.
-        // We'll just use a standard interval and clear it? 
-        // The service doesn't have an unload method called by the plugin yet.
-        // Let's assume for now we just start it. Ideally we should clean up.
-
-        const intervalId = window.setInterval(() => {
-            const statusBarItem = document.querySelector('.status-bar-item.plugin-sync');
-            if (!statusBarItem) return;
-
-            const text = statusBarItem.textContent || '';
-            const ariaLabel = statusBarItem.getAttribute('aria-label') || '';
-            const status = text + ariaLabel; // Combine to be safe
-
-            if (status !== lastStatus) {
-                if (status.includes('Fully synced')) {
-                    this.handleSystemEvent('sync_finish');
-                } else if (status.includes('Syncing')) {
-                    this.handleSystemEvent('sync_start');
-                }
-                lastStatus = status;
-            }
-        }, 2000); // Check every 2 seconds
-
-        // Register interval for cleanup if we had access to the plugin instance, 
-        // but here we don't. We could add a cleanup method to the service.
-        // For now, we'll leave it as is, but it's a minor leak on plugin reload 
-        // if the service instance is recreated but the interval persists.
-        // However, usually the whole plugin reloads.
-    }
-
-    private handleEvent(eventType: 'create' | 'modify' | 'rename' | 'delete', file: TFile, oldPath?: string) {
-        for (const trigger of this.activeTriggers.values()) {
-            // Handle standard Obsidian events
-            if (trigger.type === 'obsidian_event' && trigger.event === eventType) {
-                this.fireTrigger(trigger.id, file);
-            }
-
-            // Handle Folder Events
-            if (trigger.type === 'folder_event' && eventType === 'rename' && oldPath && trigger.folder) {
-                const oldFolder = oldPath.substring(0, oldPath.lastIndexOf('/'));
-                const newFolder = file.parent?.path || '';
-                const targetFolder = trigger.folder;
-
-                if (trigger.event === 'enter') {
-                    // Moved INTO target folder
-                    if (oldFolder !== targetFolder && newFolder === targetFolder) {
-                        this.fireTrigger(trigger.id, file);
-                    }
-                } else if (trigger.event === 'leave') {
-                    // Moved OUT OF target folder
-                    if (oldFolder === targetFolder && newFolder !== targetFolder) {
-                        this.fireTrigger(trigger.id, file);
-                    }
-                }
+                this.dirtyFiles.delete(this.lastActiveFile.path);
             }
         }
+
+        this.lastActiveFile = currentFile;
     }
 
-    public async handleSystemEvent(eventType: 'startup' | 'sync_start' | 'sync_finish') {
-        // For system events, we might not have a specific file context initially.
-        // However, our architecture expects a file to run actions against.
-        // For 'startup', we might want to run against ALL files or a specific set?
-        // Or maybe the actions for startup don't require a file?
-        // But ActionService.executeAction takes a file.
-        // This is a design constraint. 
-        // For now, let's assume system events might trigger jobs that find their own files or we iterate all files?
-        // The user requirement "When Obsidian Starts" usually implies running some maintenance.
-        // Let's iterate all markdown files for now if it's a startup trigger, OR 
-        // maybe we pass a dummy file or null? 
-        // Passing null would break strict typing in ActionService.
-        // Let's iterate all files for now as a safe default for "Auto Note Mover" context, 
-        // but this could be heavy. 
-        // Alternatively, we just fire the trigger and let the Ruleset/Job decide. 
-        // But fireTrigger takes a file.
-
-        // Let's iterate all files for startup triggers for now, as that's likely the intent (re-scan vault).
-        // This might be performance intensive.
-
+    private handleStartup() {
+        // Run against ALL files? Or just fire?
+        // Usually startup rules are for maintenance.
+        // Let's iterate all markdown files.
         const files = this.app.vault.getMarkdownFiles();
+        files.forEach(file => {
+            if (!file.path.endsWith('.ruleset.md')) {
+                this.fireTriggers('startup', file);
+            }
+        });
+    }
 
-        for (const trigger of this.activeTriggers.values()) {
-            if (trigger.type === 'system_event' && trigger.event === eventType) {
-                // Check time constraints
-                if (trigger.timeConstraints) {
-                    const now = new Date();
-                    if (trigger.timeConstraints.start) {
-                        const start = new Date(trigger.timeConstraints.start);
-                        if (now < start) continue;
-                    }
-                    if (trigger.timeConstraints.end) {
-                        const end = new Date(trigger.timeConstraints.end);
-                        if (now > end) continue;
-                    }
-                }
+    private handleSchedule() {
+        const now = new Date();
+        const currentDay = now.getDay(); // 0 = Sun
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
-                // Fire for all files?
-                for (const file of files) {
-                    this.fireTrigger(trigger.id, file);
+        // Find matching triggers
+        for (const [trigger, callback] of this.listeners) {
+            if (trigger.type === 'schedule') {
+                // Check Day
+                if (trigger.days && !trigger.days.includes(currentDay)) continue;
+
+                // Check Time
+                if (trigger.time === timeString) {
+                    // Fire for all files? Or just one?
+                    // Schedule usually implies batch processing.
+                    const files = this.app.vault.getMarkdownFiles();
+                    files.forEach(file => {
+                        if (!file.path.endsWith('.ruleset.md')) {
+                            callback(file);
+                        }
+                    });
                 }
             }
         }
     }
 
-    private fireTrigger(triggerId: string, file: TFile) {
-        const callbacks = this.listeners.get(triggerId);
-        if (callbacks) {
-            callbacks.forEach(cb => cb(triggerId, file));
+    private fireTriggers(type: 'change_from' | 'change_to' | 'startup', file: TFile) {
+        if (file.path.endsWith('.ruleset.md')) return;
+
+        for (const [trigger, callback] of this.listeners) {
+            if (trigger.type === type) {
+                callback(file);
+            }
         }
     }
 
@@ -180,6 +131,5 @@ export class TriggerService {
         this.eventRefs.forEach(ref => this.app.vault.offref(ref));
         this.eventRefs = [];
         this.listeners.clear();
-        this.activeTriggers.clear();
     }
 }

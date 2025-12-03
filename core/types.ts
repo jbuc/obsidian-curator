@@ -17,54 +17,46 @@ export interface BinderEntry {
  */
 export interface BinderState {
     entries: BinderEntry[];
-    // We can add more state here as needed, e.g., last run times for jobs
-}
-
-/**
- * A named Dataview query that defines a set of files.
- * Replaces the old Group/Identifier system.
- */
-export interface Group {
-    id: string;
-    name: string;
-    query: string; // Dataview source query (e.g. 'FROM "folder" AND #tag')
 }
 
 /**
  * An event that triggers a Ruleset.
  */
 export interface Trigger {
-    id: string;
-    name: string;
-    type: 'obsidian_event' | 'system_event' | 'folder_event' | 'schedule' | 'manual';
-    event?: 'create' | 'modify' | 'rename' | 'delete' | 'startup' | 'sync_start' | 'sync_finish' | 'enter' | 'leave';
-    folder?: string; // For folder_event
-    timeConstraints?: {
-        start?: string; // ISO timestamp or time string
-        end?: string;   // ISO timestamp or time string
-    };
-    schedule?: string; // cron expression?
+    type: 'change_from' | 'change_to' | 'startup' | 'schedule' | 'manual';
+    query?: string; // For change_from/change_to
+    time?: string; // For schedule (HH:mm)
+    days?: number[]; // For schedule (0-6, 0=Sun)
+    commandName?: string; // For manual
 }
 
 /**
  * An atomic operation to perform on a file.
  */
 export interface Action {
-    id: string;
-    name: string;
-    type: 'move' | 'rename' | 'tag' | 'frontmatter' | 'script';
-    config: any;
+    id?: string;
+    type: 'move' | 'rename' | 'tag' | 'update';
+    config: {
+        folder?: string;
+        prefix?: string;
+        suffix?: string;
+        tag?: string;
+        operation?: 'add' | 'remove';
+        key?: string;
+        value?: string;
+    };
 }
 
 /**
  * A rule within a ruleset.
- * Defines a condition (Group) and a sequence of Actions.
+ * Defines a condition (Query) and a sequence of Actions.
  */
 export interface Rule {
-    groupId?: string; // If null/undefined, runs always (unless stopped by previous rule?)
-    // For "else if" logic, we might need a way to say "only if previous didn't match"?
-    // For now, let's assume sequential execution.
-    actionIds: string[];
+    id?: string;
+    name?: string;
+    query: string; // Dataview query for condition
+    useTriggerQuery?: boolean; // If true, inherits the trigger's query
+    actions: Action[];
 }
 
 /**
@@ -74,17 +66,15 @@ export interface Ruleset {
     id: string;
     name: string;
     enabled: boolean;
-    triggerId: string;
+    trigger: Trigger;
     rules: Rule[];
+    filePath?: string; // If set, this ruleset is synced with a markdown file
 }
 
 /**
  * Configuration for the entire plugin.
  */
 export interface CuratorConfig {
-    groups: Group[];
-    triggers: Trigger[];
-    actions: Action[];
-    // jobs: Job[]; // Removed
     rulesets: Ruleset[];
+    rulesetFolder?: string;
 }

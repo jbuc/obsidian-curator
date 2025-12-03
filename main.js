@@ -7,12 +7,23 @@ var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[Object.keys(fn)[0]])(fn = 0)), res;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
 };
+var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
 var __export = (target, all) => {
   __markAsModule(target);
   for (var name in all)
@@ -50,575 +61,803 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// core/BinderService.ts
-var BinderService_exports = {};
-__export(BinderService_exports, {
-  BinderService: () => BinderService
-});
-var BinderService;
-var init_BinderService = __esm({
-  "core/BinderService.ts"() {
-    BinderService = class {
-      constructor(app) {
-        this.app = app;
-        this.state = {
-          entries: []
-        };
-      }
-      log(type, message, relatedFile, details) {
-        const entry = {
-          id: crypto.randomUUID(),
-          timestamp: Date.now(),
-          type,
-          message,
-          relatedFile,
-          details
-        };
-        this.state.entries.unshift(entry);
-        if (this.state.entries.length > 1e3) {
-          this.state.entries = this.state.entries.slice(0, 1e3);
-        }
-      }
-      getEntries() {
-        return this.state.entries;
-      }
-      clear() {
-        this.state.entries = [];
-      }
-    };
-  }
-});
-
-// core/GroupService.ts
-var GroupService_exports = {};
-__export(GroupService_exports, {
-  GroupService: () => GroupService
-});
-var import_obsidian, GroupService;
-var init_GroupService = __esm({
-  "core/GroupService.ts"() {
-    import_obsidian = __toModule(require("obsidian"));
-    GroupService = class {
-      constructor(app) {
-        this.app = app;
-      }
-      isInGroup(file, group) {
-        return __async(this, null, function* () {
-          const matchingFiles = yield this.getMatchingFiles(group);
-          return matchingFiles.some((f) => f.path === file.path);
-        });
-      }
-      getMatchingFiles(group) {
-        return __async(this, null, function* () {
-          var _a, _b, _c;
-          if (!group.query || group.query.trim() === "") {
-            return [];
-          }
-          const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
-          if (!dataviewAPI) {
-            console.warn("[Curator] Dataview plugin not found or API not available.");
-            return [];
-          }
-          try {
-            let dql = group.query.trim();
-            if (!/^(TABLE|LIST|TASK|CALENDAR)/i.test(dql)) {
-              dql = `LIST ${dql}`;
-            }
-            const result = yield dataviewAPI.query(dql);
-            if (!result.successful) {
-              console.warn(`[Curator] Dataview query failed for group ${group.name}: ${result.error}`);
-              return [];
-            }
-            const values = result.value.values;
-            const matchingFiles = [];
-            for (const item of values) {
-              let path;
-              if (item && item.path) {
-                path = item.path;
-              } else if (item && item.file && item.file.path) {
-                path = item.file.path;
-              }
-              if (path) {
-                const file = this.app.vault.getAbstractFileByPath(path);
-                if (file instanceof import_obsidian.TFile) {
-                  matchingFiles.push(file);
-                }
-              }
-            }
-            return matchingFiles;
-          } catch (error) {
-            console.error(`[Curator] Error executing Dataview query for group ${group.name}:`, error);
-            return [];
-          }
-        });
-      }
-      matchesQuery(file, query) {
-        return __async(this, null, function* () {
-          const tempGroup = { id: "temp", name: "temp", query };
-          const matchingFiles = yield this.getMatchingFiles(tempGroup);
-          return matchingFiles.some((f) => f.path === file.path);
-        });
-      }
-      validateQuery(query) {
-        return __async(this, null, function* () {
-          var _a, _b, _c;
-          if (!query || query.trim() === "") {
-            return { valid: true };
-          }
-          const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
-          if (!dataviewAPI) {
-            return { valid: false, error: "Dataview plugin not found." };
-          }
-          try {
-            let dql = query.trim();
-            if (!/^(TABLE|LIST|TASK|CALENDAR)/i.test(dql)) {
-              dql = `LIST ${dql}`;
-            }
-            const result = yield dataviewAPI.query(dql);
-            if (!result.successful) {
-              return { valid: false, error: result.error };
-            }
-            return { valid: true };
-          } catch (error) {
-            return { valid: false, error: String(error) };
-          }
-        });
-      }
-      updateIdentifiers(identifiers) {
-      }
-    };
-  }
-});
-
-// core/TriggerService.ts
-var TriggerService_exports = {};
-__export(TriggerService_exports, {
-  TriggerService: () => TriggerService
-});
-var import_obsidian2, TriggerService;
-var init_TriggerService = __esm({
-  "core/TriggerService.ts"() {
-    import_obsidian2 = __toModule(require("obsidian"));
-    TriggerService = class {
-      constructor(app) {
-        this.listeners = new Map();
-        this.eventRefs = [];
-        this.activeTriggers = new Map();
-        this.intervals = [];
-        this.lastActiveFile = null;
-        this.dirtyFiles = new Set();
-        this.app = app;
-      }
-      registerTrigger(id, trigger, callback) {
-        var _a;
-        console.log(`[DEBUG] Registering trigger ${id}`);
-        if (!this.listeners.has(id)) {
-          this.listeners.set(id, []);
-        }
-        (_a = this.listeners.get(id)) == null ? void 0 : _a.push(callback);
-        this.activeTriggers.set(id, trigger);
-        if (trigger.type === "schedule") {
-          this.registerTimeEvent(id, trigger);
-        } else if (trigger.type === "manual") {
-          this.registerManualCommand(id, trigger);
-        }
-      }
-      clearTriggers() {
-        this.listeners.clear();
-        this.activeTriggers.clear();
-        this.intervals.forEach((id) => window.clearInterval(id));
-        this.intervals = [];
-      }
-      initializeListeners() {
-        this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
-        this.eventRefs = [];
-        this.eventRefs.push(this.app.vault.on("create", (file) => {
-          if (file instanceof import_obsidian2.TFile)
-            this.handleEvent("create", file);
-        }));
-        this.eventRefs.push(this.app.vault.on("modify", (file) => {
-          if (file instanceof import_obsidian2.TFile)
-            this.handleEvent("modify", file);
-        }));
-        this.eventRefs.push(this.app.vault.on("rename", (file, oldPath) => {
-          if (file instanceof import_obsidian2.TFile)
-            this.handleEvent("rename", file, oldPath);
-        }));
-        this.eventRefs.push(this.app.vault.on("delete", (file) => {
-          if (file instanceof import_obsidian2.TFile)
-            this.handleEvent("delete", file);
-        }));
-        this.app.workspace.onLayoutReady(() => {
-          this.lastActiveFile = this.app.workspace.getActiveFile();
-        });
-        this.eventRefs.push(this.app.workspace.on("active-leaf-change", () => {
-          const currentFile = this.app.workspace.getActiveFile();
-          if (this.lastActiveFile && this.lastActiveFile !== currentFile) {
-            if (this.dirtyFiles.has(this.lastActiveFile.path)) {
-              for (const [id, trigger] of this.activeTriggers.entries()) {
-                if (trigger.type === "change_from" || trigger.type === "change_to") {
-                  this.fireTrigger(id, this.lastActiveFile);
-                }
-              }
-              this.dirtyFiles.delete(this.lastActiveFile.path);
-            }
-          }
-          this.lastActiveFile = currentFile;
-        }));
-        this.startSyncPolling();
-      }
-      startSyncPolling() {
-      }
-      handleEvent(eventType, file, oldPath) {
-        if (eventType === "modify") {
-          this.dirtyFiles.add(file.path);
-          return;
-        }
-        if (eventType === "create" || eventType === "rename") {
-          for (const [id, trigger] of this.activeTriggers.entries()) {
-            if (trigger.type === "change_to") {
-              this.fireTrigger(id, file);
-            }
-          }
-        }
-      }
-      handleSystemEvent(eventType) {
-        return __async(this, null, function* () {
-          const files = this.app.vault.getMarkdownFiles();
-          for (const [id, trigger] of this.activeTriggers.entries()) {
-            if (trigger.type === "startup") {
-              for (const file of files) {
-                this.fireTrigger(id, file);
-              }
-            }
-          }
-        });
-      }
-      registerTimeEvent(id, trigger) {
-        if (!this.intervals.length) {
-          this.startScheduler();
-        }
-      }
-      startScheduler() {
-        const intervalId = window.setInterval(() => {
-          this.checkSchedules();
-        }, 60 * 1e3);
-        this.intervals.push(intervalId);
-      }
-      checkSchedules() {
-        const now = new Date();
-        const currentDay = now.getDay();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTime = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`;
-        for (const [id, trigger] of this.activeTriggers.entries()) {
-          if (trigger.type === "schedule" && trigger.time) {
-            if (trigger.days && trigger.days.length > 0) {
-              if (!trigger.days.includes(currentDay))
-                continue;
-            }
-            if (trigger.time === currentTime) {
-              const files = this.app.vault.getMarkdownFiles();
-              files.forEach((file) => this.fireTrigger(id, file));
-            }
-          }
-        }
-      }
-      registerManualCommand(id, trigger) {
-        if (trigger.commandName) {
-          const commandId = `curator-manual-${id}`;
-          this.app.addCommand({
-            id: commandId,
-            name: trigger.commandName,
-            callback: () => {
-              const activeFile = this.app.workspace.getActiveFile();
-              if (activeFile) {
-                this.fireTrigger(id, activeFile);
-              } else {
-                new import_obsidian2.Notice("No active file to run Curator on.");
-              }
-            }
-          });
-        }
-      }
-      fireTrigger(triggerId, file) {
-        const callbacks = this.listeners.get(triggerId);
-        if (callbacks) {
-          callbacks.forEach((cb) => cb(triggerId, file));
-        }
-      }
-      unload() {
-        this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
-        this.eventRefs = [];
-        this.listeners.clear();
-        this.activeTriggers.clear();
-        this.intervals.forEach((id) => window.clearInterval(id));
-        this.intervals = [];
-      }
-    };
-  }
-});
-
-// core/ActionService.ts
-var ActionService_exports = {};
-__export(ActionService_exports, {
-  ActionService: () => ActionService
-});
-var import_obsidian3, ActionService;
-var init_ActionService = __esm({
-  "core/ActionService.ts"() {
-    import_obsidian3 = __toModule(require("obsidian"));
-    ActionService = class {
-      constructor(app, binder) {
-        this.app = app;
-        this.binder = binder;
-      }
-      executeAction(file, action) {
-        return __async(this, null, function* () {
-          try {
-            switch (action.type) {
-              case "move":
-                if (action.config.folder) {
-                  yield this.moveFile(file, { folder: action.config.folder, createIfMissing: action.config.createIfMissing });
-                }
-                break;
-              case "rename":
-                yield this.renameFile(file, action.config);
-                break;
-              case "tag":
-                if (action.config.tag) {
-                  yield this.tagFile(file, { tag: action.config.tag, operation: action.config.operation || "add" });
-                }
-                break;
-              case "update":
-                if (action.config.key) {
-                  yield this.updateFrontmatter(file, { key: action.config.key, value: action.config.value || "" });
-                }
-                break;
-              default:
-                this.binder.log("warning", `Unknown action type: ${action.type}`, file.path);
-            }
-          } catch (error) {
-            this.binder.log("error", `Failed to execute action ${action.type}`, file.path, error);
-            throw error;
-          }
-        });
-      }
-      moveFile(file, config) {
-        return __async(this, null, function* () {
-          let targetFolder = (0, import_obsidian3.normalizePath)(config.folder);
-          const folderExists = yield this.app.vault.adapter.exists(targetFolder);
-          if (!folderExists) {
-            if (config.createIfMissing) {
-              yield this.app.vault.createFolder(targetFolder);
-              this.binder.log("info", `Created folder ${targetFolder}`);
-            } else {
-              this.binder.log("error", `Target folder ${targetFolder} does not exist`, file.path);
-              return;
-            }
-          }
-          const targetPath = (0, import_obsidian3.normalizePath)(`${targetFolder}/${file.name}`);
-          if (targetPath === file.path) {
-            return;
-          }
-          const targetFileExists = yield this.app.vault.adapter.exists(targetPath);
-          if (targetFileExists) {
-            this.binder.log("warning", `File ${targetPath} already exists. Skipping move.`, file.path);
-            return;
-          }
-          yield this.app.fileManager.renameFile(file, targetPath);
-          this.binder.log("success", `Moved file to ${targetFolder}`, targetPath);
-        });
-      }
-      renameFile(file, config) {
-        return __async(this, null, function* () {
-          var _a;
-          let newName = file.basename;
-          if (config.replace) {
-            newName = config.replace;
-          }
-          if (config.prefix) {
-            newName = `${config.prefix}${newName}`;
-          }
-          if (config.suffix) {
-            newName = `${newName}${config.suffix}`;
-          }
-          if (newName === file.basename)
-            return;
-          const targetPath = (0, import_obsidian3.normalizePath)(`${(_a = file.parent) == null ? void 0 : _a.path}/${newName}.${file.extension}`);
-          if (yield this.app.vault.adapter.exists(targetPath)) {
-            this.binder.log("warning", `File ${targetPath} already exists. Skipping rename.`, file.path);
-            return;
-          }
-          yield this.app.fileManager.renameFile(file, targetPath);
-          this.binder.log("success", `Renamed file to ${newName}`, targetPath);
-        });
-      }
-      tagFile(file, config) {
-        return __async(this, null, function* () {
-          yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
-            let tags = frontmatter["tags"];
-            if (!tags)
-              tags = [];
-            if (!Array.isArray(tags))
-              tags = [tags];
-            const targetTag = config.tag.startsWith("#") ? config.tag.substring(1) : config.tag;
-            if (config.operation === "add") {
-              if (!tags.includes(targetTag)) {
-                tags.push(targetTag);
-                this.binder.log("success", `Added tag #${targetTag}`, file.path);
-              }
-            } else if (config.operation === "remove") {
-              const index = tags.indexOf(targetTag);
-              if (index > -1) {
-                tags.splice(index, 1);
-                this.binder.log("success", `Removed tag #${targetTag}`, file.path);
-              }
-            }
-            frontmatter["tags"] = tags;
-          });
-        });
-      }
-      updateFrontmatter(file, config) {
-        return __async(this, null, function* () {
-          yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
-            if (config.key) {
-              frontmatter[config.key] = config.value;
-              this.binder.log("success", `Updated frontmatter: ${config.key} = ${config.value}`, file.path);
-            }
-          });
-        });
-      }
-    };
-  }
-});
-
-// core/RulesetService.ts
-var RulesetService_exports = {};
-__export(RulesetService_exports, {
-  RulesetService: () => RulesetService
-});
-var RulesetService;
-var init_RulesetService = __esm({
-  "core/RulesetService.ts"() {
-    RulesetService = class {
-      constructor(app, triggerService, groupService, binder, actionService) {
-        this.rulesets = [];
-        this.app = app;
-        this.triggerService = triggerService;
-        this.groupService = groupService;
-        this.binder = binder;
-        this.actionService = actionService;
-      }
-      updateConfig(config) {
-        this.rulesets = config.rulesets;
-        this.triggerService.clearTriggers();
-        this.rulesets.forEach((ruleset) => {
-          if (ruleset.enabled && ruleset.trigger) {
-            this.triggerService.registerTrigger(ruleset.id, ruleset.trigger, (triggerId, file) => {
-              this.handleTrigger(triggerId, file);
-            });
-          }
-        });
-      }
-      handleTrigger(rulesetId, file) {
-        return __async(this, null, function* () {
-          const ruleset = this.rulesets.find((r) => r.id === rulesetId);
-          if (!ruleset || !ruleset.enabled)
-            return;
-          this.binder.log("info", `Processing Ruleset: ${ruleset.name}`, file.path);
-          if (ruleset.trigger.query && ruleset.trigger.query.trim() !== "") {
-            const matchesScope = yield this.groupService.matchesQuery(file, ruleset.trigger.query);
-            if (!matchesScope) {
-              this.binder.log("info", `File did not match trigger scope. Skipping.`, file.path);
-              return;
-            }
-          }
-          for (const rule of ruleset.rules) {
-            let match = true;
-            let queryToUse = rule.query;
-            if (rule.useTriggerQuery) {
-              queryToUse = ruleset.trigger.query || "";
-            }
-            if (queryToUse && queryToUse.trim() !== "") {
-              const tempGroup = { id: "temp", name: "Rule Query", query: queryToUse };
-              match = yield this.groupService.isInGroup(file, tempGroup);
-            } else {
-              match = true;
-            }
-            if (match) {
-              this.binder.log("info", `Rule matched. Executing actions.`, file.path);
-              yield this.executeActions(rule.actions, file);
-            }
-          }
-        });
-      }
-      executeActions(actions, file) {
-        return __async(this, null, function* () {
-          for (const action of actions) {
-            try {
-              yield this.actionService.executeAction(file, action);
-            } catch (error) {
-              this.binder.log("error", `Failed to execute action ${action.type}`, file.path, error);
-            }
-          }
-        });
-      }
-      dryRun(rulesetId) {
-        return __async(this, null, function* () {
-          const ruleset = this.rulesets.find((r) => r.id === rulesetId);
-          if (!ruleset)
-            return [];
-          const results = [];
-          const files = this.app.vault.getMarkdownFiles();
-          for (const file of files) {
-            const fileActions = [];
-            for (const rule of ruleset.rules) {
-              let match = true;
-              let queryToUse = rule.query;
-              if (rule.useTriggerQuery) {
-                queryToUse = ruleset.trigger.query || "";
-              }
-              if (queryToUse && queryToUse.trim() !== "") {
-                const tempGroup = { id: "temp", name: "Rule Query", query: queryToUse };
-                match = yield this.groupService.isInGroup(file, tempGroup);
-              }
-              if (match) {
-                for (const action of rule.actions) {
-                  fileActions.push(`${action.type} ${JSON.stringify(action.config)}`);
-                }
-              }
-            }
-            if (fileActions.length > 0) {
-              results.push({ file, actions: fileActions });
-            }
-          }
-          return results;
-        });
-      }
-    };
-  }
-});
-
 // main.ts
 __export(exports, {
   default: () => AutoNoteMover
 });
-var import_obsidian9 = __toModule(require("obsidian"));
-init_BinderService();
-init_GroupService();
-init_TriggerService();
-init_ActionService();
-init_RulesetService();
+var import_obsidian14 = __toModule(require("obsidian"));
+
+// core/BinderService.ts
+var BinderService = class {
+  constructor(app) {
+    this.app = app;
+    this.state = {
+      entries: []
+    };
+  }
+  log(type, message, relatedFile, details) {
+    const entry = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      type,
+      message,
+      relatedFile,
+      details
+    };
+    this.state.entries.unshift(entry);
+    if (this.state.entries.length > 1e3) {
+      this.state.entries = this.state.entries.slice(0, 1e3);
+    }
+  }
+  getEntries() {
+    return this.state.entries;
+  }
+  clear() {
+    this.state.entries = [];
+  }
+};
+
+// core/GroupService.ts
+var import_obsidian = __toModule(require("obsidian"));
+var GroupService = class {
+  constructor(app) {
+    this.app = app;
+  }
+  validateQuery(query) {
+    return __async(this, null, function* () {
+      var _a, _b, _c;
+      if (!query || query.trim() === "") {
+        return { valid: true };
+      }
+      const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
+      if (!dataviewAPI) {
+        return { valid: false, error: "Dataview plugin not found" };
+      }
+      const trimmed = query.trim();
+      if (/^(LIST|TABLE|TASK|CALENDAR)/i.test(trimmed)) {
+        try {
+          yield dataviewAPI.query(trimmed);
+          return { valid: true };
+        } catch (e) {
+          return { valid: false, error: e.message || "Query execution failed" };
+        }
+      }
+      if (/^(FROM|WHERE|FLATTEN|LIMIT|SORT)/i.test(trimmed)) {
+        try {
+          yield dataviewAPI.query("LIST " + trimmed);
+          return { valid: true };
+        } catch (e) {
+          return { valid: false, error: e.message || "Query execution failed" };
+        }
+      }
+      try {
+        if (/\s(WHERE|FLATTEN|LIMIT|SORT)\s/i.test(trimmed)) {
+          yield dataviewAPI.query("LIST FROM " + trimmed);
+          return { valid: true };
+        }
+        dataviewAPI.pages(trimmed);
+        return { valid: true };
+      } catch (e) {
+        try {
+          yield dataviewAPI.query("LIST FROM " + trimmed);
+          return { valid: true };
+        } catch (e2) {
+          return { valid: false, error: e.message };
+        }
+      }
+    });
+  }
+  matchesQuery(file, query) {
+    return __async(this, null, function* () {
+      if (!query || query.trim() === "") {
+        return true;
+      }
+      const matchingFiles = yield this.getMatchingFiles(query);
+      return matchingFiles.some((f) => f.path === file.path);
+    });
+  }
+  getMatchingFiles(query) {
+    return __async(this, null, function* () {
+      var _a, _b, _c, _d;
+      if (!query || query.trim() === "") {
+        return this.app.vault.getMarkdownFiles();
+      }
+      const dataviewAPI = (_c = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b.dataview) == null ? void 0 : _c.api;
+      if (!dataviewAPI) {
+        return [];
+      }
+      const trimmed = query.trim();
+      let finalQuery = trimmed;
+      let isFullQuery = false;
+      if (/^(LIST|TABLE|TASK|CALENDAR)/i.test(trimmed)) {
+        isFullQuery = true;
+      } else if (/^(FROM|WHERE|FLATTEN|LIMIT|SORT)/i.test(trimmed)) {
+        finalQuery = "LIST " + trimmed;
+        isFullQuery = true;
+      } else {
+        try {
+          const pages = dataviewAPI.pages(trimmed);
+          const files = [];
+          for (const page of pages) {
+            const file = this.app.vault.getAbstractFileByPath(page.file.path);
+            if (file instanceof import_obsidian.TFile)
+              files.push(file);
+          }
+          return files;
+        } catch (e) {
+          finalQuery = "LIST FROM " + trimmed;
+          isFullQuery = true;
+        }
+      }
+      if (isFullQuery) {
+        try {
+          const result = yield dataviewAPI.query(finalQuery);
+          if (!result || !result.type) {
+            console.error(`[Curator] Query returned invalid result:`, result);
+            return [];
+          }
+          const files = [];
+          const rows = result.values;
+          if (!rows)
+            return [];
+          for (const row of rows) {
+            let path = "";
+            if (result.type === "list") {
+              path = ((_d = row.file) == null ? void 0 : _d.path) || row.path;
+              if (!path && row.type === "file")
+                path = row.path;
+            } else if (result.type === "table") {
+              const link = row[0];
+              path = link == null ? void 0 : link.path;
+            }
+            if (path) {
+              const file = this.app.vault.getAbstractFileByPath(path);
+              if (file instanceof import_obsidian.TFile)
+                files.push(file);
+            }
+          }
+          return files;
+        } catch (error) {
+          console.error(`[Curator] Error executing Dataview query: ${finalQuery}`, error);
+          return [];
+        }
+      }
+      return [];
+    });
+  }
+};
+
+// core/TriggerService.ts
+var import_obsidian2 = __toModule(require("obsidian"));
+var TriggerService = class {
+  constructor(app) {
+    this.listeners = new Map();
+    this.eventRefs = [];
+    this.lastActiveFile = null;
+    this.dirtyFiles = new Set();
+    this.app = app;
+  }
+  registerTrigger(trigger, callback) {
+    this.listeners.set(trigger, callback);
+  }
+  clearTriggers() {
+    this.listeners.clear();
+  }
+  initializeListeners() {
+    this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
+    this.eventRefs = [];
+    this.eventRefs.push(this.app.vault.on("modify", (file) => {
+      if (file instanceof import_obsidian2.TFile) {
+        this.dirtyFiles.add(file.path);
+      }
+    }));
+    this.eventRefs.push(this.app.workspace.on("active-leaf-change", (leaf) => {
+      this.handleActiveLeafChange(leaf);
+    }));
+    setTimeout(() => {
+      this.handleStartup();
+    }, 3e3);
+    setInterval(() => {
+      this.handleSchedule();
+    }, 60 * 1e3);
+  }
+  handleActiveLeafChange(leaf) {
+    var _a;
+    const currentFile = ((_a = leaf == null ? void 0 : leaf.view) == null ? void 0 : _a.file) instanceof import_obsidian2.TFile ? leaf.view.file : null;
+    if (this.lastActiveFile && this.lastActiveFile !== currentFile) {
+      if (this.dirtyFiles.has(this.lastActiveFile.path)) {
+        this.fireTriggers("change_from", this.lastActiveFile);
+        this.fireTriggers("change_to", this.lastActiveFile);
+        this.dirtyFiles.delete(this.lastActiveFile.path);
+      }
+    }
+    this.lastActiveFile = currentFile;
+  }
+  handleStartup() {
+    const files = this.app.vault.getMarkdownFiles();
+    files.forEach((file) => {
+      if (!file.path.endsWith(".ruleset.md")) {
+        this.fireTriggers("startup", file);
+      }
+    });
+  }
+  handleSchedule() {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const timeString = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`;
+    for (const [trigger, callback] of this.listeners) {
+      if (trigger.type === "schedule") {
+        if (trigger.days && !trigger.days.includes(currentDay))
+          continue;
+        if (trigger.time === timeString) {
+          const files = this.app.vault.getMarkdownFiles();
+          files.forEach((file) => {
+            if (!file.path.endsWith(".ruleset.md")) {
+              callback(file);
+            }
+          });
+        }
+      }
+    }
+  }
+  fireTriggers(type, file) {
+    if (file.path.endsWith(".ruleset.md"))
+      return;
+    for (const [trigger, callback] of this.listeners) {
+      if (trigger.type === type) {
+        callback(file);
+      }
+    }
+  }
+  unload() {
+    this.eventRefs.forEach((ref) => this.app.vault.offref(ref));
+    this.eventRefs = [];
+    this.listeners.clear();
+  }
+};
+
+// core/ActionService.ts
+var import_obsidian3 = __toModule(require("obsidian"));
+var ActionService = class {
+  constructor(app, binder) {
+    this.app = app;
+    this.binder = binder;
+  }
+  executeAction(file, action) {
+    return __async(this, null, function* () {
+      try {
+        switch (action.type) {
+          case "move":
+            if (action.config.folder) {
+              yield this.moveFile(file, action.config.folder);
+            }
+            break;
+          case "rename":
+            yield this.renameFile(file, action.config);
+            break;
+          case "tag":
+            if (action.config.tag) {
+              yield this.tagFile(file, action.config.tag, action.config.operation || "add");
+            }
+            break;
+          case "update":
+            if (action.config.key) {
+              yield this.updateProperty(file, action.config.key, action.config.value || "");
+            }
+            break;
+          default:
+            this.binder.log("warning", `Unknown action type: ${action.type}`, file.path);
+        }
+      } catch (error) {
+        this.binder.log("error", `Failed to execute action ${action.type}`, file.path, error);
+        throw error;
+      }
+    });
+  }
+  moveFile(file, folder) {
+    return __async(this, null, function* () {
+      let targetFolder = (0, import_obsidian3.normalizePath)(folder);
+      const folderExists = yield this.app.vault.adapter.exists(targetFolder);
+      if (!folderExists) {
+        yield this.app.vault.createFolder(targetFolder);
+        this.binder.log("info", `Created folder ${targetFolder}`);
+      }
+      const targetPath = (0, import_obsidian3.normalizePath)(`${targetFolder}/${file.name}`);
+      if (targetPath === file.path) {
+        return;
+      }
+      const targetFileExists = yield this.app.vault.adapter.exists(targetPath);
+      if (targetFileExists) {
+        this.binder.log("warning", `File ${targetPath} already exists. Skipping move.`, file.path);
+        return;
+      }
+      yield this.app.fileManager.renameFile(file, targetPath);
+      this.binder.log("success", `Moved file to ${targetFolder}`, targetPath);
+    });
+  }
+  renameFile(file, config) {
+    return __async(this, null, function* () {
+      var _a;
+      let newName = file.basename;
+      if (config.prefix) {
+        newName = `${config.prefix}${newName}`;
+      }
+      if (config.suffix) {
+        newName = `${newName}${config.suffix}`;
+      }
+      if (newName === file.basename)
+        return;
+      const targetPath = (0, import_obsidian3.normalizePath)(`${(_a = file.parent) == null ? void 0 : _a.path}/${newName}.${file.extension}`);
+      if (yield this.app.vault.adapter.exists(targetPath)) {
+        this.binder.log("warning", `File ${targetPath} already exists. Skipping rename.`, file.path);
+        return;
+      }
+      yield this.app.fileManager.renameFile(file, targetPath);
+      this.binder.log("success", `Renamed file to ${newName}`, targetPath);
+    });
+  }
+  tagFile(file, tag, operation) {
+    return __async(this, null, function* () {
+      yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
+        let tags = frontmatter["tags"];
+        if (!tags)
+          tags = [];
+        if (!Array.isArray(tags))
+          tags = [tags];
+        const targetTag = tag.startsWith("#") ? tag.substring(1) : tag;
+        if (operation === "add") {
+          if (!tags.includes(targetTag)) {
+            tags.push(targetTag);
+            this.binder.log("success", `Added tag #${targetTag}`, file.path);
+          }
+        } else if (operation === "remove") {
+          const index = tags.indexOf(targetTag);
+          if (index > -1) {
+            tags.splice(index, 1);
+            this.binder.log("success", `Removed tag #${targetTag}`, file.path);
+          }
+        }
+        frontmatter["tags"] = tags;
+      });
+    });
+  }
+  updateProperty(file, key, value) {
+    return __async(this, null, function* () {
+      yield this.app.fileManager.processFrontmatter(file, (frontmatter) => {
+        frontmatter[key] = value;
+        this.binder.log("success", `Updated property ${key} to ${value}`, file.path);
+      });
+    });
+  }
+};
+
+// core/RulesetService.ts
+var RulesetService = class {
+  constructor(app, triggerService, groupService, binder, actionService) {
+    this.rulesets = [];
+    this.app = app;
+    this.triggerService = triggerService;
+    this.groupService = groupService;
+    this.binder = binder;
+    this.actionService = actionService;
+  }
+  setMarkdownConfigService(service) {
+    this.markdownConfigService = service;
+  }
+  setSaveSettingsCallback(callback) {
+    this.saveSettingsCallback = callback;
+  }
+  updateConfig(config) {
+    this.rulesets = config.rulesets || [];
+    this.refreshTriggers();
+  }
+  getRulesets() {
+    return this.rulesets.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  saveRuleset(ruleset) {
+    return __async(this, null, function* () {
+      const index = this.rulesets.findIndex((r) => r.id === ruleset.id);
+      if (index !== -1) {
+        this.rulesets[index] = ruleset;
+      } else {
+        this.rulesets.push(ruleset);
+      }
+      yield this.saveSettings();
+      this.refreshTriggers();
+    });
+  }
+  deleteRuleset(ruleset) {
+    return __async(this, null, function* () {
+      this.rulesets = this.rulesets.filter((r) => r.id !== ruleset.id);
+      yield this.saveSettings();
+      this.refreshTriggers();
+    });
+  }
+  importRuleset(file) {
+    return __async(this, null, function* () {
+      if (!this.markdownConfigService)
+        return;
+      try {
+        const ruleset = yield this.markdownConfigService.parseRuleset(file);
+        const index = this.rulesets.findIndex((r) => r.id === ruleset.id);
+        if (index !== -1) {
+          this.rulesets[index] = ruleset;
+        } else {
+          this.rulesets.push(ruleset);
+        }
+        yield this.saveSettings();
+        this.refreshTriggers();
+        return ruleset;
+      } catch (e) {
+        console.error(`[Curator] Failed to import ruleset from ${file.path}`, e);
+        throw e;
+      }
+    });
+  }
+  exportRuleset(ruleset, folderPath) {
+    return __async(this, null, function* () {
+      if (!this.markdownConfigService)
+        return;
+      const exportRuleset = __spreadValues({}, ruleset);
+      const safeName = ruleset.name.replace(/[^a-z0-9]/gi, "_").trim();
+      exportRuleset.filePath = `${folderPath}/${safeName}.ruleset.md`;
+      yield this.markdownConfigService.writeRuleset(exportRuleset);
+    });
+  }
+  saveSettings() {
+    return __async(this, null, function* () {
+      if (this.saveSettingsCallback) {
+        yield this.saveSettingsCallback(this.rulesets);
+      }
+    });
+  }
+  get allRulesets() {
+    return this.rulesets;
+  }
+  refreshTriggers() {
+    this.triggerService.clearTriggers();
+    this.allRulesets.forEach((ruleset) => {
+      if (ruleset.enabled) {
+        this.triggerService.registerTrigger(ruleset.trigger, (file) => {
+          this.handleTrigger(ruleset, file);
+        });
+      }
+    });
+  }
+  handleTrigger(ruleset, file) {
+    return __async(this, null, function* () {
+      this.binder.log("info", `Processing Ruleset: ${ruleset.name}`, file.path);
+      if (ruleset.trigger.query) {
+        const matchesScope = yield this.groupService.matchesQuery(file, ruleset.trigger.query);
+        if (!matchesScope) {
+          return;
+        }
+      }
+      for (const rule of ruleset.rules) {
+        let match = true;
+        let query = rule.query;
+        if (rule.useTriggerQuery) {
+          query = ruleset.trigger.query || "";
+        }
+        if (query) {
+          match = yield this.groupService.matchesQuery(file, query);
+        }
+        if (match) {
+          this.binder.log("info", `Rule matched. Executing actions.`, file.path);
+          yield this.executeActions(rule.actions, file);
+        }
+      }
+    });
+  }
+  executeActions(actions, file) {
+    return __async(this, null, function* () {
+      for (const action of actions) {
+        try {
+          yield this.actionService.executeAction(file, action);
+        } catch (error) {
+          this.binder.log("error", `Failed to execute action ${action.type}`, file.path, error);
+        }
+      }
+    });
+  }
+  dryRun(rulesetId) {
+    return __async(this, null, function* () {
+      const ruleset = this.allRulesets.find((r) => r.id === rulesetId);
+      if (!ruleset)
+        return [];
+      let candidateFiles = [];
+      if (ruleset.trigger.query) {
+        candidateFiles = yield this.groupService.getMatchingFiles(ruleset.trigger.query);
+      } else {
+        candidateFiles = this.app.vault.getMarkdownFiles();
+      }
+      const results = [];
+      for (const file of candidateFiles) {
+        const fileActions = [];
+        for (const rule of ruleset.rules) {
+          let match = true;
+          let query = rule.query;
+          if (rule.useTriggerQuery) {
+            query = ruleset.trigger.query || "";
+          }
+          if (query) {
+            match = yield this.groupService.matchesQuery(file, query);
+          }
+          if (match) {
+            rule.actions.forEach((action) => {
+              let desc = action.type;
+              if (action.type === "move")
+                desc += ` to ${action.config.folder}`;
+              else if (action.type === "tag")
+                desc += ` ${action.config.operation} ${action.config.tag}`;
+              else if (action.type === "rename")
+                desc += ` (prefix: ${action.config.prefix}, suffix: ${action.config.suffix})`;
+              else if (action.type === "update")
+                desc += ` ${action.config.key} = ${action.config.value}`;
+              fileActions.push(desc);
+            });
+          }
+        }
+        if (fileActions.length > 0) {
+          results.push({ file, actions: fileActions });
+        }
+      }
+      return results;
+    });
+  }
+};
+
+// core/MarkdownConfigService.ts
+var import_obsidian4 = __toModule(require("obsidian"));
+var MarkdownConfigService = class {
+  constructor(app, rulesetService) {
+    this.activeRulesets = new Map();
+    this.rulesetFolder = "Curator Rules";
+    this.app = app;
+    this.rulesetService = rulesetService;
+  }
+  setRulesetFolder(folder) {
+    this.rulesetFolder = folder;
+  }
+  initialize() {
+    return __async(this, null, function* () {
+    });
+  }
+  processFile(file) {
+    return __async(this, null, function* () {
+      try {
+        const ruleset = yield this.parseRuleset(file);
+        this.activeRulesets.set(file.path, ruleset);
+      } catch (e) {
+        console.error(`[Curator] Failed to parse ruleset file: ${file.path}`, e);
+        new import_obsidian4.Notice(`Curator: Error parsing ruleset "${file.basename}". See console for details.`);
+        this.activeRulesets.delete(file.path);
+      }
+    });
+  }
+  parseRuleset(file) {
+    return __async(this, null, function* () {
+      const content = yield this.app.vault.read(file);
+      const cache = this.app.metadataCache.getFileCache(file);
+      const frontmatter = (cache == null ? void 0 : cache.frontmatter) || {};
+      if (!frontmatter["curator-trigger"]) {
+        throw new Error('Missing "curator-trigger" in frontmatter.');
+      }
+      const triggerBlock = this.extractCodeBlock(content, "# Trigger");
+      const triggerQuery = triggerBlock ? triggerBlock.trim() : "";
+      const trigger = {
+        type: frontmatter["curator-trigger"],
+        query: triggerQuery,
+        time: frontmatter["curator-trigger-time"],
+        days: frontmatter["curator-trigger-days"],
+        commandName: frontmatter["curator-trigger-command"]
+      };
+      const rules = [];
+      const sections = content.split(/^##\s+/m);
+      for (let i = 1; i < sections.length; i++) {
+        const section = sections[i];
+        const lines = section.split("\n");
+        const ruleName = lines[0].trim();
+        const scopeBlock = this.extractCodeBlock(section, "### Scope");
+        const scopeQuery = scopeBlock ? scopeBlock.trim() : "";
+        const actionsBlock = this.extractSectionContent(section, "### Actions");
+        const actions = this.parseActions(actionsBlock);
+        rules.push({
+          query: scopeQuery,
+          useTriggerQuery: !scopeQuery,
+          actions
+        });
+      }
+      return {
+        id: frontmatter["curator-id"] || file.path,
+        name: file.basename.replace(".ruleset", ""),
+        enabled: frontmatter["curator-enabled"] !== false,
+        trigger,
+        rules,
+        filePath: file.path
+      };
+    });
+  }
+  extractCodeBlock(content, sectionHeader) {
+    const headerIndex = content.indexOf(sectionHeader);
+    if (headerIndex === -1) {
+      console.log(`[Curator] Section header not found: "${sectionHeader}"`);
+      return null;
+    }
+    const searchStart = headerIndex + sectionHeader.length;
+    const remaining = content.substring(searchStart);
+    const blockStartRegex = /```\s*dataview/i;
+    const match = remaining.match(blockStartRegex);
+    if (!match || match.index === void 0) {
+      console.log(`[Curator] No dataview block found after "${sectionHeader}"`);
+      return null;
+    }
+    const blockStartIndex = match.index + match[0].length;
+    const blockEndIndex = remaining.indexOf("```", blockStartIndex);
+    if (blockEndIndex === -1) {
+      console.log(`[Curator] No closing fence found for dataview block after "${sectionHeader}"`);
+      return null;
+    }
+    return remaining.substring(blockStartIndex, blockEndIndex).trim();
+  }
+  extractSectionContent(content, sectionHeader) {
+    const headerIndex = content.indexOf(sectionHeader);
+    if (headerIndex === -1)
+      return [];
+    const searchStart = headerIndex + sectionHeader.length;
+    let sectionText = content.substring(searchStart);
+    const nextHeaderMatch = sectionText.match(/^\s*#/m);
+    if (nextHeaderMatch && nextHeaderMatch.index !== void 0) {
+      sectionText = sectionText.substring(0, nextHeaderMatch.index);
+    }
+    return sectionText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+  }
+  parseActions(lines) {
+    const actions = [];
+    for (const line of lines) {
+      const match = line.match(/^(\d+\.|-)\s+(.+)$/);
+      if (!match)
+        continue;
+      const text = match[2];
+      let action = null;
+      if (text.startsWith("move to folder:")) {
+        action = { type: "move", config: { folder: text.replace("move to folder:", "").trim() } };
+      } else if (text.startsWith("add tag:")) {
+        action = { type: "tag", config: { operation: "add", tag: text.replace("add tag:", "").trim() } };
+      } else if (text.startsWith("remove tag:")) {
+        action = { type: "tag", config: { operation: "remove", tag: text.replace("remove tag:", "").trim() } };
+      } else if (text.startsWith("rename:")) {
+        const configStr = text.replace("rename:", "").trim();
+        const prefixMatch = configStr.match(/prefix="([^"]*)"/);
+        const suffixMatch = configStr.match(/suffix="([^"]*)"/);
+        action = {
+          type: "rename",
+          config: {
+            prefix: prefixMatch ? prefixMatch[1] : void 0,
+            suffix: suffixMatch ? suffixMatch[1] : void 0
+          }
+        };
+      } else if (text.startsWith("update property:")) {
+        const configStr = text.replace("update property:", "").trim();
+        const keyMatch = configStr.match(/key="([^"]*)"/);
+        const valueMatch = configStr.match(/value="([^"]*)"/);
+        if (keyMatch && valueMatch) {
+          action = {
+            type: "update",
+            config: { key: keyMatch[1], value: valueMatch[1] }
+          };
+        }
+      }
+      if (action)
+        actions.push(action);
+    }
+    return actions;
+  }
+  formatQueryForFile(query) {
+    if (!query)
+      return "";
+    const trimmed = query.trim();
+    if (/^(LIST|TABLE|TASK|CALENDAR)/i.test(trimmed)) {
+      return trimmed;
+    }
+    if (/^(FROM|WHERE|FLATTEN|LIMIT|SORT)/i.test(trimmed)) {
+      return `LIST ${trimmed}`;
+    }
+    if (/\s(WHERE|FLATTEN|LIMIT|SORT)\s/i.test(trimmed)) {
+      return `LIST FROM ${trimmed}`;
+    }
+    return `LIST FROM ${trimmed}`;
+  }
+  writeRuleset(ruleset) {
+    return __async(this, null, function* () {
+      let content = "---\n";
+      content += `curator-id: "${ruleset.id}"
+`;
+      content += `curator-enabled: ${ruleset.enabled}
+`;
+      content += `curator-trigger: "${ruleset.trigger.type}"
+`;
+      if (ruleset.trigger.time)
+        content += `curator-trigger-time: "${ruleset.trigger.time}"
+`;
+      if (ruleset.trigger.days)
+        content += `curator-trigger-days: [${ruleset.trigger.days.join(", ")}]
+`;
+      if (ruleset.trigger.commandName)
+        content += `curator-trigger-command: "${ruleset.trigger.commandName}"
+`;
+      content += "---\n\n";
+      content += "# Trigger\n";
+      if (ruleset.trigger.query) {
+        content += "``` dataview\n";
+        content += this.formatQueryForFile(ruleset.trigger.query) + "\n";
+        content += "```\n";
+      }
+      content += "\n";
+      for (let i = 0; i < ruleset.rules.length; i++) {
+        const rule = ruleset.rules[i];
+        const ruleName = `Rule ${i + 1}`;
+        content += `## ${ruleName}
+`;
+        content += "### Scope\n";
+        if (rule.query) {
+          content += "``` dataview\n";
+          content += this.formatQueryForFile(rule.query) + "\n";
+          content += "```\n";
+        } else {
+          content += "_Inherits Trigger Scope_\n";
+        }
+        content += "\n";
+        content += "### Actions\n";
+        for (const action of rule.actions) {
+          let line = "";
+          if (action.type === "move")
+            line = `move to folder: ${action.config.folder}`;
+          else if (action.type === "tag")
+            line = `${action.config.operation} tag: ${action.config.tag}`;
+          else if (action.type === "rename")
+            line = `rename: prefix="${action.config.prefix || ""}", suffix="${action.config.suffix || ""}"`;
+          else if (action.type === "update")
+            line = `update property: key="${action.config.key}", value="${action.config.value}"`;
+          content += `1. ${line}
+`;
+        }
+        content += "\n";
+      }
+      let targetPath = ruleset.filePath;
+      if (!targetPath || !targetPath.endsWith(".ruleset.md")) {
+        const fileName = `${ruleset.name.replace(/[^a-z0-9]/gi, "_").trim()}.ruleset.md`;
+        if (this.rulesetFolder) {
+          const folder = this.app.vault.getAbstractFileByPath(this.rulesetFolder);
+          if (!folder) {
+            yield this.app.vault.createFolder(this.rulesetFolder);
+          }
+          targetPath = `${this.rulesetFolder}/${fileName}`;
+        } else {
+          targetPath = fileName;
+        }
+      }
+      const file = this.app.vault.getAbstractFileByPath(targetPath);
+      if (file instanceof import_obsidian4.TFile) {
+        yield this.app.vault.modify(file, content);
+      } else {
+        yield this.app.vault.create(targetPath, content);
+      }
+      return targetPath;
+    });
+  }
+};
 
 // ui/CuratorSettingsTab.ts
-var import_obsidian8 = __toModule(require("obsidian"));
+var import_obsidian13 = __toModule(require("obsidian"));
 
 // ui/components/RulesTab.ts
-var import_obsidian6 = __toModule(require("obsidian"));
+var import_obsidian11 = __toModule(require("obsidian"));
 
 // ui/components/FolderSuggest.ts
-var import_obsidian4 = __toModule(require("obsidian"));
+var import_obsidian5 = __toModule(require("obsidian"));
 var FolderSuggest = class {
   constructor(app, inputEl) {
     this.app = app;
@@ -684,7 +923,7 @@ var FolderSuggest = class {
     const folders = [];
     const lowerCaseInputStr = inputStr.toLowerCase();
     abstractFiles.forEach((file) => {
-      if (file instanceof import_obsidian4.TFolder) {
+      if (file instanceof import_obsidian5.TFolder) {
         if (file.path.toLowerCase().contains(lowerCaseInputStr)) {
           folders.push(file);
         }
@@ -734,8 +973,8 @@ var FolderSuggest = class {
 };
 
 // ui/components/QueryHelperModal.ts
-var import_obsidian5 = __toModule(require("obsidian"));
-var QueryHelperModal = class extends import_obsidian5.Modal {
+var import_obsidian6 = __toModule(require("obsidian"));
+var QueryHelperModal = class extends import_obsidian6.Modal {
   constructor(app, onSelect) {
     super(app);
     this.templates = [
@@ -822,16 +1061,1692 @@ var QueryHelperModal = class extends import_obsidian5.Modal {
   }
 };
 
+// ui/components/AddRulesetModal.ts
+var import_obsidian7 = __toModule(require("obsidian"));
+var AddRulesetModal = class extends import_obsidian7.Modal {
+  constructor(app, defaultFolder, onSubmit) {
+    super(app);
+    this.name = "New Ruleset";
+    this.triggerType = "change_to";
+    this.isFile = true;
+    this.folder = defaultFolder || "";
+    this.onSubmit = onSubmit;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: "Create New Ruleset" });
+    new import_obsidian7.Setting(contentEl).setName("Ruleset Name").addText((text) => text.setValue(this.name).onChange((value) => {
+      this.name = value;
+    }));
+    new import_obsidian7.Setting(contentEl).setName("Trigger When...").addDropdown((dropdown) => dropdown.addOption("change_to", "Notes change to...").addOption("change_from", "Notes change from...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(this.triggerType).onChange((value) => {
+      this.triggerType = value;
+    }));
+    const fileSetting = new import_obsidian7.Setting(contentEl).setName("Save as Markdown File").setDesc("Save configuration in a .ruleset.md file").addToggle((toggle) => toggle.setValue(this.isFile).onChange((value) => {
+      this.isFile = value;
+      folderSetting.settingEl.style.display = value ? "" : "none";
+    }));
+    const folderSetting = new import_obsidian7.Setting(contentEl).setName("Folder").setDesc("Where to save the ruleset file").addText((text) => {
+      text.setValue(this.folder).onChange((value) => {
+        this.folder = value;
+      });
+      new FolderSuggest(this.app, text.inputEl);
+    });
+    folderSetting.settingEl.style.display = this.isFile ? "" : "none";
+    new import_obsidian7.Setting(contentEl).addButton((btn) => btn.setButtonText("Create").setCta().onClick(() => {
+      this.close();
+      this.onSubmit(this.name, this.triggerType, this.isFile ? this.folder : null);
+    }));
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
+// ui/components/ImportRulesetModal.ts
+var import_obsidian10 = __toModule(require("obsidian"));
+
+// suggests/file-suggest.ts
+var import_obsidian9 = __toModule(require("obsidian"));
+
+// suggests/suggest.ts
+var import_obsidian8 = __toModule(require("obsidian"));
+
+// node_modules/@popperjs/core/lib/enums.js
+var top = "top";
+var bottom = "bottom";
+var right = "right";
+var left = "left";
+var auto = "auto";
+var basePlacements = [top, bottom, right, left];
+var start = "start";
+var end = "end";
+var clippingParents = "clippingParents";
+var viewport = "viewport";
+var popper = "popper";
+var reference = "reference";
+var variationPlacements = /* @__PURE__ */ basePlacements.reduce(function(acc, placement) {
+  return acc.concat([placement + "-" + start, placement + "-" + end]);
+}, []);
+var placements = /* @__PURE__ */ [].concat(basePlacements, [auto]).reduce(function(acc, placement) {
+  return acc.concat([placement, placement + "-" + start, placement + "-" + end]);
+}, []);
+var beforeRead = "beforeRead";
+var read = "read";
+var afterRead = "afterRead";
+var beforeMain = "beforeMain";
+var main = "main";
+var afterMain = "afterMain";
+var beforeWrite = "beforeWrite";
+var write = "write";
+var afterWrite = "afterWrite";
+var modifierPhases = [beforeRead, read, afterRead, beforeMain, main, afterMain, beforeWrite, write, afterWrite];
+
+// node_modules/@popperjs/core/lib/dom-utils/getNodeName.js
+function getNodeName(element) {
+  return element ? (element.nodeName || "").toLowerCase() : null;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getWindow.js
+function getWindow(node) {
+  if (node == null) {
+    return window;
+  }
+  if (node.toString() !== "[object Window]") {
+    var ownerDocument = node.ownerDocument;
+    return ownerDocument ? ownerDocument.defaultView || window : window;
+  }
+  return node;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/instanceOf.js
+function isElement(node) {
+  var OwnElement = getWindow(node).Element;
+  return node instanceof OwnElement || node instanceof Element;
+}
+function isHTMLElement(node) {
+  var OwnElement = getWindow(node).HTMLElement;
+  return node instanceof OwnElement || node instanceof HTMLElement;
+}
+function isShadowRoot(node) {
+  if (typeof ShadowRoot === "undefined") {
+    return false;
+  }
+  var OwnElement = getWindow(node).ShadowRoot;
+  return node instanceof OwnElement || node instanceof ShadowRoot;
+}
+
+// node_modules/@popperjs/core/lib/modifiers/applyStyles.js
+function applyStyles(_ref) {
+  var state = _ref.state;
+  Object.keys(state.elements).forEach(function(name) {
+    var style = state.styles[name] || {};
+    var attributes = state.attributes[name] || {};
+    var element = state.elements[name];
+    if (!isHTMLElement(element) || !getNodeName(element)) {
+      return;
+    }
+    Object.assign(element.style, style);
+    Object.keys(attributes).forEach(function(name2) {
+      var value = attributes[name2];
+      if (value === false) {
+        element.removeAttribute(name2);
+      } else {
+        element.setAttribute(name2, value === true ? "" : value);
+      }
+    });
+  });
+}
+function effect(_ref2) {
+  var state = _ref2.state;
+  var initialStyles = {
+    popper: {
+      position: state.options.strategy,
+      left: "0",
+      top: "0",
+      margin: "0"
+    },
+    arrow: {
+      position: "absolute"
+    },
+    reference: {}
+  };
+  Object.assign(state.elements.popper.style, initialStyles.popper);
+  state.styles = initialStyles;
+  if (state.elements.arrow) {
+    Object.assign(state.elements.arrow.style, initialStyles.arrow);
+  }
+  return function() {
+    Object.keys(state.elements).forEach(function(name) {
+      var element = state.elements[name];
+      var attributes = state.attributes[name] || {};
+      var styleProperties = Object.keys(state.styles.hasOwnProperty(name) ? state.styles[name] : initialStyles[name]);
+      var style = styleProperties.reduce(function(style2, property) {
+        style2[property] = "";
+        return style2;
+      }, {});
+      if (!isHTMLElement(element) || !getNodeName(element)) {
+        return;
+      }
+      Object.assign(element.style, style);
+      Object.keys(attributes).forEach(function(attribute) {
+        element.removeAttribute(attribute);
+      });
+    });
+  };
+}
+var applyStyles_default = {
+  name: "applyStyles",
+  enabled: true,
+  phase: "write",
+  fn: applyStyles,
+  effect,
+  requires: ["computeStyles"]
+};
+
+// node_modules/@popperjs/core/lib/utils/getBasePlacement.js
+function getBasePlacement(placement) {
+  return placement.split("-")[0];
+}
+
+// node_modules/@popperjs/core/lib/utils/math.js
+var max = Math.max;
+var min = Math.min;
+var round = Math.round;
+
+// node_modules/@popperjs/core/lib/utils/userAgent.js
+function getUAString() {
+  var uaData = navigator.userAgentData;
+  if (uaData != null && uaData.brands && Array.isArray(uaData.brands)) {
+    return uaData.brands.map(function(item) {
+      return item.brand + "/" + item.version;
+    }).join(" ");
+  }
+  return navigator.userAgent;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/isLayoutViewport.js
+function isLayoutViewport() {
+  return !/^((?!chrome|android).)*safari/i.test(getUAString());
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getBoundingClientRect.js
+function getBoundingClientRect(element, includeScale, isFixedStrategy) {
+  if (includeScale === void 0) {
+    includeScale = false;
+  }
+  if (isFixedStrategy === void 0) {
+    isFixedStrategy = false;
+  }
+  var clientRect = element.getBoundingClientRect();
+  var scaleX = 1;
+  var scaleY = 1;
+  if (includeScale && isHTMLElement(element)) {
+    scaleX = element.offsetWidth > 0 ? round(clientRect.width) / element.offsetWidth || 1 : 1;
+    scaleY = element.offsetHeight > 0 ? round(clientRect.height) / element.offsetHeight || 1 : 1;
+  }
+  var _ref = isElement(element) ? getWindow(element) : window, visualViewport = _ref.visualViewport;
+  var addVisualOffsets = !isLayoutViewport() && isFixedStrategy;
+  var x = (clientRect.left + (addVisualOffsets && visualViewport ? visualViewport.offsetLeft : 0)) / scaleX;
+  var y = (clientRect.top + (addVisualOffsets && visualViewport ? visualViewport.offsetTop : 0)) / scaleY;
+  var width = clientRect.width / scaleX;
+  var height = clientRect.height / scaleY;
+  return {
+    width,
+    height,
+    top: y,
+    right: x + width,
+    bottom: y + height,
+    left: x,
+    x,
+    y
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getLayoutRect.js
+function getLayoutRect(element) {
+  var clientRect = getBoundingClientRect(element);
+  var width = element.offsetWidth;
+  var height = element.offsetHeight;
+  if (Math.abs(clientRect.width - width) <= 1) {
+    width = clientRect.width;
+  }
+  if (Math.abs(clientRect.height - height) <= 1) {
+    height = clientRect.height;
+  }
+  return {
+    x: element.offsetLeft,
+    y: element.offsetTop,
+    width,
+    height
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/contains.js
+function contains(parent, child) {
+  var rootNode = child.getRootNode && child.getRootNode();
+  if (parent.contains(child)) {
+    return true;
+  } else if (rootNode && isShadowRoot(rootNode)) {
+    var next = child;
+    do {
+      if (next && parent.isSameNode(next)) {
+        return true;
+      }
+      next = next.parentNode || next.host;
+    } while (next);
+  }
+  return false;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getComputedStyle.js
+function getComputedStyle(element) {
+  return getWindow(element).getComputedStyle(element);
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/isTableElement.js
+function isTableElement(element) {
+  return ["table", "td", "th"].indexOf(getNodeName(element)) >= 0;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getDocumentElement.js
+function getDocumentElement(element) {
+  return ((isElement(element) ? element.ownerDocument : element.document) || window.document).documentElement;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getParentNode.js
+function getParentNode(element) {
+  if (getNodeName(element) === "html") {
+    return element;
+  }
+  return element.assignedSlot || element.parentNode || (isShadowRoot(element) ? element.host : null) || getDocumentElement(element);
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getOffsetParent.js
+function getTrueOffsetParent(element) {
+  if (!isHTMLElement(element) || getComputedStyle(element).position === "fixed") {
+    return null;
+  }
+  return element.offsetParent;
+}
+function getContainingBlock(element) {
+  var isFirefox = /firefox/i.test(getUAString());
+  var isIE = /Trident/i.test(getUAString());
+  if (isIE && isHTMLElement(element)) {
+    var elementCss = getComputedStyle(element);
+    if (elementCss.position === "fixed") {
+      return null;
+    }
+  }
+  var currentNode = getParentNode(element);
+  if (isShadowRoot(currentNode)) {
+    currentNode = currentNode.host;
+  }
+  while (isHTMLElement(currentNode) && ["html", "body"].indexOf(getNodeName(currentNode)) < 0) {
+    var css = getComputedStyle(currentNode);
+    if (css.transform !== "none" || css.perspective !== "none" || css.contain === "paint" || ["transform", "perspective"].indexOf(css.willChange) !== -1 || isFirefox && css.willChange === "filter" || isFirefox && css.filter && css.filter !== "none") {
+      return currentNode;
+    } else {
+      currentNode = currentNode.parentNode;
+    }
+  }
+  return null;
+}
+function getOffsetParent(element) {
+  var window2 = getWindow(element);
+  var offsetParent = getTrueOffsetParent(element);
+  while (offsetParent && isTableElement(offsetParent) && getComputedStyle(offsetParent).position === "static") {
+    offsetParent = getTrueOffsetParent(offsetParent);
+  }
+  if (offsetParent && (getNodeName(offsetParent) === "html" || getNodeName(offsetParent) === "body" && getComputedStyle(offsetParent).position === "static")) {
+    return window2;
+  }
+  return offsetParent || getContainingBlock(element) || window2;
+}
+
+// node_modules/@popperjs/core/lib/utils/getMainAxisFromPlacement.js
+function getMainAxisFromPlacement(placement) {
+  return ["top", "bottom"].indexOf(placement) >= 0 ? "x" : "y";
+}
+
+// node_modules/@popperjs/core/lib/utils/within.js
+function within(min2, value, max2) {
+  return max(min2, min(value, max2));
+}
+function withinMaxClamp(min2, value, max2) {
+  var v = within(min2, value, max2);
+  return v > max2 ? max2 : v;
+}
+
+// node_modules/@popperjs/core/lib/utils/getFreshSideObject.js
+function getFreshSideObject() {
+  return {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0
+  };
+}
+
+// node_modules/@popperjs/core/lib/utils/mergePaddingObject.js
+function mergePaddingObject(paddingObject) {
+  return Object.assign({}, getFreshSideObject(), paddingObject);
+}
+
+// node_modules/@popperjs/core/lib/utils/expandToHashMap.js
+function expandToHashMap(value, keys) {
+  return keys.reduce(function(hashMap, key) {
+    hashMap[key] = value;
+    return hashMap;
+  }, {});
+}
+
+// node_modules/@popperjs/core/lib/modifiers/arrow.js
+var toPaddingObject = function toPaddingObject2(padding, state) {
+  padding = typeof padding === "function" ? padding(Object.assign({}, state.rects, {
+    placement: state.placement
+  })) : padding;
+  return mergePaddingObject(typeof padding !== "number" ? padding : expandToHashMap(padding, basePlacements));
+};
+function arrow(_ref) {
+  var _state$modifiersData$;
+  var state = _ref.state, name = _ref.name, options = _ref.options;
+  var arrowElement = state.elements.arrow;
+  var popperOffsets2 = state.modifiersData.popperOffsets;
+  var basePlacement = getBasePlacement(state.placement);
+  var axis = getMainAxisFromPlacement(basePlacement);
+  var isVertical = [left, right].indexOf(basePlacement) >= 0;
+  var len = isVertical ? "height" : "width";
+  if (!arrowElement || !popperOffsets2) {
+    return;
+  }
+  var paddingObject = toPaddingObject(options.padding, state);
+  var arrowRect = getLayoutRect(arrowElement);
+  var minProp = axis === "y" ? top : left;
+  var maxProp = axis === "y" ? bottom : right;
+  var endDiff = state.rects.reference[len] + state.rects.reference[axis] - popperOffsets2[axis] - state.rects.popper[len];
+  var startDiff = popperOffsets2[axis] - state.rects.reference[axis];
+  var arrowOffsetParent = getOffsetParent(arrowElement);
+  var clientSize = arrowOffsetParent ? axis === "y" ? arrowOffsetParent.clientHeight || 0 : arrowOffsetParent.clientWidth || 0 : 0;
+  var centerToReference = endDiff / 2 - startDiff / 2;
+  var min2 = paddingObject[minProp];
+  var max2 = clientSize - arrowRect[len] - paddingObject[maxProp];
+  var center = clientSize / 2 - arrowRect[len] / 2 + centerToReference;
+  var offset2 = within(min2, center, max2);
+  var axisProp = axis;
+  state.modifiersData[name] = (_state$modifiersData$ = {}, _state$modifiersData$[axisProp] = offset2, _state$modifiersData$.centerOffset = offset2 - center, _state$modifiersData$);
+}
+function effect2(_ref2) {
+  var state = _ref2.state, options = _ref2.options;
+  var _options$element = options.element, arrowElement = _options$element === void 0 ? "[data-popper-arrow]" : _options$element;
+  if (arrowElement == null) {
+    return;
+  }
+  if (typeof arrowElement === "string") {
+    arrowElement = state.elements.popper.querySelector(arrowElement);
+    if (!arrowElement) {
+      return;
+    }
+  }
+  if (!contains(state.elements.popper, arrowElement)) {
+    return;
+  }
+  state.elements.arrow = arrowElement;
+}
+var arrow_default = {
+  name: "arrow",
+  enabled: true,
+  phase: "main",
+  fn: arrow,
+  effect: effect2,
+  requires: ["popperOffsets"],
+  requiresIfExists: ["preventOverflow"]
+};
+
+// node_modules/@popperjs/core/lib/utils/getVariation.js
+function getVariation(placement) {
+  return placement.split("-")[1];
+}
+
+// node_modules/@popperjs/core/lib/modifiers/computeStyles.js
+var unsetSides = {
+  top: "auto",
+  right: "auto",
+  bottom: "auto",
+  left: "auto"
+};
+function roundOffsetsByDPR(_ref, win) {
+  var x = _ref.x, y = _ref.y;
+  var dpr = win.devicePixelRatio || 1;
+  return {
+    x: round(x * dpr) / dpr || 0,
+    y: round(y * dpr) / dpr || 0
+  };
+}
+function mapToStyles(_ref2) {
+  var _Object$assign2;
+  var popper2 = _ref2.popper, popperRect = _ref2.popperRect, placement = _ref2.placement, variation = _ref2.variation, offsets = _ref2.offsets, position = _ref2.position, gpuAcceleration = _ref2.gpuAcceleration, adaptive = _ref2.adaptive, roundOffsets = _ref2.roundOffsets, isFixed = _ref2.isFixed;
+  var _offsets$x = offsets.x, x = _offsets$x === void 0 ? 0 : _offsets$x, _offsets$y = offsets.y, y = _offsets$y === void 0 ? 0 : _offsets$y;
+  var _ref3 = typeof roundOffsets === "function" ? roundOffsets({
+    x,
+    y
+  }) : {
+    x,
+    y
+  };
+  x = _ref3.x;
+  y = _ref3.y;
+  var hasX = offsets.hasOwnProperty("x");
+  var hasY = offsets.hasOwnProperty("y");
+  var sideX = left;
+  var sideY = top;
+  var win = window;
+  if (adaptive) {
+    var offsetParent = getOffsetParent(popper2);
+    var heightProp = "clientHeight";
+    var widthProp = "clientWidth";
+    if (offsetParent === getWindow(popper2)) {
+      offsetParent = getDocumentElement(popper2);
+      if (getComputedStyle(offsetParent).position !== "static" && position === "absolute") {
+        heightProp = "scrollHeight";
+        widthProp = "scrollWidth";
+      }
+    }
+    offsetParent = offsetParent;
+    if (placement === top || (placement === left || placement === right) && variation === end) {
+      sideY = bottom;
+      var offsetY = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.height : offsetParent[heightProp];
+      y -= offsetY - popperRect.height;
+      y *= gpuAcceleration ? 1 : -1;
+    }
+    if (placement === left || (placement === top || placement === bottom) && variation === end) {
+      sideX = right;
+      var offsetX = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.width : offsetParent[widthProp];
+      x -= offsetX - popperRect.width;
+      x *= gpuAcceleration ? 1 : -1;
+    }
+  }
+  var commonStyles = Object.assign({
+    position
+  }, adaptive && unsetSides);
+  var _ref4 = roundOffsets === true ? roundOffsetsByDPR({
+    x,
+    y
+  }, getWindow(popper2)) : {
+    x,
+    y
+  };
+  x = _ref4.x;
+  y = _ref4.y;
+  if (gpuAcceleration) {
+    var _Object$assign;
+    return Object.assign({}, commonStyles, (_Object$assign = {}, _Object$assign[sideY] = hasY ? "0" : "", _Object$assign[sideX] = hasX ? "0" : "", _Object$assign.transform = (win.devicePixelRatio || 1) <= 1 ? "translate(" + x + "px, " + y + "px)" : "translate3d(" + x + "px, " + y + "px, 0)", _Object$assign));
+  }
+  return Object.assign({}, commonStyles, (_Object$assign2 = {}, _Object$assign2[sideY] = hasY ? y + "px" : "", _Object$assign2[sideX] = hasX ? x + "px" : "", _Object$assign2.transform = "", _Object$assign2));
+}
+function computeStyles(_ref5) {
+  var state = _ref5.state, options = _ref5.options;
+  var _options$gpuAccelerat = options.gpuAcceleration, gpuAcceleration = _options$gpuAccelerat === void 0 ? true : _options$gpuAccelerat, _options$adaptive = options.adaptive, adaptive = _options$adaptive === void 0 ? true : _options$adaptive, _options$roundOffsets = options.roundOffsets, roundOffsets = _options$roundOffsets === void 0 ? true : _options$roundOffsets;
+  var commonStyles = {
+    placement: getBasePlacement(state.placement),
+    variation: getVariation(state.placement),
+    popper: state.elements.popper,
+    popperRect: state.rects.popper,
+    gpuAcceleration,
+    isFixed: state.options.strategy === "fixed"
+  };
+  if (state.modifiersData.popperOffsets != null) {
+    state.styles.popper = Object.assign({}, state.styles.popper, mapToStyles(Object.assign({}, commonStyles, {
+      offsets: state.modifiersData.popperOffsets,
+      position: state.options.strategy,
+      adaptive,
+      roundOffsets
+    })));
+  }
+  if (state.modifiersData.arrow != null) {
+    state.styles.arrow = Object.assign({}, state.styles.arrow, mapToStyles(Object.assign({}, commonStyles, {
+      offsets: state.modifiersData.arrow,
+      position: "absolute",
+      adaptive: false,
+      roundOffsets
+    })));
+  }
+  state.attributes.popper = Object.assign({}, state.attributes.popper, {
+    "data-popper-placement": state.placement
+  });
+}
+var computeStyles_default = {
+  name: "computeStyles",
+  enabled: true,
+  phase: "beforeWrite",
+  fn: computeStyles,
+  data: {}
+};
+
+// node_modules/@popperjs/core/lib/modifiers/eventListeners.js
+var passive = {
+  passive: true
+};
+function effect3(_ref) {
+  var state = _ref.state, instance = _ref.instance, options = _ref.options;
+  var _options$scroll = options.scroll, scroll = _options$scroll === void 0 ? true : _options$scroll, _options$resize = options.resize, resize = _options$resize === void 0 ? true : _options$resize;
+  var window2 = getWindow(state.elements.popper);
+  var scrollParents = [].concat(state.scrollParents.reference, state.scrollParents.popper);
+  if (scroll) {
+    scrollParents.forEach(function(scrollParent) {
+      scrollParent.addEventListener("scroll", instance.update, passive);
+    });
+  }
+  if (resize) {
+    window2.addEventListener("resize", instance.update, passive);
+  }
+  return function() {
+    if (scroll) {
+      scrollParents.forEach(function(scrollParent) {
+        scrollParent.removeEventListener("scroll", instance.update, passive);
+      });
+    }
+    if (resize) {
+      window2.removeEventListener("resize", instance.update, passive);
+    }
+  };
+}
+var eventListeners_default = {
+  name: "eventListeners",
+  enabled: true,
+  phase: "write",
+  fn: function fn() {
+  },
+  effect: effect3,
+  data: {}
+};
+
+// node_modules/@popperjs/core/lib/utils/getOppositePlacement.js
+var hash = {
+  left: "right",
+  right: "left",
+  bottom: "top",
+  top: "bottom"
+};
+function getOppositePlacement(placement) {
+  return placement.replace(/left|right|bottom|top/g, function(matched) {
+    return hash[matched];
+  });
+}
+
+// node_modules/@popperjs/core/lib/utils/getOppositeVariationPlacement.js
+var hash2 = {
+  start: "end",
+  end: "start"
+};
+function getOppositeVariationPlacement(placement) {
+  return placement.replace(/start|end/g, function(matched) {
+    return hash2[matched];
+  });
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getWindowScroll.js
+function getWindowScroll(node) {
+  var win = getWindow(node);
+  var scrollLeft = win.pageXOffset;
+  var scrollTop = win.pageYOffset;
+  return {
+    scrollLeft,
+    scrollTop
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getWindowScrollBarX.js
+function getWindowScrollBarX(element) {
+  return getBoundingClientRect(getDocumentElement(element)).left + getWindowScroll(element).scrollLeft;
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getViewportRect.js
+function getViewportRect(element, strategy) {
+  var win = getWindow(element);
+  var html = getDocumentElement(element);
+  var visualViewport = win.visualViewport;
+  var width = html.clientWidth;
+  var height = html.clientHeight;
+  var x = 0;
+  var y = 0;
+  if (visualViewport) {
+    width = visualViewport.width;
+    height = visualViewport.height;
+    var layoutViewport = isLayoutViewport();
+    if (layoutViewport || !layoutViewport && strategy === "fixed") {
+      x = visualViewport.offsetLeft;
+      y = visualViewport.offsetTop;
+    }
+  }
+  return {
+    width,
+    height,
+    x: x + getWindowScrollBarX(element),
+    y
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getDocumentRect.js
+function getDocumentRect(element) {
+  var _element$ownerDocumen;
+  var html = getDocumentElement(element);
+  var winScroll = getWindowScroll(element);
+  var body = (_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body;
+  var width = max(html.scrollWidth, html.clientWidth, body ? body.scrollWidth : 0, body ? body.clientWidth : 0);
+  var height = max(html.scrollHeight, html.clientHeight, body ? body.scrollHeight : 0, body ? body.clientHeight : 0);
+  var x = -winScroll.scrollLeft + getWindowScrollBarX(element);
+  var y = -winScroll.scrollTop;
+  if (getComputedStyle(body || html).direction === "rtl") {
+    x += max(html.clientWidth, body ? body.clientWidth : 0) - width;
+  }
+  return {
+    width,
+    height,
+    x,
+    y
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/isScrollParent.js
+function isScrollParent(element) {
+  var _getComputedStyle = getComputedStyle(element), overflow = _getComputedStyle.overflow, overflowX = _getComputedStyle.overflowX, overflowY = _getComputedStyle.overflowY;
+  return /auto|scroll|overlay|hidden/.test(overflow + overflowY + overflowX);
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getScrollParent.js
+function getScrollParent(node) {
+  if (["html", "body", "#document"].indexOf(getNodeName(node)) >= 0) {
+    return node.ownerDocument.body;
+  }
+  if (isHTMLElement(node) && isScrollParent(node)) {
+    return node;
+  }
+  return getScrollParent(getParentNode(node));
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/listScrollParents.js
+function listScrollParents(element, list) {
+  var _element$ownerDocumen;
+  if (list === void 0) {
+    list = [];
+  }
+  var scrollParent = getScrollParent(element);
+  var isBody = scrollParent === ((_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body);
+  var win = getWindow(scrollParent);
+  var target = isBody ? [win].concat(win.visualViewport || [], isScrollParent(scrollParent) ? scrollParent : []) : scrollParent;
+  var updatedList = list.concat(target);
+  return isBody ? updatedList : updatedList.concat(listScrollParents(getParentNode(target)));
+}
+
+// node_modules/@popperjs/core/lib/utils/rectToClientRect.js
+function rectToClientRect(rect) {
+  return Object.assign({}, rect, {
+    left: rect.x,
+    top: rect.y,
+    right: rect.x + rect.width,
+    bottom: rect.y + rect.height
+  });
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getClippingRect.js
+function getInnerBoundingClientRect(element, strategy) {
+  var rect = getBoundingClientRect(element, false, strategy === "fixed");
+  rect.top = rect.top + element.clientTop;
+  rect.left = rect.left + element.clientLeft;
+  rect.bottom = rect.top + element.clientHeight;
+  rect.right = rect.left + element.clientWidth;
+  rect.width = element.clientWidth;
+  rect.height = element.clientHeight;
+  rect.x = rect.left;
+  rect.y = rect.top;
+  return rect;
+}
+function getClientRectFromMixedType(element, clippingParent, strategy) {
+  return clippingParent === viewport ? rectToClientRect(getViewportRect(element, strategy)) : isElement(clippingParent) ? getInnerBoundingClientRect(clippingParent, strategy) : rectToClientRect(getDocumentRect(getDocumentElement(element)));
+}
+function getClippingParents(element) {
+  var clippingParents2 = listScrollParents(getParentNode(element));
+  var canEscapeClipping = ["absolute", "fixed"].indexOf(getComputedStyle(element).position) >= 0;
+  var clipperElement = canEscapeClipping && isHTMLElement(element) ? getOffsetParent(element) : element;
+  if (!isElement(clipperElement)) {
+    return [];
+  }
+  return clippingParents2.filter(function(clippingParent) {
+    return isElement(clippingParent) && contains(clippingParent, clipperElement) && getNodeName(clippingParent) !== "body";
+  });
+}
+function getClippingRect(element, boundary, rootBoundary, strategy) {
+  var mainClippingParents = boundary === "clippingParents" ? getClippingParents(element) : [].concat(boundary);
+  var clippingParents2 = [].concat(mainClippingParents, [rootBoundary]);
+  var firstClippingParent = clippingParents2[0];
+  var clippingRect = clippingParents2.reduce(function(accRect, clippingParent) {
+    var rect = getClientRectFromMixedType(element, clippingParent, strategy);
+    accRect.top = max(rect.top, accRect.top);
+    accRect.right = min(rect.right, accRect.right);
+    accRect.bottom = min(rect.bottom, accRect.bottom);
+    accRect.left = max(rect.left, accRect.left);
+    return accRect;
+  }, getClientRectFromMixedType(element, firstClippingParent, strategy));
+  clippingRect.width = clippingRect.right - clippingRect.left;
+  clippingRect.height = clippingRect.bottom - clippingRect.top;
+  clippingRect.x = clippingRect.left;
+  clippingRect.y = clippingRect.top;
+  return clippingRect;
+}
+
+// node_modules/@popperjs/core/lib/utils/computeOffsets.js
+function computeOffsets(_ref) {
+  var reference2 = _ref.reference, element = _ref.element, placement = _ref.placement;
+  var basePlacement = placement ? getBasePlacement(placement) : null;
+  var variation = placement ? getVariation(placement) : null;
+  var commonX = reference2.x + reference2.width / 2 - element.width / 2;
+  var commonY = reference2.y + reference2.height / 2 - element.height / 2;
+  var offsets;
+  switch (basePlacement) {
+    case top:
+      offsets = {
+        x: commonX,
+        y: reference2.y - element.height
+      };
+      break;
+    case bottom:
+      offsets = {
+        x: commonX,
+        y: reference2.y + reference2.height
+      };
+      break;
+    case right:
+      offsets = {
+        x: reference2.x + reference2.width,
+        y: commonY
+      };
+      break;
+    case left:
+      offsets = {
+        x: reference2.x - element.width,
+        y: commonY
+      };
+      break;
+    default:
+      offsets = {
+        x: reference2.x,
+        y: reference2.y
+      };
+  }
+  var mainAxis = basePlacement ? getMainAxisFromPlacement(basePlacement) : null;
+  if (mainAxis != null) {
+    var len = mainAxis === "y" ? "height" : "width";
+    switch (variation) {
+      case start:
+        offsets[mainAxis] = offsets[mainAxis] - (reference2[len] / 2 - element[len] / 2);
+        break;
+      case end:
+        offsets[mainAxis] = offsets[mainAxis] + (reference2[len] / 2 - element[len] / 2);
+        break;
+      default:
+    }
+  }
+  return offsets;
+}
+
+// node_modules/@popperjs/core/lib/utils/detectOverflow.js
+function detectOverflow(state, options) {
+  if (options === void 0) {
+    options = {};
+  }
+  var _options = options, _options$placement = _options.placement, placement = _options$placement === void 0 ? state.placement : _options$placement, _options$strategy = _options.strategy, strategy = _options$strategy === void 0 ? state.strategy : _options$strategy, _options$boundary = _options.boundary, boundary = _options$boundary === void 0 ? clippingParents : _options$boundary, _options$rootBoundary = _options.rootBoundary, rootBoundary = _options$rootBoundary === void 0 ? viewport : _options$rootBoundary, _options$elementConte = _options.elementContext, elementContext = _options$elementConte === void 0 ? popper : _options$elementConte, _options$altBoundary = _options.altBoundary, altBoundary = _options$altBoundary === void 0 ? false : _options$altBoundary, _options$padding = _options.padding, padding = _options$padding === void 0 ? 0 : _options$padding;
+  var paddingObject = mergePaddingObject(typeof padding !== "number" ? padding : expandToHashMap(padding, basePlacements));
+  var altContext = elementContext === popper ? reference : popper;
+  var popperRect = state.rects.popper;
+  var element = state.elements[altBoundary ? altContext : elementContext];
+  var clippingClientRect = getClippingRect(isElement(element) ? element : element.contextElement || getDocumentElement(state.elements.popper), boundary, rootBoundary, strategy);
+  var referenceClientRect = getBoundingClientRect(state.elements.reference);
+  var popperOffsets2 = computeOffsets({
+    reference: referenceClientRect,
+    element: popperRect,
+    strategy: "absolute",
+    placement
+  });
+  var popperClientRect = rectToClientRect(Object.assign({}, popperRect, popperOffsets2));
+  var elementClientRect = elementContext === popper ? popperClientRect : referenceClientRect;
+  var overflowOffsets = {
+    top: clippingClientRect.top - elementClientRect.top + paddingObject.top,
+    bottom: elementClientRect.bottom - clippingClientRect.bottom + paddingObject.bottom,
+    left: clippingClientRect.left - elementClientRect.left + paddingObject.left,
+    right: elementClientRect.right - clippingClientRect.right + paddingObject.right
+  };
+  var offsetData = state.modifiersData.offset;
+  if (elementContext === popper && offsetData) {
+    var offset2 = offsetData[placement];
+    Object.keys(overflowOffsets).forEach(function(key) {
+      var multiply = [right, bottom].indexOf(key) >= 0 ? 1 : -1;
+      var axis = [top, bottom].indexOf(key) >= 0 ? "y" : "x";
+      overflowOffsets[key] += offset2[axis] * multiply;
+    });
+  }
+  return overflowOffsets;
+}
+
+// node_modules/@popperjs/core/lib/utils/computeAutoPlacement.js
+function computeAutoPlacement(state, options) {
+  if (options === void 0) {
+    options = {};
+  }
+  var _options = options, placement = _options.placement, boundary = _options.boundary, rootBoundary = _options.rootBoundary, padding = _options.padding, flipVariations = _options.flipVariations, _options$allowedAutoP = _options.allowedAutoPlacements, allowedAutoPlacements = _options$allowedAutoP === void 0 ? placements : _options$allowedAutoP;
+  var variation = getVariation(placement);
+  var placements2 = variation ? flipVariations ? variationPlacements : variationPlacements.filter(function(placement2) {
+    return getVariation(placement2) === variation;
+  }) : basePlacements;
+  var allowedPlacements = placements2.filter(function(placement2) {
+    return allowedAutoPlacements.indexOf(placement2) >= 0;
+  });
+  if (allowedPlacements.length === 0) {
+    allowedPlacements = placements2;
+  }
+  var overflows = allowedPlacements.reduce(function(acc, placement2) {
+    acc[placement2] = detectOverflow(state, {
+      placement: placement2,
+      boundary,
+      rootBoundary,
+      padding
+    })[getBasePlacement(placement2)];
+    return acc;
+  }, {});
+  return Object.keys(overflows).sort(function(a, b) {
+    return overflows[a] - overflows[b];
+  });
+}
+
+// node_modules/@popperjs/core/lib/modifiers/flip.js
+function getExpandedFallbackPlacements(placement) {
+  if (getBasePlacement(placement) === auto) {
+    return [];
+  }
+  var oppositePlacement = getOppositePlacement(placement);
+  return [getOppositeVariationPlacement(placement), oppositePlacement, getOppositeVariationPlacement(oppositePlacement)];
+}
+function flip(_ref) {
+  var state = _ref.state, options = _ref.options, name = _ref.name;
+  if (state.modifiersData[name]._skip) {
+    return;
+  }
+  var _options$mainAxis = options.mainAxis, checkMainAxis = _options$mainAxis === void 0 ? true : _options$mainAxis, _options$altAxis = options.altAxis, checkAltAxis = _options$altAxis === void 0 ? true : _options$altAxis, specifiedFallbackPlacements = options.fallbackPlacements, padding = options.padding, boundary = options.boundary, rootBoundary = options.rootBoundary, altBoundary = options.altBoundary, _options$flipVariatio = options.flipVariations, flipVariations = _options$flipVariatio === void 0 ? true : _options$flipVariatio, allowedAutoPlacements = options.allowedAutoPlacements;
+  var preferredPlacement = state.options.placement;
+  var basePlacement = getBasePlacement(preferredPlacement);
+  var isBasePlacement = basePlacement === preferredPlacement;
+  var fallbackPlacements = specifiedFallbackPlacements || (isBasePlacement || !flipVariations ? [getOppositePlacement(preferredPlacement)] : getExpandedFallbackPlacements(preferredPlacement));
+  var placements2 = [preferredPlacement].concat(fallbackPlacements).reduce(function(acc, placement2) {
+    return acc.concat(getBasePlacement(placement2) === auto ? computeAutoPlacement(state, {
+      placement: placement2,
+      boundary,
+      rootBoundary,
+      padding,
+      flipVariations,
+      allowedAutoPlacements
+    }) : placement2);
+  }, []);
+  var referenceRect = state.rects.reference;
+  var popperRect = state.rects.popper;
+  var checksMap = new Map();
+  var makeFallbackChecks = true;
+  var firstFittingPlacement = placements2[0];
+  for (var i = 0; i < placements2.length; i++) {
+    var placement = placements2[i];
+    var _basePlacement = getBasePlacement(placement);
+    var isStartVariation = getVariation(placement) === start;
+    var isVertical = [top, bottom].indexOf(_basePlacement) >= 0;
+    var len = isVertical ? "width" : "height";
+    var overflow = detectOverflow(state, {
+      placement,
+      boundary,
+      rootBoundary,
+      altBoundary,
+      padding
+    });
+    var mainVariationSide = isVertical ? isStartVariation ? right : left : isStartVariation ? bottom : top;
+    if (referenceRect[len] > popperRect[len]) {
+      mainVariationSide = getOppositePlacement(mainVariationSide);
+    }
+    var altVariationSide = getOppositePlacement(mainVariationSide);
+    var checks = [];
+    if (checkMainAxis) {
+      checks.push(overflow[_basePlacement] <= 0);
+    }
+    if (checkAltAxis) {
+      checks.push(overflow[mainVariationSide] <= 0, overflow[altVariationSide] <= 0);
+    }
+    if (checks.every(function(check) {
+      return check;
+    })) {
+      firstFittingPlacement = placement;
+      makeFallbackChecks = false;
+      break;
+    }
+    checksMap.set(placement, checks);
+  }
+  if (makeFallbackChecks) {
+    var numberOfChecks = flipVariations ? 3 : 1;
+    var _loop = function _loop2(_i2) {
+      var fittingPlacement = placements2.find(function(placement2) {
+        var checks2 = checksMap.get(placement2);
+        if (checks2) {
+          return checks2.slice(0, _i2).every(function(check) {
+            return check;
+          });
+        }
+      });
+      if (fittingPlacement) {
+        firstFittingPlacement = fittingPlacement;
+        return "break";
+      }
+    };
+    for (var _i = numberOfChecks; _i > 0; _i--) {
+      var _ret = _loop(_i);
+      if (_ret === "break")
+        break;
+    }
+  }
+  if (state.placement !== firstFittingPlacement) {
+    state.modifiersData[name]._skip = true;
+    state.placement = firstFittingPlacement;
+    state.reset = true;
+  }
+}
+var flip_default = {
+  name: "flip",
+  enabled: true,
+  phase: "main",
+  fn: flip,
+  requiresIfExists: ["offset"],
+  data: {
+    _skip: false
+  }
+};
+
+// node_modules/@popperjs/core/lib/modifiers/hide.js
+function getSideOffsets(overflow, rect, preventedOffsets) {
+  if (preventedOffsets === void 0) {
+    preventedOffsets = {
+      x: 0,
+      y: 0
+    };
+  }
+  return {
+    top: overflow.top - rect.height - preventedOffsets.y,
+    right: overflow.right - rect.width + preventedOffsets.x,
+    bottom: overflow.bottom - rect.height + preventedOffsets.y,
+    left: overflow.left - rect.width - preventedOffsets.x
+  };
+}
+function isAnySideFullyClipped(overflow) {
+  return [top, right, bottom, left].some(function(side) {
+    return overflow[side] >= 0;
+  });
+}
+function hide(_ref) {
+  var state = _ref.state, name = _ref.name;
+  var referenceRect = state.rects.reference;
+  var popperRect = state.rects.popper;
+  var preventedOffsets = state.modifiersData.preventOverflow;
+  var referenceOverflow = detectOverflow(state, {
+    elementContext: "reference"
+  });
+  var popperAltOverflow = detectOverflow(state, {
+    altBoundary: true
+  });
+  var referenceClippingOffsets = getSideOffsets(referenceOverflow, referenceRect);
+  var popperEscapeOffsets = getSideOffsets(popperAltOverflow, popperRect, preventedOffsets);
+  var isReferenceHidden = isAnySideFullyClipped(referenceClippingOffsets);
+  var hasPopperEscaped = isAnySideFullyClipped(popperEscapeOffsets);
+  state.modifiersData[name] = {
+    referenceClippingOffsets,
+    popperEscapeOffsets,
+    isReferenceHidden,
+    hasPopperEscaped
+  };
+  state.attributes.popper = Object.assign({}, state.attributes.popper, {
+    "data-popper-reference-hidden": isReferenceHidden,
+    "data-popper-escaped": hasPopperEscaped
+  });
+}
+var hide_default = {
+  name: "hide",
+  enabled: true,
+  phase: "main",
+  requiresIfExists: ["preventOverflow"],
+  fn: hide
+};
+
+// node_modules/@popperjs/core/lib/modifiers/offset.js
+function distanceAndSkiddingToXY(placement, rects, offset2) {
+  var basePlacement = getBasePlacement(placement);
+  var invertDistance = [left, top].indexOf(basePlacement) >= 0 ? -1 : 1;
+  var _ref = typeof offset2 === "function" ? offset2(Object.assign({}, rects, {
+    placement
+  })) : offset2, skidding = _ref[0], distance = _ref[1];
+  skidding = skidding || 0;
+  distance = (distance || 0) * invertDistance;
+  return [left, right].indexOf(basePlacement) >= 0 ? {
+    x: distance,
+    y: skidding
+  } : {
+    x: skidding,
+    y: distance
+  };
+}
+function offset(_ref2) {
+  var state = _ref2.state, options = _ref2.options, name = _ref2.name;
+  var _options$offset = options.offset, offset2 = _options$offset === void 0 ? [0, 0] : _options$offset;
+  var data = placements.reduce(function(acc, placement) {
+    acc[placement] = distanceAndSkiddingToXY(placement, state.rects, offset2);
+    return acc;
+  }, {});
+  var _data$state$placement = data[state.placement], x = _data$state$placement.x, y = _data$state$placement.y;
+  if (state.modifiersData.popperOffsets != null) {
+    state.modifiersData.popperOffsets.x += x;
+    state.modifiersData.popperOffsets.y += y;
+  }
+  state.modifiersData[name] = data;
+}
+var offset_default = {
+  name: "offset",
+  enabled: true,
+  phase: "main",
+  requires: ["popperOffsets"],
+  fn: offset
+};
+
+// node_modules/@popperjs/core/lib/modifiers/popperOffsets.js
+function popperOffsets(_ref) {
+  var state = _ref.state, name = _ref.name;
+  state.modifiersData[name] = computeOffsets({
+    reference: state.rects.reference,
+    element: state.rects.popper,
+    strategy: "absolute",
+    placement: state.placement
+  });
+}
+var popperOffsets_default = {
+  name: "popperOffsets",
+  enabled: true,
+  phase: "read",
+  fn: popperOffsets,
+  data: {}
+};
+
+// node_modules/@popperjs/core/lib/utils/getAltAxis.js
+function getAltAxis(axis) {
+  return axis === "x" ? "y" : "x";
+}
+
+// node_modules/@popperjs/core/lib/modifiers/preventOverflow.js
+function preventOverflow(_ref) {
+  var state = _ref.state, options = _ref.options, name = _ref.name;
+  var _options$mainAxis = options.mainAxis, checkMainAxis = _options$mainAxis === void 0 ? true : _options$mainAxis, _options$altAxis = options.altAxis, checkAltAxis = _options$altAxis === void 0 ? false : _options$altAxis, boundary = options.boundary, rootBoundary = options.rootBoundary, altBoundary = options.altBoundary, padding = options.padding, _options$tether = options.tether, tether = _options$tether === void 0 ? true : _options$tether, _options$tetherOffset = options.tetherOffset, tetherOffset = _options$tetherOffset === void 0 ? 0 : _options$tetherOffset;
+  var overflow = detectOverflow(state, {
+    boundary,
+    rootBoundary,
+    padding,
+    altBoundary
+  });
+  var basePlacement = getBasePlacement(state.placement);
+  var variation = getVariation(state.placement);
+  var isBasePlacement = !variation;
+  var mainAxis = getMainAxisFromPlacement(basePlacement);
+  var altAxis = getAltAxis(mainAxis);
+  var popperOffsets2 = state.modifiersData.popperOffsets;
+  var referenceRect = state.rects.reference;
+  var popperRect = state.rects.popper;
+  var tetherOffsetValue = typeof tetherOffset === "function" ? tetherOffset(Object.assign({}, state.rects, {
+    placement: state.placement
+  })) : tetherOffset;
+  var normalizedTetherOffsetValue = typeof tetherOffsetValue === "number" ? {
+    mainAxis: tetherOffsetValue,
+    altAxis: tetherOffsetValue
+  } : Object.assign({
+    mainAxis: 0,
+    altAxis: 0
+  }, tetherOffsetValue);
+  var offsetModifierState = state.modifiersData.offset ? state.modifiersData.offset[state.placement] : null;
+  var data = {
+    x: 0,
+    y: 0
+  };
+  if (!popperOffsets2) {
+    return;
+  }
+  if (checkMainAxis) {
+    var _offsetModifierState$;
+    var mainSide = mainAxis === "y" ? top : left;
+    var altSide = mainAxis === "y" ? bottom : right;
+    var len = mainAxis === "y" ? "height" : "width";
+    var offset2 = popperOffsets2[mainAxis];
+    var min2 = offset2 + overflow[mainSide];
+    var max2 = offset2 - overflow[altSide];
+    var additive = tether ? -popperRect[len] / 2 : 0;
+    var minLen = variation === start ? referenceRect[len] : popperRect[len];
+    var maxLen = variation === start ? -popperRect[len] : -referenceRect[len];
+    var arrowElement = state.elements.arrow;
+    var arrowRect = tether && arrowElement ? getLayoutRect(arrowElement) : {
+      width: 0,
+      height: 0
+    };
+    var arrowPaddingObject = state.modifiersData["arrow#persistent"] ? state.modifiersData["arrow#persistent"].padding : getFreshSideObject();
+    var arrowPaddingMin = arrowPaddingObject[mainSide];
+    var arrowPaddingMax = arrowPaddingObject[altSide];
+    var arrowLen = within(0, referenceRect[len], arrowRect[len]);
+    var minOffset = isBasePlacement ? referenceRect[len] / 2 - additive - arrowLen - arrowPaddingMin - normalizedTetherOffsetValue.mainAxis : minLen - arrowLen - arrowPaddingMin - normalizedTetherOffsetValue.mainAxis;
+    var maxOffset = isBasePlacement ? -referenceRect[len] / 2 + additive + arrowLen + arrowPaddingMax + normalizedTetherOffsetValue.mainAxis : maxLen + arrowLen + arrowPaddingMax + normalizedTetherOffsetValue.mainAxis;
+    var arrowOffsetParent = state.elements.arrow && getOffsetParent(state.elements.arrow);
+    var clientOffset = arrowOffsetParent ? mainAxis === "y" ? arrowOffsetParent.clientTop || 0 : arrowOffsetParent.clientLeft || 0 : 0;
+    var offsetModifierValue = (_offsetModifierState$ = offsetModifierState == null ? void 0 : offsetModifierState[mainAxis]) != null ? _offsetModifierState$ : 0;
+    var tetherMin = offset2 + minOffset - offsetModifierValue - clientOffset;
+    var tetherMax = offset2 + maxOffset - offsetModifierValue;
+    var preventedOffset = within(tether ? min(min2, tetherMin) : min2, offset2, tether ? max(max2, tetherMax) : max2);
+    popperOffsets2[mainAxis] = preventedOffset;
+    data[mainAxis] = preventedOffset - offset2;
+  }
+  if (checkAltAxis) {
+    var _offsetModifierState$2;
+    var _mainSide = mainAxis === "x" ? top : left;
+    var _altSide = mainAxis === "x" ? bottom : right;
+    var _offset = popperOffsets2[altAxis];
+    var _len = altAxis === "y" ? "height" : "width";
+    var _min = _offset + overflow[_mainSide];
+    var _max = _offset - overflow[_altSide];
+    var isOriginSide = [top, left].indexOf(basePlacement) !== -1;
+    var _offsetModifierValue = (_offsetModifierState$2 = offsetModifierState == null ? void 0 : offsetModifierState[altAxis]) != null ? _offsetModifierState$2 : 0;
+    var _tetherMin = isOriginSide ? _min : _offset - referenceRect[_len] - popperRect[_len] - _offsetModifierValue + normalizedTetherOffsetValue.altAxis;
+    var _tetherMax = isOriginSide ? _offset + referenceRect[_len] + popperRect[_len] - _offsetModifierValue - normalizedTetherOffsetValue.altAxis : _max;
+    var _preventedOffset = tether && isOriginSide ? withinMaxClamp(_tetherMin, _offset, _tetherMax) : within(tether ? _tetherMin : _min, _offset, tether ? _tetherMax : _max);
+    popperOffsets2[altAxis] = _preventedOffset;
+    data[altAxis] = _preventedOffset - _offset;
+  }
+  state.modifiersData[name] = data;
+}
+var preventOverflow_default = {
+  name: "preventOverflow",
+  enabled: true,
+  phase: "main",
+  fn: preventOverflow,
+  requiresIfExists: ["offset"]
+};
+
+// node_modules/@popperjs/core/lib/dom-utils/getHTMLElementScroll.js
+function getHTMLElementScroll(element) {
+  return {
+    scrollLeft: element.scrollLeft,
+    scrollTop: element.scrollTop
+  };
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getNodeScroll.js
+function getNodeScroll(node) {
+  if (node === getWindow(node) || !isHTMLElement(node)) {
+    return getWindowScroll(node);
+  } else {
+    return getHTMLElementScroll(node);
+  }
+}
+
+// node_modules/@popperjs/core/lib/dom-utils/getCompositeRect.js
+function isElementScaled(element) {
+  var rect = element.getBoundingClientRect();
+  var scaleX = round(rect.width) / element.offsetWidth || 1;
+  var scaleY = round(rect.height) / element.offsetHeight || 1;
+  return scaleX !== 1 || scaleY !== 1;
+}
+function getCompositeRect(elementOrVirtualElement, offsetParent, isFixed) {
+  if (isFixed === void 0) {
+    isFixed = false;
+  }
+  var isOffsetParentAnElement = isHTMLElement(offsetParent);
+  var offsetParentIsScaled = isHTMLElement(offsetParent) && isElementScaled(offsetParent);
+  var documentElement = getDocumentElement(offsetParent);
+  var rect = getBoundingClientRect(elementOrVirtualElement, offsetParentIsScaled, isFixed);
+  var scroll = {
+    scrollLeft: 0,
+    scrollTop: 0
+  };
+  var offsets = {
+    x: 0,
+    y: 0
+  };
+  if (isOffsetParentAnElement || !isOffsetParentAnElement && !isFixed) {
+    if (getNodeName(offsetParent) !== "body" || isScrollParent(documentElement)) {
+      scroll = getNodeScroll(offsetParent);
+    }
+    if (isHTMLElement(offsetParent)) {
+      offsets = getBoundingClientRect(offsetParent, true);
+      offsets.x += offsetParent.clientLeft;
+      offsets.y += offsetParent.clientTop;
+    } else if (documentElement) {
+      offsets.x = getWindowScrollBarX(documentElement);
+    }
+  }
+  return {
+    x: rect.left + scroll.scrollLeft - offsets.x,
+    y: rect.top + scroll.scrollTop - offsets.y,
+    width: rect.width,
+    height: rect.height
+  };
+}
+
+// node_modules/@popperjs/core/lib/utils/orderModifiers.js
+function order(modifiers) {
+  var map = new Map();
+  var visited = new Set();
+  var result = [];
+  modifiers.forEach(function(modifier) {
+    map.set(modifier.name, modifier);
+  });
+  function sort(modifier) {
+    visited.add(modifier.name);
+    var requires = [].concat(modifier.requires || [], modifier.requiresIfExists || []);
+    requires.forEach(function(dep) {
+      if (!visited.has(dep)) {
+        var depModifier = map.get(dep);
+        if (depModifier) {
+          sort(depModifier);
+        }
+      }
+    });
+    result.push(modifier);
+  }
+  modifiers.forEach(function(modifier) {
+    if (!visited.has(modifier.name)) {
+      sort(modifier);
+    }
+  });
+  return result;
+}
+function orderModifiers(modifiers) {
+  var orderedModifiers = order(modifiers);
+  return modifierPhases.reduce(function(acc, phase) {
+    return acc.concat(orderedModifiers.filter(function(modifier) {
+      return modifier.phase === phase;
+    }));
+  }, []);
+}
+
+// node_modules/@popperjs/core/lib/utils/debounce.js
+function debounce(fn2) {
+  var pending;
+  return function() {
+    if (!pending) {
+      pending = new Promise(function(resolve) {
+        Promise.resolve().then(function() {
+          pending = void 0;
+          resolve(fn2());
+        });
+      });
+    }
+    return pending;
+  };
+}
+
+// node_modules/@popperjs/core/lib/utils/mergeByName.js
+function mergeByName(modifiers) {
+  var merged = modifiers.reduce(function(merged2, current) {
+    var existing = merged2[current.name];
+    merged2[current.name] = existing ? Object.assign({}, existing, current, {
+      options: Object.assign({}, existing.options, current.options),
+      data: Object.assign({}, existing.data, current.data)
+    }) : current;
+    return merged2;
+  }, {});
+  return Object.keys(merged).map(function(key) {
+    return merged[key];
+  });
+}
+
+// node_modules/@popperjs/core/lib/createPopper.js
+var DEFAULT_OPTIONS = {
+  placement: "bottom",
+  modifiers: [],
+  strategy: "absolute"
+};
+function areValidElements() {
+  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+  return !args.some(function(element) {
+    return !(element && typeof element.getBoundingClientRect === "function");
+  });
+}
+function popperGenerator(generatorOptions) {
+  if (generatorOptions === void 0) {
+    generatorOptions = {};
+  }
+  var _generatorOptions = generatorOptions, _generatorOptions$def = _generatorOptions.defaultModifiers, defaultModifiers2 = _generatorOptions$def === void 0 ? [] : _generatorOptions$def, _generatorOptions$def2 = _generatorOptions.defaultOptions, defaultOptions = _generatorOptions$def2 === void 0 ? DEFAULT_OPTIONS : _generatorOptions$def2;
+  return function createPopper2(reference2, popper2, options) {
+    if (options === void 0) {
+      options = defaultOptions;
+    }
+    var state = {
+      placement: "bottom",
+      orderedModifiers: [],
+      options: Object.assign({}, DEFAULT_OPTIONS, defaultOptions),
+      modifiersData: {},
+      elements: {
+        reference: reference2,
+        popper: popper2
+      },
+      attributes: {},
+      styles: {}
+    };
+    var effectCleanupFns = [];
+    var isDestroyed = false;
+    var instance = {
+      state,
+      setOptions: function setOptions(setOptionsAction) {
+        var options2 = typeof setOptionsAction === "function" ? setOptionsAction(state.options) : setOptionsAction;
+        cleanupModifierEffects();
+        state.options = Object.assign({}, defaultOptions, state.options, options2);
+        state.scrollParents = {
+          reference: isElement(reference2) ? listScrollParents(reference2) : reference2.contextElement ? listScrollParents(reference2.contextElement) : [],
+          popper: listScrollParents(popper2)
+        };
+        var orderedModifiers = orderModifiers(mergeByName([].concat(defaultModifiers2, state.options.modifiers)));
+        state.orderedModifiers = orderedModifiers.filter(function(m) {
+          return m.enabled;
+        });
+        runModifierEffects();
+        return instance.update();
+      },
+      forceUpdate: function forceUpdate() {
+        if (isDestroyed) {
+          return;
+        }
+        var _state$elements = state.elements, reference3 = _state$elements.reference, popper3 = _state$elements.popper;
+        if (!areValidElements(reference3, popper3)) {
+          return;
+        }
+        state.rects = {
+          reference: getCompositeRect(reference3, getOffsetParent(popper3), state.options.strategy === "fixed"),
+          popper: getLayoutRect(popper3)
+        };
+        state.reset = false;
+        state.placement = state.options.placement;
+        state.orderedModifiers.forEach(function(modifier) {
+          return state.modifiersData[modifier.name] = Object.assign({}, modifier.data);
+        });
+        for (var index = 0; index < state.orderedModifiers.length; index++) {
+          if (state.reset === true) {
+            state.reset = false;
+            index = -1;
+            continue;
+          }
+          var _state$orderedModifie = state.orderedModifiers[index], fn2 = _state$orderedModifie.fn, _state$orderedModifie2 = _state$orderedModifie.options, _options = _state$orderedModifie2 === void 0 ? {} : _state$orderedModifie2, name = _state$orderedModifie.name;
+          if (typeof fn2 === "function") {
+            state = fn2({
+              state,
+              options: _options,
+              name,
+              instance
+            }) || state;
+          }
+        }
+      },
+      update: debounce(function() {
+        return new Promise(function(resolve) {
+          instance.forceUpdate();
+          resolve(state);
+        });
+      }),
+      destroy: function destroy() {
+        cleanupModifierEffects();
+        isDestroyed = true;
+      }
+    };
+    if (!areValidElements(reference2, popper2)) {
+      return instance;
+    }
+    instance.setOptions(options).then(function(state2) {
+      if (!isDestroyed && options.onFirstUpdate) {
+        options.onFirstUpdate(state2);
+      }
+    });
+    function runModifierEffects() {
+      state.orderedModifiers.forEach(function(_ref) {
+        var name = _ref.name, _ref$options = _ref.options, options2 = _ref$options === void 0 ? {} : _ref$options, effect4 = _ref.effect;
+        if (typeof effect4 === "function") {
+          var cleanupFn = effect4({
+            state,
+            name,
+            instance,
+            options: options2
+          });
+          var noopFn = function noopFn2() {
+          };
+          effectCleanupFns.push(cleanupFn || noopFn);
+        }
+      });
+    }
+    function cleanupModifierEffects() {
+      effectCleanupFns.forEach(function(fn2) {
+        return fn2();
+      });
+      effectCleanupFns = [];
+    }
+    return instance;
+  };
+}
+
+// node_modules/@popperjs/core/lib/popper.js
+var defaultModifiers = [eventListeners_default, popperOffsets_default, computeStyles_default, applyStyles_default, offset_default, flip_default, preventOverflow_default, arrow_default, hide_default];
+var createPopper = /* @__PURE__ */ popperGenerator({
+  defaultModifiers
+});
+
+// suggests/suggest.ts
+var wrapAround = (value, size) => {
+  return (value % size + size) % size;
+};
+var Suggest = class {
+  constructor(owner, containerEl, scope) {
+    this.owner = owner;
+    this.containerEl = containerEl;
+    containerEl.on("click", ".suggestion-item", this.onSuggestionClick.bind(this));
+    containerEl.on("mousemove", ".suggestion-item", this.onSuggestionMouseover.bind(this));
+    scope.register([], "ArrowUp", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedItem(this.selectedItem - 1, true);
+        return false;
+      }
+    });
+    scope.register([], "ArrowDown", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedItem(this.selectedItem + 1, true);
+        return false;
+      }
+    });
+    scope.register([], "Enter", (event) => {
+      if (!event.isComposing) {
+        this.useSelectedItem(event);
+        return false;
+      }
+    });
+  }
+  onSuggestionClick(event, el) {
+    event.preventDefault();
+    const item = this.suggestions.indexOf(el);
+    this.setSelectedItem(item, false);
+    this.useSelectedItem(event);
+  }
+  onSuggestionMouseover(_event, el) {
+    const item = this.suggestions.indexOf(el);
+    this.setSelectedItem(item, false);
+  }
+  setSuggestions(values) {
+    this.containerEl.empty();
+    const suggestionEls = [];
+    values.forEach((value) => {
+      const suggestionEl = this.containerEl.createDiv("suggestion-item");
+      this.owner.renderSuggestion(value, suggestionEl);
+      suggestionEls.push(suggestionEl);
+    });
+    this.values = values;
+    this.suggestions = suggestionEls;
+    this.setSelectedItem(0, false);
+  }
+  useSelectedItem(event) {
+    const currentValue = this.values[this.selectedItem];
+    if (currentValue) {
+      this.owner.selectSuggestion(currentValue, event);
+    }
+  }
+  setSelectedItem(selectedIndex, scrollIntoView) {
+    const normalizedIndex = wrapAround(selectedIndex, this.suggestions.length);
+    const prevSelectedSuggestion = this.suggestions[this.selectedItem];
+    const selectedSuggestion = this.suggestions[normalizedIndex];
+    prevSelectedSuggestion == null ? void 0 : prevSelectedSuggestion.removeClass("is-selected");
+    selectedSuggestion == null ? void 0 : selectedSuggestion.addClass("is-selected");
+    this.selectedItem = normalizedIndex;
+    if (scrollIntoView) {
+      selectedSuggestion.scrollIntoView(false);
+    }
+  }
+};
+var TextInputSuggest = class {
+  constructor(app, inputEl) {
+    this.app = app;
+    this.inputEl = inputEl;
+    this.scope = new import_obsidian8.Scope();
+    this.suggestEl = createDiv("suggestion-container");
+    const suggestion = this.suggestEl.createDiv("suggestion");
+    this.suggest = new Suggest(this, suggestion, this.scope);
+    this.scope.register([], "Escape", this.close.bind(this));
+    this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
+    this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
+    this.inputEl.addEventListener("blur", this.close.bind(this));
+    this.suggestEl.on("mousedown", ".suggestion-container", (event) => {
+      event.preventDefault();
+    });
+  }
+  onInputChanged() {
+    const inputStr = this.inputEl.value;
+    const suggestions = this.getSuggestions(inputStr);
+    if (suggestions.length > 0) {
+      this.suggest.setSuggestions(suggestions);
+      this.open(this.app.dom.appContainerEl, this.inputEl);
+    }
+  }
+  open(container, inputEl) {
+    this.app.keymap.pushScope(this.scope);
+    container.appendChild(this.suggestEl);
+    this.popper = createPopper(inputEl, this.suggestEl, {
+      placement: "bottom-start",
+      modifiers: [
+        {
+          name: "sameWidth",
+          enabled: true,
+          fn: ({ state, instance }) => {
+            const targetWidth = `${state.rects.reference.width}px`;
+            if (state.styles.popper.width === targetWidth) {
+              return;
+            }
+            state.styles.popper.width = targetWidth;
+            instance.update();
+          },
+          phase: "beforeWrite",
+          requires: ["computeStyles"]
+        }
+      ]
+    });
+  }
+  close() {
+    this.app.keymap.popScope(this.scope);
+    this.suggest.setSuggestions([]);
+    this.popper.destroy();
+    this.suggestEl.detach();
+  }
+};
+
+// suggests/file-suggest.ts
+var FileSuggest = class extends TextInputSuggest {
+  constructor(app, inputEl, onSelect) {
+    super(app, inputEl);
+    this.onSelect = onSelect;
+  }
+  getSuggestions(inputStr) {
+    const abstractFiles = this.app.vault.getAllLoadedFiles();
+    const files = [];
+    const lowerCaseInputStr = inputStr.toLowerCase();
+    abstractFiles.forEach((file) => {
+      if (file instanceof import_obsidian9.TFile && file.extension === "md" && file.path.toLowerCase().contains(lowerCaseInputStr)) {
+        files.push(file);
+      }
+    });
+    return files;
+  }
+  renderSuggestion(file, el) {
+    el.setText(file.path);
+  }
+  selectSuggestion(file) {
+    this.inputEl.value = file.path;
+    this.inputEl.trigger("input");
+    this.close();
+    if (this.onSelect) {
+      this.onSelect(file);
+    }
+  }
+};
+
+// ui/components/ImportRulesetModal.ts
+var ImportRulesetModal = class extends import_obsidian10.Modal {
+  constructor(app, onSubmit) {
+    super(app);
+    this.file = null;
+    this.onSubmit = onSubmit;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: "Import Ruleset" });
+    contentEl.createEl("p", { text: "Select a markdown file to import as a ruleset." });
+    const input = contentEl.createEl("input", { type: "text" });
+    input.style.width = "100%";
+    input.placeholder = "Type to search files...";
+    new FileSuggest(this.app, input, (file) => {
+      this.file = file;
+      input.value = file.path;
+    });
+    const btnDiv = contentEl.createDiv();
+    btnDiv.style.marginTop = "15px";
+    btnDiv.style.textAlign = "right";
+    const btn = btnDiv.createEl("button", { text: "Import" });
+    btn.addClass("mod-cta");
+    btn.onclick = () => {
+      if (this.file) {
+        this.close();
+        this.onSubmit(this.file);
+      } else {
+        const file = this.app.vault.getAbstractFileByPath(input.value);
+        if (file instanceof import_obsidian10.TFile) {
+          this.close();
+          this.onSubmit(file);
+        } else {
+          input.style.borderColor = "var(--text-error)";
+        }
+      }
+    };
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
 // ui/components/RulesTab.ts
-init_GroupService();
 var RulesTab = class {
-  constructor(app, containerEl, config, onUpdate) {
+  constructor(app, containerEl, rulesetService, defaultRulesetFolder) {
     this.collapsedItems = new Set();
     this.app = app;
     this.containerEl = containerEl;
-    this.config = config;
-    this.onUpdate = onUpdate;
+    this.rulesetService = rulesetService;
     this.groupService = new GroupService(app);
+    this.defaultRulesetFolder = defaultRulesetFolder;
   }
   validateQueryInput(inputEl, statusEl, query) {
     return __async(this, null, function* () {
@@ -854,11 +2769,12 @@ var RulesTab = class {
     this.containerEl.createEl("h3", { text: "Rules Configuration" });
     this.containerEl.createEl("p", { text: "Connect Triggers, Groups, and Jobs to create automated workflows." });
     const globalControls = this.containerEl.createDiv("curator-global-controls");
-    new import_obsidian6.Setting(globalControls).addButton((btn) => btn.setButtonText("Expand All").onClick(() => {
+    const rulesets = this.rulesetService.getRulesets().sort((a, b) => a.name.localeCompare(b.name));
+    new import_obsidian11.Setting(globalControls).addButton((btn) => btn.setButtonText("Expand All").onClick(() => {
       this.collapsedItems.clear();
       this.display();
     })).addButton((btn) => btn.setButtonText("Collapse All").onClick(() => {
-      this.config.rulesets.forEach((r) => {
+      rulesets.forEach((r) => {
         this.collapsedItems.add(r.id);
         r.rules.forEach((rule) => {
           if (rule.id)
@@ -867,25 +2783,49 @@ var RulesTab = class {
       });
       this.display();
     }));
-    new import_obsidian6.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => {
-      this.addRuleset();
+    new import_obsidian11.Setting(this.containerEl).setName("Import Ruleset").setDesc("Import a ruleset from a markdown file.").addButton((btn) => btn.setButtonText("Import").onClick(() => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".md";
+      input.onchange = (e) => __async(this, null, function* () {
+        var _a;
+        const file = (_a = e.target.files) == null ? void 0 : _a[0];
+        if (file) {
+        }
+      });
+      new ImportRulesetModal(this.app, (file) => __async(this, null, function* () {
+        yield this.rulesetService.importRuleset(file);
+        this.display();
+        new import_obsidian11.Notice(`Imported ruleset from ${file.path}`);
+      })).open();
     }));
+    new import_obsidian11.Setting(this.containerEl).setName("Add New Ruleset").setDesc("Create a new rule to automate your notes.").addButton((button) => button.setButtonText("Add Ruleset").setCta().onClick(() => __async(this, null, function* () {
+      yield this.addRuleset();
+    })));
     const rulesetsList = this.containerEl.createDiv("rulesets-list");
-    this.config.rulesets.forEach((ruleset, index) => {
+    rulesets.forEach((ruleset, index) => {
       this.renderRuleset(rulesetsList, ruleset, index);
     });
   }
   addRuleset() {
-    const newRuleset = {
-      id: crypto.randomUUID(),
-      name: "New Ruleset",
-      enabled: true,
-      trigger: { type: "change_to", query: "" },
-      rules: []
-    };
-    this.config.rulesets.push(newRuleset);
-    this.onUpdate(this.config);
-    this.display();
+    return __async(this, null, function* () {
+      const modal = new AddRulesetModal(this.app, this.defaultRulesetFolder, (name, triggerType, folder) => __async(this, null, function* () {
+        const newRuleset = {
+          id: crypto.randomUUID(),
+          name,
+          enabled: true,
+          trigger: { type: triggerType, query: "" },
+          rules: []
+        };
+        if (triggerType === "manual") {
+          newRuleset.trigger.commandName = `Run ${name}`;
+        }
+        yield this.rulesetService.saveRuleset(newRuleset);
+        this.collapsedItems.delete(newRuleset.id);
+        this.display();
+      }));
+      modal.open();
+    });
   }
   renderRuleset(container, ruleset, index) {
     const rulesetContainer = container.createDiv("curator-ruleset-container");
@@ -896,49 +2836,32 @@ var RulesTab = class {
     const nameInputDiv = header.createDiv("curator-ruleset-name-input");
     const nameInput = nameInputDiv.createEl("input", { type: "text", value: ruleset.name });
     nameInput.placeholder = "Ruleset Name";
-    nameInput.oninput = () => {
+    nameInput.onchange = () => __async(this, null, function* () {
       ruleset.name = nameInput.value;
-      this.onUpdate(this.config);
-    };
+      yield this.rulesetService.saveRuleset(ruleset);
+    });
     nameInput.onclick = (e) => e.stopPropagation();
     const controls = header.createDiv("curator-ruleset-controls");
-    const toggleLabel = controls.createEl("label");
-    toggleLabel.className = "checkbox-container";
-    const toggle = toggleLabel.createEl("input", { type: "checkbox" });
-    toggle.checked = ruleset.enabled;
-    toggle.onclick = (e) => {
+    const exportBtn = controls.createEl("button", { cls: "clickable-icon" });
+    (0, import_obsidian11.setIcon)(exportBtn, "file-output");
+    exportBtn.title = "Export to Markdown";
+    exportBtn.onclick = (e) => __async(this, null, function* () {
       e.stopPropagation();
-      ruleset.enabled = toggle.checked;
-      this.onUpdate(this.config);
-    };
-    toggleLabel.createEl("span", { cls: "checkbox-switch" });
-    toggleLabel.title = "Enable/Disable Ruleset";
-    const moveUpBtn = controls.createEl("button", { cls: "clickable-icon" });
-    (0, import_obsidian6.setIcon)(moveUpBtn, "arrow-up");
-    moveUpBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (index > 0) {
-        [this.config.rulesets[index - 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index - 1]];
-        this.onUpdate(this.config);
-        this.display();
+      if (confirm(`Export ruleset "${ruleset.name}" to ${this.defaultRulesetFolder}?`)) {
+        if (!(yield this.app.vault.adapter.exists(this.defaultRulesetFolder))) {
+          yield this.app.vault.createFolder(this.defaultRulesetFolder);
+        }
+        yield this.rulesetService.exportRuleset(ruleset, this.defaultRulesetFolder);
+        new import_obsidian11.Notice(`Exported to ${this.defaultRulesetFolder}`);
       }
-    };
-    if (index === 0)
-      moveUpBtn.disabled = true;
-    const moveDownBtn = controls.createEl("button", { cls: "clickable-icon" });
-    (0, import_obsidian6.setIcon)(moveDownBtn, "arrow-down");
-    moveDownBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (index < this.config.rulesets.length - 1) {
-        [this.config.rulesets[index + 1], this.config.rulesets[index]] = [this.config.rulesets[index], this.config.rulesets[index + 1]];
-        this.onUpdate(this.config);
-        this.display();
-      }
-    };
-    if (index === this.config.rulesets.length - 1)
-      moveDownBtn.disabled = true;
+    });
+    const toggle = new import_obsidian11.ToggleComponent(controls).setValue(ruleset.enabled).setTooltip("Enable/Disable Ruleset").onChange((value) => __async(this, null, function* () {
+      ruleset.enabled = value;
+      yield this.rulesetService.saveRuleset(ruleset);
+    }));
+    toggle.toggleEl.addEventListener("click", (e) => e.stopPropagation());
     const collapseBtn = controls.createEl("button", { cls: "clickable-icon" });
-    (0, import_obsidian6.setIcon)(collapseBtn, this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down");
+    (0, import_obsidian11.setIcon)(collapseBtn, this.collapsedItems.has(ruleset.id) ? "chevron-right" : "chevron-down");
     collapseBtn.onclick = (e) => {
       e.stopPropagation();
       if (this.collapsedItems.has(ruleset.id)) {
@@ -949,15 +2872,14 @@ var RulesTab = class {
       this.display();
     };
     const deleteBtn = controls.createEl("button", { cls: "clickable-icon" });
-    (0, import_obsidian6.setIcon)(deleteBtn, "trash");
-    deleteBtn.onclick = (e) => {
+    (0, import_obsidian11.setIcon)(deleteBtn, "trash");
+    deleteBtn.onclick = (e) => __async(this, null, function* () {
       e.stopPropagation();
       if (confirm(`Are you sure you want to delete ruleset "${ruleset.name}"?`)) {
-        this.config.rulesets.splice(index, 1);
-        this.onUpdate(this.config);
+        yield this.rulesetService.deleteRuleset(ruleset);
         this.display();
       }
-    };
+    });
     header.onclick = () => {
       if (this.collapsedItems.has(ruleset.id)) {
         this.collapsedItems.delete(ruleset.id);
@@ -972,38 +2894,44 @@ var RulesTab = class {
     const body = rulesetContainer.createDiv("curator-ruleset-body");
     const triggerDiv = body.createDiv("curator-trigger-config");
     triggerDiv.createDiv("curator-section-title").setText("Trigger");
-    new import_obsidian6.Setting(triggerDiv).setName("When...").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => {
+    new import_obsidian11.Setting(triggerDiv).setName("When...").addDropdown((dropdown) => dropdown.addOption("change_from", "Notes change from...").addOption("change_to", "Notes change to...").addOption("startup", "Obsidian starts").addOption("schedule", "Scheduled time").addOption("manual", "A command runs").setValue(ruleset.trigger.type).onChange((value) => __async(this, null, function* () {
       ruleset.trigger.type = value;
       if (ruleset.trigger.type === "manual")
         ruleset.trigger.commandName = "Run My Rule";
-      this.onUpdate(this.config);
+      yield this.rulesetService.saveRuleset(ruleset);
       this.display();
-    }));
+    })));
     if (ruleset.trigger.type === "change_from" || ruleset.trigger.type === "change_to") {
-      new import_obsidian6.Setting(triggerDiv).setName("Dataview Query").setDesc("Define the set of notes to monitor.").addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
-        new QueryHelperModal(this.app, (query) => {
+      const querySettingDiv = triggerDiv.createDiv("curator-full-width-setting");
+      const topRow = querySettingDiv.createDiv("setting-top-row");
+      topRow.createDiv("setting-name").setText("Dataview Query");
+      const helpBtn = topRow.createEl("button", { cls: "clickable-icon" });
+      (0, import_obsidian11.setIcon)(helpBtn, "help-circle");
+      helpBtn.onclick = () => {
+        new QueryHelperModal(this.app, (query) => __async(this, null, function* () {
           ruleset.trigger.query = query;
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
-        }).open();
-      })).addTextArea((text) => {
-        text.setPlaceholder('FROM "projects" AND #active').setValue(ruleset.trigger.query || "");
-        const statusEl = triggerDiv.createDiv("query-status");
-        statusEl.style.fontSize = "0.8em";
-        statusEl.style.marginTop = "5px";
-        this.validateQueryInput(text.inputEl, statusEl, ruleset.trigger.query || "");
-        text.inputEl.oninput = (e) => {
-          const val = e.target.value;
-          ruleset.trigger.query = val;
-          this.onUpdate(this.config);
-          this.validateQueryInput(text.inputEl, statusEl, val);
-        };
+        })).open();
+      };
+      querySettingDiv.createDiv("setting-desc").setText("Define the set of notes to monitor.");
+      const textArea = querySettingDiv.createEl("textarea");
+      textArea.placeholder = 'FROM "projects" AND #active';
+      textArea.value = ruleset.trigger.query || "";
+      textArea.rows = 3;
+      const statusEl = querySettingDiv.createDiv("query-status");
+      this.validateQueryInput(textArea, statusEl, ruleset.trigger.query || "");
+      textArea.onchange = (e) => __async(this, null, function* () {
+        const val = e.target.value;
+        ruleset.trigger.query = val;
+        yield this.rulesetService.saveRuleset(ruleset);
+        this.validateQueryInput(textArea, statusEl, val);
       });
     } else if (ruleset.trigger.type === "schedule") {
-      new import_obsidian6.Setting(triggerDiv).setName("Time (HH:mm)").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => {
+      new import_obsidian11.Setting(triggerDiv).setName("Time (HH:mm)").addText((text) => text.setPlaceholder("09:00").setValue(ruleset.trigger.time || "").onChange((value) => __async(this, null, function* () {
         ruleset.trigger.time = value;
-        this.onUpdate(this.config);
-      }));
+        yield this.rulesetService.saveRuleset(ruleset);
+      })));
       const daysDiv = triggerDiv.createDiv("days-of-week");
       daysDiv.style.marginTop = "10px";
       daysDiv.createEl("span", { text: "Days: " });
@@ -1013,7 +2941,7 @@ var RulesTab = class {
         label.style.marginRight = "10px";
         const checkbox = label.createEl("input", { type: "checkbox" });
         checkbox.checked = ruleset.trigger.days ? ruleset.trigger.days.includes(index2) : true;
-        checkbox.onchange = () => {
+        checkbox.onchange = () => __async(this, null, function* () {
           if (!ruleset.trigger.days)
             ruleset.trigger.days = [0, 1, 2, 3, 4, 5, 6];
           if (checkbox.checked) {
@@ -1022,34 +2950,23 @@ var RulesTab = class {
           } else {
             ruleset.trigger.days = ruleset.trigger.days.filter((d) => d !== index2);
           }
-          this.onUpdate(this.config);
-        };
+          yield this.rulesetService.saveRuleset(ruleset);
+        });
         label.createEl("span", { text: day });
       });
     } else if (ruleset.trigger.type === "manual") {
-      new import_obsidian6.Setting(triggerDiv).setName("Command Name").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => {
+      new import_obsidian11.Setting(triggerDiv).setName("Command Name").addText((text) => text.setValue(ruleset.trigger.commandName || "").onChange((value) => __async(this, null, function* () {
         ruleset.trigger.commandName = value;
-        this.onUpdate(this.config);
-      }));
+        yield this.rulesetService.saveRuleset(ruleset);
+      })));
     }
     const testBtnDiv = body.createDiv();
     testBtnDiv.style.textAlign = "right";
     testBtnDiv.style.marginBottom = "15px";
     const testBtn = testBtnDiv.createEl("button", { text: "Test Run (Dry Run)" });
     testBtn.onclick = () => __async(this, null, function* () {
-      const { RulesetService: RulesetService2 } = yield Promise.resolve().then(() => (init_RulesetService(), RulesetService_exports));
-      const { GroupService: GroupService2 } = yield Promise.resolve().then(() => (init_GroupService(), GroupService_exports));
-      const { TriggerService: TriggerService2 } = yield Promise.resolve().then(() => (init_TriggerService(), TriggerService_exports));
-      const { BinderService: BinderService2 } = yield Promise.resolve().then(() => (init_BinderService(), BinderService_exports));
-      const { ActionService: ActionService2 } = yield Promise.resolve().then(() => (init_ActionService(), ActionService_exports));
-      const binder = new BinderService2(this.app);
-      const groupService = new GroupService2(this.app);
-      const triggerService = new TriggerService2(this.app);
-      const actionService = new ActionService2(this.app, binder);
-      const rulesetService = new RulesetService2(this.app, triggerService, groupService, binder, actionService);
-      rulesetService.updateConfig(this.config);
-      const results = yield rulesetService.dryRun(ruleset.id);
-      const modal = new import_obsidian6.Modal(this.app);
+      const results = yield this.rulesetService.dryRun(ruleset.id);
+      const modal = new import_obsidian11.Modal(this.app);
       modal.titleEl.setText(`Dry Run: ${ruleset.name}`);
       if (results.length === 0) {
         modal.contentEl.createEl("p", { text: "No files matched the criteria." });
@@ -1076,34 +2993,41 @@ var RulesTab = class {
         rule.id = crypto.randomUUID();
       const ruleItem = rulesList.createDiv("curator-rule-item");
       const ruleHeader = ruleItem.createDiv("curator-rule-header");
-      ruleHeader.createSpan({ text: `Rule ${ruleIndex + 1}`, cls: "curator-rule-title" });
+      const ruleNameInput = ruleHeader.createEl("input", { type: "text", cls: "curator-rule-name-input" });
+      ruleNameInput.value = rule.name || `Rule ${ruleIndex + 1}`;
+      ruleNameInput.placeholder = "Rule Name";
+      ruleNameInput.onclick = (e) => e.stopPropagation();
+      ruleNameInput.onchange = () => __async(this, null, function* () {
+        rule.name = ruleNameInput.value;
+        yield this.rulesetService.saveRuleset(ruleset);
+      });
       const ruleControls = ruleHeader.createDiv("curator-controls");
       const rMoveUp = ruleControls.createEl("button", { cls: "clickable-icon" });
-      (0, import_obsidian6.setIcon)(rMoveUp, "arrow-up");
-      rMoveUp.onclick = (e) => {
+      (0, import_obsidian11.setIcon)(rMoveUp, "arrow-up");
+      rMoveUp.onclick = (e) => __async(this, null, function* () {
         e.stopPropagation();
         if (ruleIndex > 0) {
           [ruleset.rules[ruleIndex - 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex - 1]];
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
         }
-      };
+      });
       if (ruleIndex === 0)
         rMoveUp.disabled = true;
       const rMoveDown = ruleControls.createEl("button", { cls: "clickable-icon" });
-      (0, import_obsidian6.setIcon)(rMoveDown, "arrow-down");
-      rMoveDown.onclick = (e) => {
+      (0, import_obsidian11.setIcon)(rMoveDown, "arrow-down");
+      rMoveDown.onclick = (e) => __async(this, null, function* () {
         e.stopPropagation();
         if (ruleIndex < ruleset.rules.length - 1) {
           [ruleset.rules[ruleIndex + 1], ruleset.rules[ruleIndex]] = [ruleset.rules[ruleIndex], ruleset.rules[ruleIndex + 1]];
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
         }
-      };
+      });
       if (ruleIndex === ruleset.rules.length - 1)
         rMoveDown.disabled = true;
       const rCollapse = ruleControls.createEl("button", { cls: "clickable-icon" });
-      (0, import_obsidian6.setIcon)(rCollapse, this.collapsedItems.has(rule.id) ? "chevron-right" : "chevron-down");
+      (0, import_obsidian11.setIcon)(rCollapse, this.collapsedItems.has(rule.id) ? "chevron-right" : "chevron-down");
       rCollapse.onclick = (e) => {
         e.stopPropagation();
         if (this.collapsedItems.has(rule.id)) {
@@ -1114,13 +3038,13 @@ var RulesTab = class {
         this.display();
       };
       const rDelete = ruleControls.createEl("button", { cls: "clickable-icon" });
-      (0, import_obsidian6.setIcon)(rDelete, "trash");
-      rDelete.onclick = (e) => {
+      (0, import_obsidian11.setIcon)(rDelete, "trash");
+      rDelete.onclick = (e) => __async(this, null, function* () {
         e.stopPropagation();
         ruleset.rules.splice(ruleIndex, 1);
-        this.onUpdate(this.config);
+        yield this.rulesetService.saveRuleset(ruleset);
         this.display();
-      };
+      });
       ruleHeader.onclick = () => {
         if (this.collapsedItems.has(rule.id)) {
           this.collapsedItems.delete(rule.id);
@@ -1133,43 +3057,46 @@ var RulesTab = class {
         return;
       }
       const ruleBody = ruleItem.createDiv("curator-rule-body");
-      const querySetting = new import_obsidian6.Setting(ruleBody);
-      querySetting.setName("Condition (Dataview Query)");
-      querySetting.setDesc("Leave empty to match all files.");
+      const conditionHeader = ruleBody.createDiv("curator-condition-header");
+      const conditionTitle = conditionHeader.createDiv("curator-section-title");
+      conditionTitle.setText("Condition (Dataview Query)");
+      conditionTitle.style.marginBottom = "0";
       if (ruleset.trigger.type === "change_from" || ruleset.trigger.type === "change_to") {
-        querySetting.addToggle((toggle2) => toggle2.setValue(rule.useTriggerQuery || false).setTooltip("Use the Trigger's query for this rule").onChange((value) => {
-          rule.useTriggerQuery = value;
-          this.onUpdate(this.config);
+        const customControl = conditionHeader.createDiv("curator-inherit-control");
+        const span = customControl.createSpan({ text: "Custom Query" });
+        span.style.marginRight = "8px";
+        span.style.fontSize = "0.9em";
+        const isCustom = !rule.useTriggerQuery;
+        const toggle2 = new import_obsidian11.ToggleComponent(customControl).setValue(isCustom).setTooltip("Enable to define a custom query for this rule").onChange((value) => __async(this, null, function* () {
+          rule.useTriggerQuery = !value;
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
         }));
       }
       if (!rule.useTriggerQuery) {
-        querySetting.addExtraButton((btn) => btn.setIcon("help-circle").setTooltip("Query Templates").onClick(() => {
-          new QueryHelperModal(this.app, (query) => {
-            rule.query = query;
-            this.onUpdate(this.config);
-            this.display();
-          }).open();
-        }));
-        const queryContainer = ruleBody.createDiv();
+        const queryContainer = ruleBody.createDiv("curator-query-container");
         const textArea = queryContainer.createEl("textarea");
         textArea.style.width = "100%";
         textArea.style.minHeight = "60px";
-        textArea.style.marginBottom = "10px";
+        textArea.style.marginBottom = "5px";
         textArea.placeholder = 'FROM "folder" AND #tag';
         textArea.value = rule.query;
         const statusEl = queryContainer.createDiv("query-status");
         statusEl.style.fontSize = "0.8em";
         statusEl.style.marginBottom = "10px";
         this.validateQueryInput(textArea, statusEl, rule.query);
-        textArea.oninput = (e) => {
+        textArea.onchange = (e) => __async(this, null, function* () {
           const val = e.target.value;
           rule.query = val;
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.validateQueryInput(textArea, statusEl, val);
-        };
+        });
       } else {
-        ruleBody.createEl("p", { text: "Condition: Matches Trigger Scope (Inherited)", cls: "text-muted" });
+        const infoMsg = ruleBody.createDiv("curator-inherited-msg");
+        infoMsg.setText("By default, Curator will use the trigger query.");
+        infoMsg.style.color = "var(--text-muted)";
+        infoMsg.style.fontStyle = "italic";
+        infoMsg.style.marginBottom = "10px";
         if (rule.query)
           rule.query = "";
       }
@@ -1179,25 +3106,25 @@ var RulesTab = class {
         const actionItem = actionsDiv.createDiv("curator-action-item");
         const aControls = actionItem.createDiv("curator-controls");
         const aMoveUp = aControls.createEl("button", { cls: "clickable-icon" });
-        (0, import_obsidian6.setIcon)(aMoveUp, "arrow-up");
-        aMoveUp.onclick = () => {
+        (0, import_obsidian11.setIcon)(aMoveUp, "arrow-up");
+        aMoveUp.onclick = () => __async(this, null, function* () {
           if (actionIndex > 0) {
             [rule.actions[actionIndex - 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex - 1]];
-            this.onUpdate(this.config);
+            yield this.rulesetService.saveRuleset(ruleset);
             this.display();
           }
-        };
+        });
         if (actionIndex === 0)
           aMoveUp.disabled = true;
         const aMoveDown = aControls.createEl("button", { cls: "clickable-icon" });
-        (0, import_obsidian6.setIcon)(aMoveDown, "arrow-down");
-        aMoveDown.onclick = () => {
+        (0, import_obsidian11.setIcon)(aMoveDown, "arrow-down");
+        aMoveDown.onclick = (e) => __async(this, null, function* () {
           if (actionIndex < rule.actions.length - 1) {
             [rule.actions[actionIndex + 1], rule.actions[actionIndex]] = [rule.actions[actionIndex], rule.actions[actionIndex + 1]];
-            this.onUpdate(this.config);
+            yield this.rulesetService.saveRuleset(ruleset);
             this.display();
           }
-        };
+        });
         if (actionIndex === rule.actions.length - 1)
           aMoveDown.disabled = true;
         const configDiv = actionItem.createDiv("curator-action-config");
@@ -1207,7 +3134,7 @@ var RulesTab = class {
           if (t === action.type)
             opt.selected = true;
         });
-        typeSelect.onchange = () => {
+        typeSelect.onchange = () => __async(this, null, function* () {
           action.type = typeSelect.value;
           if (action.type === "move")
             action.config = { folder: "" };
@@ -1217,99 +3144,100 @@ var RulesTab = class {
             action.config = { tag: "", operation: "add" };
           else if (action.type === "update")
             action.config = { key: "", value: "" };
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
-        };
+        });
         if (action.type === "move") {
           const folderInput = configDiv.createEl("input", { type: "text" });
           folderInput.placeholder = "Folder Path";
           folderInput.value = action.config.folder || "";
           new FolderSuggest(this.app, folderInput);
-          folderInput.oninput = () => {
+          folderInput.onchange = () => __async(this, null, function* () {
             action.config.folder = folderInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
         } else if (action.type === "tag") {
           const tagInput = configDiv.createEl("input", { type: "text" });
           tagInput.placeholder = "#tag";
           tagInput.value = action.config.tag || "";
-          tagInput.oninput = () => {
+          tagInput.onchange = () => __async(this, null, function* () {
             action.config.tag = tagInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
           const opSelect = configDiv.createEl("select");
           ["add", "remove"].forEach((op) => {
             const opt = opSelect.createEl("option", { text: op, value: op });
             if (op === action.config.operation)
               opt.selected = true;
           });
-          opSelect.onchange = () => {
+          opSelect.onchange = () => __async(this, null, function* () {
             action.config.operation = opSelect.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
         } else if (action.type === "update") {
           const keyInput = configDiv.createEl("input", { type: "text" });
           keyInput.placeholder = "Property Key";
           keyInput.value = action.config.key || "";
-          keyInput.oninput = () => {
+          keyInput.onchange = () => __async(this, null, function* () {
             action.config.key = keyInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
           const valInput = configDiv.createEl("input", { type: "text" });
           valInput.placeholder = "Value";
           valInput.value = action.config.value || "";
-          valInput.oninput = () => {
+          valInput.onchange = () => __async(this, null, function* () {
             action.config.value = valInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
         } else if (action.type === "rename") {
           const prefixInput = configDiv.createEl("input", { type: "text" });
           prefixInput.placeholder = "Prefix";
           prefixInput.value = action.config.prefix || "";
-          prefixInput.oninput = () => {
+          prefixInput.onchange = () => __async(this, null, function* () {
             action.config.prefix = prefixInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
           const suffixInput = configDiv.createEl("input", { type: "text" });
           suffixInput.placeholder = "Suffix";
           suffixInput.value = action.config.suffix || "";
-          suffixInput.oninput = () => {
+          suffixInput.onchange = () => __async(this, null, function* () {
             action.config.suffix = suffixInput.value;
-            this.onUpdate(this.config);
-          };
+            yield this.rulesetService.saveRuleset(ruleset);
+          });
         }
         const aDelete = actionItem.createEl("button", { cls: "clickable-icon" });
-        (0, import_obsidian6.setIcon)(aDelete, "trash");
-        aDelete.onclick = () => {
+        (0, import_obsidian11.setIcon)(aDelete, "trash");
+        aDelete.onclick = () => __async(this, null, function* () {
           rule.actions.splice(actionIndex, 1);
-          this.onUpdate(this.config);
+          yield this.rulesetService.saveRuleset(ruleset);
           this.display();
-        };
+        });
       });
-      const addActionBtn = rulesList.createEl("button", { text: "+ Add Action" });
+      const addActionBtn = ruleBody.createEl("button", { text: "+ Add Action" });
       addActionBtn.style.marginTop = "5px";
-      addActionBtn.onclick = () => {
+      addActionBtn.style.width = "100%";
+      addActionBtn.onclick = () => __async(this, null, function* () {
         rule.actions.push({ type: "move", config: { folder: "" } });
-        this.onUpdate(this.config);
+        yield this.rulesetService.saveRuleset(ruleset);
         this.display();
-      };
+      });
     });
     const addRuleBtn = body.createEl("button", { text: "+ Add Rule" });
     addRuleBtn.style.marginTop = "10px";
-    addRuleBtn.onclick = () => {
+    addRuleBtn.onclick = () => __async(this, null, function* () {
       ruleset.rules.push({
         id: crypto.randomUUID(),
         query: "",
         actions: []
       });
-      this.onUpdate(this.config);
+      yield this.rulesetService.saveRuleset(ruleset);
       this.display();
-    };
+    });
   }
 };
 
 // ui/components/LogbookTab.ts
-var import_obsidian7 = __toModule(require("obsidian"));
+var import_obsidian12 = __toModule(require("obsidian"));
 var LogbookTab = class {
   constructor(app, containerEl, binder) {
     this.app = app;
@@ -1325,7 +3253,7 @@ var LogbookTab = class {
     header.style.marginBottom = "10px";
     const headerH3 = header.createEl("h3", { text: "Logbook" });
     headerH3.style.margin = "0";
-    new import_obsidian7.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
+    new import_obsidian12.ButtonComponent(header).setButtonText("Clear Log").setWarning().onClick(() => {
       this.binder.clear();
       this.display();
     });
@@ -1373,28 +3301,48 @@ var LogbookTab = class {
 };
 
 // ui/CuratorSettingsTab.ts
-var CuratorSettingsTab = class extends import_obsidian8.PluginSettingTab {
-  constructor(app, plugin) {
+var CuratorSettingsTab = class extends import_obsidian13.PluginSettingTab {
+  constructor(app, plugin, rulesetService) {
     super(app, plugin);
     this.activeTab = "rules";
     this.plugin = plugin;
+    this.rulesetService = rulesetService;
+    this.buildIdentifier = this.generateBuildIdentifier();
+  }
+  generateBuildIdentifier() {
+    const now = new Date();
+    const yy = now.getFullYear().toString().slice(-2);
+    const mm = (now.getMonth() + 1).toString().padStart(2, "0");
+    const dd = now.getDate().toString().padStart(2, "0");
+    const days = ["su", "mo", "tu", "we", "th", "fr", "sa"];
+    const day = days[now.getDay()];
+    const HH = now.getHours().toString().padStart(2, "0");
+    const MM = now.getMinutes().toString().padStart(2, "0");
+    const SS = now.getSeconds().toString().padStart(2, "0");
+    return `${yy}${mm}${dd}.${day}.${HH}${MM}${SS}`;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Curator Settings" });
+    const versionDiv = containerEl.createDiv("curator-version-info");
+    versionDiv.style.fontSize = "0.8em";
+    versionDiv.style.color = "var(--text-muted)";
+    versionDiv.style.marginBottom = "15px";
+    versionDiv.setText(`Version: ${this.plugin.manifest.version} | Build: ${this.buildIdentifier}`);
     const navContainer = containerEl.createDiv("curator-nav");
     navContainer.style.display = "flex";
     navContainer.style.gap = "10px";
     navContainer.style.marginBottom = "20px";
     this.createNavButton(navContainer, "Rules", "rules");
     this.createNavButton(navContainer, "Logbook", "logbook");
+    new import_obsidian13.Setting(containerEl).setName("Ruleset Folder").setDesc("Folder where markdown rulesets will be saved.").addText((text) => text.setPlaceholder("Curator Rules").setValue(this.plugin.settings.rulesetFolder || "Curator Rules").onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.rulesetFolder = value;
+      yield this.plugin.saveSettings();
+    })));
     const contentContainer = containerEl.createDiv("curator-content");
     if (this.activeTab === "rules") {
-      new RulesTab(this.app, contentContainer, this.plugin.settings, (newConfig) => {
-        this.plugin.settings = newConfig;
-        this.plugin.saveSettings();
-      }).display();
+      new RulesTab(this.app, contentContainer, this.rulesetService, this.plugin.settings.rulesetFolder).display();
     } else if (this.activeTab === "logbook") {
       new LogbookTab(this.app, contentContainer, this.plugin.binder).display();
     }
@@ -1412,7 +3360,7 @@ var CuratorSettingsTab = class extends import_obsidian8.PluginSettingTab {
 };
 
 // main.ts
-var AutoNoteMover = class extends import_obsidian9.Plugin {
+var AutoNoteMover = class extends import_obsidian14.Plugin {
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
@@ -1421,24 +3369,39 @@ var AutoNoteMover = class extends import_obsidian9.Plugin {
       this.triggerService = new TriggerService(this.app);
       this.actionService = new ActionService(this.app, this.binder);
       this.rulesetService = new RulesetService(this.app, this.triggerService, this.groupService, this.binder, this.actionService);
+      this.markdownConfigService = new MarkdownConfigService(this.app, this.rulesetService);
+      this.rulesetService.setMarkdownConfigService(this.markdownConfigService);
+      this.rulesetService.setSaveSettingsCallback((rulesets) => __async(this, null, function* () {
+        this.settings.rulesets = rulesets;
+        yield this.saveSettings();
+      }));
       this.triggerService.initializeListeners();
-      this.addSettingTab(new CuratorSettingsTab(this.app, this));
+      this.markdownConfigService.setRulesetFolder(this.settings.rulesetFolder || "Curator Rules");
+      yield this.markdownConfigService.initialize();
+      this.addSettingTab(new CuratorSettingsTab(this.app, this, this.rulesetService));
       this.rulesetService.updateConfig(this.settings);
-      this.app.workspace.onLayoutReady(() => {
-        setTimeout(() => {
-          this.triggerService.handleSystemEvent("startup");
-        }, 2e3);
-      });
     });
   }
   onunload() {
+    this.triggerService.unload();
   }
   loadSettings() {
     return __async(this, null, function* () {
       const DEFAULT_SETTINGS = {
-        rulesets: []
+        rulesets: [],
+        rulesetFolder: "Curator Rules"
       };
-      this.settings = Object.assign({}, DEFAULT_SETTINGS, yield this.loadData());
+      const loadedData = yield this.loadData();
+      this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+      if (this.settings.rulesets) {
+        this.settings.rulesets = this.settings.rulesets.filter((r) => {
+          if (!r.trigger || typeof r.trigger !== "object") {
+            console.warn(`[Curator] Dropping invalid/legacy ruleset "${r.name}" (missing trigger object).`);
+            return false;
+          }
+          return true;
+        });
+      }
     });
   }
   saveSettings() {
@@ -1446,6 +3409,9 @@ var AutoNoteMover = class extends import_obsidian9.Plugin {
       yield this.saveData(this.settings);
       if (this.rulesetService) {
         this.rulesetService.updateConfig(this.settings);
+      }
+      if (this.markdownConfigService) {
+        this.markdownConfigService.setRulesetFolder(this.settings.rulesetFolder || "Curator Rules");
       }
     });
   }
